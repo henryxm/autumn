@@ -75,6 +75,7 @@ description: >-
 涉及 **支付密码 / `PayPinVerifier` / `modules.safe`** 时，见下文 **安全支付模块（safe）**。
 
 涉及 **实体字段存储加密 / `@FieldEncrypt` / `EncryptModuleService`** 时，必读 **`docs/AI_FIELD_ENCRYPT.md`**（§0 易混概念；§7 **`@Cache` 加密缓存**；与 **`docs/AI_CRYPTO.md`** 传输加密独立）。
+**`sys_config` 读写只经 `SysConfigService` 标准方法**：取值用 **`getValue` / `getBoolean` / `getInt` / `getConfigObject*`**，写入用 **`updateValueByKey` / `save` / `update`**；**禁止** `getByKey(...).getParamValue()` 或手写 Gson 解析 `paramValue` 作为业务取值（§3.2）。
 
 涉及 **授权登录 / OAuth / 开放平台 / 账号绑定** 时，**先读 **`docs/AI_AUTH_LOGIN_MODES.md`**（双轨总览），再按角色追加 **`docs/AI_OAUTH_INTEGRATION.md`**（方式一 uuid）或 **`docs/AI_OPC_INTEGRATION.md`** + **`docs/AI_OPL_INTEGRATION.md`**（方式二 openId）；见下文 **授权登录与账号绑定**。
 

@@ -106,7 +106,9 @@ public class SysConfigController extends SysAbstractController {
                 try {
                     Class<?> clazz = Class.forName(entity.getOptions());
                     Gson gson = GsonConfig.getGson();
-                    Object o = gson.fromJson(entity.getParamValue(), clazz);
+                    // 当前 JSON 必须走 getValue，保证字段加密后仍为明文
+                    String currentJson = sysConfigService.getValue(entity.getParamKey());
+                    Object o = gson.fromJson(currentJson, clazz);
                     List<String> list = Arrays.asList(config.getFieldName().split("\\."));
                     if (!list.isEmpty()) {
                         sysConfigService.inject(list.listIterator(), clazz, null, o, null, null, value);

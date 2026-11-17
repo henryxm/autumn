@@ -268,6 +268,34 @@ public class WallController {
         return map;
     }
 
+    /**
+     * wall 页门禁状态（仅超管，不强制管理 IP）：用于未加白时展示临时安全密码门禁。
+     */
+    @GetMapping("/ipadminwhite/gate")
+    public Map<String, Object> getIpAdminWhiteGate(HttpServletRequest request) {
+        adminAccessGuard.requireSystemAdmin("ipadminwhiteGate");
+        String ip = IPUtils.getIp(request);
+        boolean bootstrapPending = ipAdminWhiteService.isBootstrapPending();
+        boolean locked;
+        try {
+            ipAdminWhiteService.checkAdmin(request, getClass(), "ipadminwhiteGate");
+            // dev 下放行 IP，但引导态仍须临时密钥认领
+            locked = bootstrapPending;
+        } catch (AException ignored) {
+            locked = true;
+        }
+        Map<String, Object> map = new HashMap<>();
+        map.put("locked", locked);
+        map.put("bootstrapPending", bootstrapPending);
+        map.put("empty", ipAdminWhiteService.isEmpty());
+        map.put("currentIp", ip);
+        map.put("mode", bootstrapPending ? "bootstrap" : "clearToken");
+        map.put("hint", bootstrapPending
+                ? "请输入启动日志中的一次性临时密钥（AdminIpBootstrap secret=）"
+                : "请输入运维临时安全密码（SECURITY_OPS_CONFIG.clearToken）以认领当前 IP");
+        return map;
+    }
+
     @PostMapping("/ipadminwhite/bootstrap")
     public Map<String, Object> bootstrapIpAdminWhite(
             @RequestParam(required = false) String secret,
@@ -281,6 +309,59 @@ public class WallController {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("ip", entity.getIp());
+        return result;
+    }
+
+    /**
+     * 未在管理 IP 白名单时：校验临时安全密码后认领当前 IP。
+     * 引导态走 bootstrap 密钥；已有名单时走 clearToken。
+     */
+    @PostMapping("/ipadminwhite/unlock")
+    public Map<String, Object> unlockIpAdminWhite(
+            @RequestParam(required = false) String secret,
+            HttpServletRequest request) {
+        adminAccessGuard.requireSystemAdmin("ipadminwhiteUnlock");
+        if (StringUtils.isBlank(secret)) {
+            secret = request.getHeader("x-admin-ip-bootstrap");
+        }
+        if (StringUtils.isBlank(secret)) {
+            secret = request.getHeader("x-clear-authentication");
+        }
+        if (StringUtils.isBlank(secret)) {
+            throw new AException("请输入临时安全密码", 403);
+        }
+        String ip = IPUtils.getIp(request);
+        if (ipAdminWhiteService.isBootstrapPending() || ipAdminWhiteService.isEmpty()) {
+            IpAdminWhiteEntity entity = ipAdminWhiteService.bootstrapClaim(request, secret);
+            adminAccessGuard.auditWithIp(request, "admin_ip_unlock_bootstrap", "ip=" + entity.getIp());
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("ip", entity.getIp());
+            result.put("mode", "bootstrap");
+            return result;
+        }
+        if (ipAdminWhiteService.isAdminWhite(ip)) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("ip", ip);
+            result.put("mode", "already");
+            return result;
+        }
+        SecurityOpsConfig ops = sysConfigService.getSecurityOpsConfig();
+        String configured = ops != null ? ops.getClearToken() : null;
+        if (StringUtils.isBlank(configured) || !configured.equals(secret.trim())) {
+            adminAccessGuard.warnDenied("admin_ip_unlock", "ipadminwhiteUnlock", request, "临时安全密码错误");
+            throw new AException("临时安全密码无效", 403);
+        }
+        IpAdminWhiteEntity entity = ipAdminWhiteService.create(ip, "unlock", "临时安全密码认领");
+        if (entity == null) {
+            throw new AException("写入管理IP失败", 500);
+        }
+        adminAccessGuard.auditWithIp(request, "admin_ip_unlock", "ip=" + entity.getIp());
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("ip", entity.getIp());
+        result.put("mode", "clearToken");
         return result;
     }
 

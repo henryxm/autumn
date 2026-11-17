@@ -30,7 +30,7 @@
 | **C-04** | 默认管理员口令 | 未配置时 `admin`/`admin` | 未配置时**随机强口令**并打 info 日志（英文）+ 落盘恢复文件 | 首次安装/自动化装机脚本 | 配置 `systemPassword`（EnvBean） |
 | **C-05** | Dev 空密登录 | 空用户名/密码回填 `admin` | 空则报错 | 本地习惯空 POST 登录的脚本 | 显式传账号密码 |
 | **C-06** | `/plugin` / `/plugin.html` | Shiro anon + 无角色校验 | 走 `spm`；方法内超管 + **管理 IP 白名单**（`wall_ip_admin_white`） | 自动化插件加载 | 先登录超管 Session，且客户端 IP 已在管理白名单 |
-| **C-20** | 后台门禁 / gen CRUD / Bean 执行 / wall 加白 | 有菜单即可调任意 gen 全表；`/wall/api/ipwhite/add` 无鉴权；exec 默认可调 | **任意** `*.controller.gen.*` 默认仅超管+**管理 IP**；仅 usr/safe/bot/qrc（+SPI）豁免；运维页超管+`wall_ip_admin_white`（与用户 `wall_ip_white` 防火墙防拉黑分离）；空管理名单启动一次性临时密钥引导；`beanExecuteEnabled` 默认关；加白须鉴权；页面：框架 GEN_MODULES / ops / `@PageAware(admin=true)` 仅超管+管理 IP | 非超管用 gen 管业务全表；匿名加白脚本 | 自助 API/公开首页不变；首条管理 IP 用控制台 `AdminIpBootstrap secret=` 认领；加白用已在管理名单的超管会话 |
+| **C-20** | 后台门禁 / gen CRUD / Bean 执行 / wall 加白 | 有菜单即可调任意 gen 全表；`/wall/api/ipwhite/add` 无鉴权；exec 默认可调 | **`GenAdminAccessAspect`** 织入 `*..modules..controller..*` / `*..controller.gen..*`（不限 `cn.org.autumn`）；强制超管+**管理 IP**；`GEN_MODULES`+SPI `managedModules()`；`selfGenModules` 豁免；异形包见 **`docs/AI_ADMIN_IP_BIZ.md`**；install 不强制 IP；wall 临时密码认领 | 非超管/非白名单 IP 调管理 API | 业务仓按 AI_ADMIN_IP_BIZ 模式 A/B/C；`/sys/node/*` 须超管+管理 IP |
 | **C-21** | WebShell（`/webshell` `/shell` `/sftp`） | 常默认可连、握手弱鉴权 | **默认关闭**（`SECURITY_OPS_CONFIG.webShellEnabled=false` + `autumn.webshell.enabled=false`）；开启后须超管+**管理 IP**+主机白名单 | 依赖 `web-shell` 的现网升级后终端不可用 | 显式双开开关并配置 `allowed-hosts`；禁止 Shiro anon |
 | **C-07** | `/actuator/**` | Shiro anon | 走 `spm`（需登录） | 监控探活若直打 actuator | 改用网关鉴权或登录；health 暴露见 `management.endpoints` |
 | **C-08** | clear/reinit 头认证 | 固定头 `application/client-clear` 等 | **必须**在 SysConfig 配置高熵 ops Token，未配置则拒绝 | 运维脚本 | `SECURITY_OPS_CONFIG.clearToken` / `reinitToken` |
@@ -151,7 +151,7 @@
 **明文禁忌与接口门禁**
 
 - **禁止**写入或 API 返回口令明文；亦不存「新口令」明文（新口令只在 `sys_user` 哈希中）。
-- `GET /sys/passwordlog/list`：**不对普通用户开放**；门禁为已登录**系统管理员**（`AdminAccessGuard.requireSystemAdmin`），不挂可分配菜单权限，避免角色误授权。响应为 `PasswordChangeLogView`，**剥离** `previousPasswordHash` / `previousSalt`（仅元数据：操作者/目标/动作/渠道/IP/UA/时间）。
+- `GET /sys/passwordlog/list`：**不对普通用户开放**；门禁为**系统管理员 + 管理 IP 白名单**（`AdminAccessGuard.requireOpsAdmin`），不挂可分配菜单权限，避免角色误授权。响应为 `PasswordChangeLogView`，**剥离** `previousPasswordHash` / `previousSalt`（仅元数据：操作者/目标/动作/渠道/IP/UA/时间）。
 - 无 gen CRUD / 无自助查询接口；防重用匹配仅在服务端 `matchesHistory` 使用哈希，不对外暴露。
 
 **历史口令 / 防重用**
@@ -345,7 +345,9 @@
 - [ ] **`POST /wall/api/ipwhite/add`**（用户防拉黑名单）：未登录/非超管/管理 IP 未加白 → 不写库；删当前 IP 须头 `x-clear-authentication` = clearToken  
 - [ ] **管理 IP**：`wall_ip_admin_white` 与 `wall_ip_white` 表隔离；运维/gen/`requireOpsAdmin` 走 `IpAdminWhiteService.checkAdmin`，不跟随 `WallDefault.ipWhiteEnable`；**不从用户白名单迁移/回退**，空表初始化；用户 `isWhite` **逻辑继承**管理名单（管理 IP 默认免防火墙拉黑）  
 - [ ] **管理 IP 引导**：空表启动打印 `AdminIpBootstrap secret=`（明文一次）；内存只存 hash；`POST /wall/api/ipadminwhite/bootstrap` 认领当前 IP 后立即清 hash；二次同一密钥失败；名单非空后 bootstrap 拒绝；客户端 IP 解析与 `IPUtils.getIp` 统一（XFF 首 hop + trim）  
-- [ ] **`wall.html`**：空名单+引导中超管可进页认领；认领后增删管理 IP 须已在管理名单；用户白名单区块文案区分「防拉黑」  
+- [ ] **`wall.html`**：超管可进页；IP 未加白时**不直接展示内容**，居中输入临时安全密码（引导态=启动密钥，否则=`clearToken`）→ `POST /wall/api/ipadminwhite/unlock` 认领当前 IP 后再显示；POST 带 CSRF；认领后增删管理 IP 须已在管理名单；用户白名单区块文案区分「防拉黑」
+- [ ] **`/sys/node/*`（`ProfileController`）**：未登录/非超管/管理 IP 未加白 → 403（`GEN_MODULES` 含 `node`，切面强制）
+- [ ] **install 向导**：`autumn.install.mode=true` 时可无管理 IP；切面织入 install 包但不强制 IP（首装无白名单）  
 - [ ] **`firewall.html`**：非超管不得改 `WallDefault`；`white=false` 须 clearToken  
 - [ ] gen CRUD：非超管或管理 IP 未加白调 `*.controller.gen.*` → 403；**usr/safe/bot/qrc**（及 SPI `selfGenModules`）不强制超管  
 - [ ] 子项目 `modules/{biz}/**` **页面**：默认非超管可开（登录由 Spm）；`adminLockdown=true` 或 `@PageAware(admin=true)` 时仅超管  
@@ -361,15 +363,16 @@
 | **xsign-www**（`xsignw`） | 公开 Site / `XSignWwwController`；证书与职位等自定义 anon | `login=true` 管理页默认兼容 | `xsignw` gen → 仅超管（切面） | 首页可用；gen 全表已锁 |
 | **im**（`im/file/asr/…`） | 部分 `login=false`；客户端 `/im/api/v1` | 大量 `login=true`、无 `admin=true` | `im/file/asr/…` gen → 仅超管 | 客户端 API 不受 gen 切面影响 |
 | **video**（`vshort`） | `/vshort/api/v1/**` Shiro anon + `@Authenticated` | `VshortPages` 等默认兼容 | `vshort` gen → 仅超管 | 同上 |
-| **bighub**（`cn.bighub.modules.*`） | 门户 SPM；`/admin` 自拦超管 | 控制台默认兼容；**全库无** `admin=true` | `cn.bighub...controller.gen` → 仅超管 | 包名不同**不能**绕过切面 |
+| **bighub**（`cn.bighub.modules.*`） | 门户 SPM；`/admin` 自拦超管 | 控制台默认兼容；**全库无** `admin=true` | `cn.bighub...controller.gen` → 超管+管理 IP（`*..modules..controller..*` 织入） | 手写管理模块用 SPI `managedModules()`；异形包见 **AI_ADMIN_IP_BIZ** |
 
 **适配要点（框架约定）**
 
 1. **公开首页 / 匿名 API**：`@PageAware(login=false)` 或可维护 Controller + Shiro anon；**禁止**把公开能力写进 `controller.gen`（否则非超管/匿名会 403）。  
 2. **本人数据**：usr/safe/bot/qrc，或 `AdminAccessModuleHandler#selfGenModules()`（仍须权限与行级隔离）。  
-3. **业务全表**：仅超管用 gen；运营部分表 → 可维护 Controller + 数据范围。  
+3. **业务全表**：仅超管+管理 IP 用 gen；运营部分表 → 可维护 Controller + 数据范围。  
 4. **管理页**：全表/运维向 Site 字段加 **`@PageAware(login = true, admin = true)`**。  
-5. **整站高危**：可开 `adminLockdown=true`（会收紧全部未知 `modules/**`，含用户控制台页，慎用）。
+5. **非标准包前缀**：按 **`docs/AI_ADMIN_IP_BIZ.md`** 模式 A（标准包）/ B（`managedModules`）/ C（薄切面委托 `enforceAdminIpApiIfRequired`）。  
+6. **整站高危**：可开 `adminLockdown=true`（会收紧全部未知 `modules/**`，含用户控制台页，慎用）。
 
 **业务仓残留风险（框架不替代，升级后仍须业务侧整改）**
 

@@ -177,7 +177,9 @@ public class SysCategoryService extends ModuleService<SysCategoryDao, SysCategor
         try {
             if (sysConfigEntity.getType().equals(InputType.JsonType.getValue()) && StringUtils.isNotBlank(sysConfigEntity.getOptions())) {
                 Class<?> clazz = Class.forName(sysConfigEntity.getOptions());
-                Object o = GsonConfig.getGson().fromJson(sysConfigEntity.getParamValue(), clazz);
+                 // 取值必须走 getValue，保证字段加密后仍为明文 JSON
+                String json = sysConfigService.getValue(sysConfigEntity.getParamKey());
+                Object o = GsonConfig.getGson().fromJson(json, clazz);
                 return reverse(clazz, "", o, language);
             }
         } catch (ClassNotFoundException e) {

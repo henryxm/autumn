@@ -1,6 +1,8 @@
 package cn.org.autumn.modules.wall.controller;
 
 import cn.org.autumn.exception.AException;
+import cn.org.autumn.model.SecurityOpsConfig;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
 import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
@@ -13,6 +15,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,6 +33,7 @@ class WallControllerIpAdminWhiteTest {
     private AdminAccessGuard adminAccessGuard;
     private IpAdminWhiteService ipAdminWhiteService;
     private IpWhiteService ipWhiteService;
+    private SysConfigService sysConfigService;
 
     @BeforeEach
     void setUp() {
@@ -37,9 +41,11 @@ class WallControllerIpAdminWhiteTest {
         adminAccessGuard = mock(AdminAccessGuard.class);
         ipAdminWhiteService = mock(IpAdminWhiteService.class);
         ipWhiteService = mock(IpWhiteService.class);
+        sysConfigService = mock(SysConfigService.class);
         ReflectionTestUtils.setField(controller, "adminAccessGuard", adminAccessGuard);
         ReflectionTestUtils.setField(controller, "ipAdminWhiteService", ipAdminWhiteService);
         ReflectionTestUtils.setField(controller, "ipWhiteService", ipWhiteService);
+        ReflectionTestUtils.setField(controller, "sysConfigService", sysConfigService);
     }
 
     @Test
@@ -76,5 +82,54 @@ class WallControllerIpAdminWhiteTest {
         controller.addIpWhite("8.8.8.8", request);
         verify(ipWhiteService).create("8.8.8.8", "手动添加", "手动添加");
         verify(ipAdminWhiteService, never()).create(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void unlock_withClearToken_claimsCurrentIp() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("198.51.100.9");
+        when(ipAdminWhiteService.isBootstrapPending()).thenReturn(false);
+        when(ipAdminWhiteService.isEmpty()).thenReturn(false);
+        when(ipAdminWhiteService.isAdminWhite("198.51.100.9")).thenReturn(false);
+        SecurityOpsConfig ops = new SecurityOpsConfig();
+        ops.setClearToken("temp-ops-secret");
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(ops);
+        IpAdminWhiteEntity entity = new IpAdminWhiteEntity();
+        entity.setIp("198.51.100.9");
+        when(ipAdminWhiteService.create(eq("198.51.100.9"), eq("unlock"), anyString())).thenReturn(entity);
+
+        Map<String, Object> result = controller.unlockIpAdminWhite("temp-ops-secret", request);
+        assertTrue(Boolean.TRUE.equals(result.get("success")));
+        assertEquals("clearToken", result.get("mode"));
+        verify(adminAccessGuard).requireSystemAdmin("ipadminwhiteUnlock");
+        verify(ipAdminWhiteService).create(eq("198.51.100.9"), eq("unlock"), anyString());
+    }
+
+    @Test
+    void unlock_wrongSecret_rejected() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("198.51.100.9");
+        when(ipAdminWhiteService.isBootstrapPending()).thenReturn(false);
+        when(ipAdminWhiteService.isEmpty()).thenReturn(false);
+        when(ipAdminWhiteService.isAdminWhite(anyString())).thenReturn(false);
+        SecurityOpsConfig ops = new SecurityOpsConfig();
+        ops.setClearToken("good");
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(ops);
+        assertThrows(AException.class, () -> controller.unlockIpAdminWhite("bad", request));
+        verify(ipAdminWhiteService, never()).create(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void gate_reportsLockedForNonAdminIp() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("198.51.100.9");
+        when(ipAdminWhiteService.isBootstrapPending()).thenReturn(false);
+        doThrow(new AException("服务繁忙")).when(ipAdminWhiteService)
+                .checkAdmin(eq(request), eq(WallController.class), eq("ipadminwhiteGate"));
+        Map<String, Object> gate = controller.getIpAdminWhiteGate(request);
+        assertTrue(Boolean.TRUE.equals(gate.get("locked")));
+        assertFalse(Boolean.TRUE.equals(gate.get("bootstrapPending")));
+        assertEquals("clearToken", gate.get("mode"));
+        verify(adminAccessGuard).requireSystemAdmin("ipadminwhiteGate");
     }
 }

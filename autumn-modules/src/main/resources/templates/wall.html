@@ -478,11 +478,73 @@
             .toolbar input { width: 100%; }
             .toolbar .url-input { min-width: 100%; }
         }
+        .wall-unlock-gate {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .wall-unlock-card {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 16px 48px rgba(15, 23, 42, 0.28);
+            padding: 28px 24px 24px;
+            text-align: center;
+        }
+        .wall-unlock-card h2 {
+            font-size: 20px;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        .wall-unlock-card .hint {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.55;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+        .wall-unlock-card input {
+            width: 100%;
+            height: 40px;
+            border: 1px solid #d9dfe7;
+            border-radius: 8px;
+            padding: 0 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .wall-unlock-card .ip-line {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .wall-unlock-card .ip-line code { color: #475569; }
+        .wall-unlock-card .err {
+            display: none;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #dc2626;
+        }
     </style>
     <script src="${request.contextPath}/statics/libs/jquery.min.js"></script>
 </head>
 <body>
-<div class="container">
+<div id="wallUnlockGate" class="wall-unlock-gate" style="display:none;">
+    <div class="wall-unlock-card">
+        <h2><i class="fa fa-lock"></i> 临时安全验证</h2>
+        <p class="hint" id="wallUnlockHint">当前访问 IP 未在管理白名单。请输入临时安全密码后继续；验证成功将认领当前 IP。</p>
+        <input type="password" id="wallUnlockSecret" placeholder="临时安全密码" autocomplete="off">
+        <button type="button" class="layui-btn layui-btn-danger" id="wallUnlockBtn" style="width:100%;height:40px;border:none;border-radius:8px;background:#dc2626;color:#fff;font-size:14px;cursor:pointer;">验证并进入</button>
+        <div class="err" id="wallUnlockErr"></div>
+        <div class="ip-line">当前 IP：<code id="wallUnlockIp">-</code></div>
+    </div>
+</div>
+<div class="container" id="wallMainContent" style="display:none;">
     <div class="header">
         <i class="fa fa-shield"></i>
         <h1>防火墙管理</h1>
@@ -814,6 +876,8 @@
 <script>
 $(function(){
     var __CTX = '${request.contextPath!""}';
+    var WALL_IP_LOCKED = ${(wallIpLocked!false)?string('true','false')};
+    var WALL_BOOTSTRAP_PENDING = ${(wallBootstrapPending!false)?string('true','false')};
     var currentIp = '';
     var shieldAttackEnabled = false;
     var latestVerifyLog = null;
@@ -822,6 +886,8 @@ $(function(){
     var jumpListCache = [];
     var jumpQuickCriteria = null;
     var jumpQuickMatchIds = {};
+    var csrfHeader = 'X-CSRF-Token';
+    var csrfToken = '';
     var pageState = {
         black: {curr: 1, limit: 10, total: 0},
         white: {curr: 1, limit: 10, total: 0},
@@ -830,6 +896,44 @@ $(function(){
         jump: {curr: 1, limit: 10, total: 0},
         securityRequest: {curr: 1, limit: 10, total: 0}
     };
+
+    function ensureCsrf(done) {
+        if (csrfToken) { if (done) done(); return; }
+        $.get(__CTX + '/sys/session/self/csrf', function(res) {
+            if (res && res.code === 0 && res.csrfToken) {
+                csrfToken = res.csrfToken;
+                if (res.header) csrfHeader = res.header;
+            }
+            if (done) done();
+        }).fail(function(){ if (done) done(); });
+    }
+
+    function wallAjax(options) {
+        ensureCsrf(function() {
+            var headers = options.headers || {};
+            var m = String(options.type || options.method || 'GET').toUpperCase();
+            if (csrfToken && (m === 'POST' || m === 'PUT' || m === 'DELETE' || m === 'PATCH')) {
+                headers[csrfHeader] = csrfToken;
+            }
+            options.headers = headers;
+            $.ajax(options);
+        });
+    }
+
+    function wallPost(url, data, ok, fail) {
+        if (typeof data === 'function') {
+            fail = ok;
+            ok = data;
+            data = {};
+        }
+        wallAjax({
+            type: 'POST',
+            url: url,
+            data: data || {},
+            success: ok,
+            error: fail
+        });
+    }
 
     function msg(txt, type) {
         var cls = 'toast-success';
@@ -868,7 +972,7 @@ $(function(){
     }
 
     function requestJson(url, method, payload, onSuccess, onFail) {
-        $.ajax({
+        wallAjax({
             url: url,
             type: method || 'POST',
             contentType: 'application/json;charset=UTF-8',
@@ -884,6 +988,55 @@ $(function(){
             error: function(err){
                 if (onFail) onFail(err);
             }
+        });
+    }
+
+    function showUnlockGate(gate) {
+        $('#wallMainContent').hide();
+        $('#wallUnlockGate').show();
+        if (gate) {
+            if (gate.hint) $('#wallUnlockHint').text(gate.hint);
+            if (gate.currentIp) {
+                currentIp = gate.currentIp;
+                $('#wallUnlockIp').text(gate.currentIp);
+            }
+        } else if (WALL_BOOTSTRAP_PENDING) {
+            $('#wallUnlockHint').text('管理 IP 白名单为空。请输入启动日志中的一次性临时密钥（AdminIpBootstrap secret=）以认领当前 IP。');
+        }
+        $('#wallUnlockErr').hide().text('');
+        $('#wallUnlockSecret').val('').focus();
+    }
+
+    function enterWallMain() {
+        $('#wallUnlockGate').hide();
+        $('#wallMainContent').show();
+        loadAdminIpStatus(true);
+        loadCurrentIp();
+    }
+
+    function submitWallUnlock() {
+        var secret = ($('#wallUnlockSecret').val() || '').trim();
+        if (!secret) {
+            $('#wallUnlockErr').text('请输入临时安全密码').show();
+            return;
+        }
+        $('#wallUnlockBtn').prop('disabled', true);
+        wallPost(__CTX + '/wall/api/ipadminwhite/unlock', {secret: secret}, function(res){
+            $('#wallUnlockBtn').prop('disabled', false);
+            if (res && res.success) {
+                msg('验证成功，已认领管理 IP', 'success');
+                enterWallMain();
+            } else {
+                $('#wallUnlockErr').text((res && res.msg) || '验证失败').show();
+            }
+        }, function(xhr){
+            $('#wallUnlockBtn').prop('disabled', false);
+            var msgText = '验证失败';
+            try {
+                var body = xhr && xhr.responseJSON;
+                if (body && body.msg) msgText = body.msg;
+            } catch (e) { /* ignore */ }
+            $('#wallUnlockErr').text(msgText).show();
         });
     }
 
@@ -1213,7 +1366,7 @@ $(function(){
             pageState.black.total = res && res.count ? res.count : 0;
             renderBlackTable(res && res.data ? res.data : []);
             updatePager('black');
-        }).fail(function(){
+        }, function(){
             renderBlackTable([]);
             msg('黑名单加载失败', 'error');
         });
@@ -1409,26 +1562,37 @@ $(function(){
         loadVerifyStrongLogs();
     }
 
-    loadAdminIpStatus(true);
-    loadCurrentIp();
+    $('#wallUnlockBtn').on('click', submitWallUnlock);
+    $('#wallUnlockSecret').on('keyup', function(e){
+        if (e.key === 'Enter' || e.keyCode === 13) submitWallUnlock();
+    });
+
+    if (WALL_IP_LOCKED) {
+        showUnlockGate();
+        $.get(__CTX + '/wall/api/ipadminwhite/gate', function(res){
+            showUnlockGate(res || {});
+        });
+    } else {
+        enterWallMain();
+    }
 
     $('#firewallOpen').on('change', function(){
         syncSwitchText('#firewallOpen');
         var checked = $(this).is(':checked');
-        $.post(__CTX + '/wall/api/firewallOpen', {open: checked}, function(){
+        wallPost(__CTX + '/wall/api/firewallOpen', {open: checked}, function(){
             msg('防火墙已' + (checked ? '开启' : '关闭'), 'success');
             loadAll();
-        }).fail(function(){
+        }, function(){
             msg('防火墙切换失败', 'error');
         });
     });
 
     $('#setCountBtn').click(function(){
         var count = $('#firewallCount').val();
-        $.post(__CTX + '/wall/api/firewallCount', {count: count}, function(){
+        wallPost(__CTX + '/wall/api/firewallCount', {count: count}, function(){
             msg('阈值已更新', 'success');
             loadAll();
-        }).fail(function(){
+        }, function(){
             msg('阈值更新失败', 'error');
         });
     });
@@ -1436,10 +1600,10 @@ $(function(){
     $('#shieldPrint').on('change', function(){
         syncSwitchText('#shieldPrint');
         var checked = $(this).is(':checked');
-        $.post(__CTX + '/wall/api/shieldPrint', {print: checked}, function(){
+        wallPost(__CTX + '/wall/api/shieldPrint', {print: checked}, function(){
             msg('日志已' + (checked ? '开启' : '关闭'), 'success');
             loadAll();
-        }).fail(function(){
+        }, function(){
             msg('盾牌日志切换失败', 'error');
         });
     });
@@ -1447,19 +1611,19 @@ $(function(){
     $('#shieldAttack').on('change', function(){
         syncSwitchText('#shieldAttack');
         var checked = $(this).is(':checked');
-        $.post(__CTX + '/wall/api/shieldAttack', {attack: checked}, function(){
+        wallPost(__CTX + '/wall/api/shieldAttack', {attack: checked}, function(){
             msg('攻击模式已' + (checked ? '开启' : '关闭'), 'success');
             loadAll();
-        }).fail(function(){
+        }, function(){
             msg('攻击模式切换失败', 'error');
         });
     });
 
     $('#toggleShield').click(function(){
-        $.post(__CTX + '/wall/api/shield/toggle', {}, function(res){
+        wallPost(__CTX + '/wall/api/shield/toggle', {}, function(res){
             msg(res.enable ? '盾牌已启用' : '盾牌已禁用', 'success');
             loadAll();
-        }).fail(function(){
+        }, function(){
             msg('盾牌状态切换失败', 'error');
         });
     });
@@ -1581,10 +1745,10 @@ $(function(){
     });
 
     $('#clearVerifyLogsBtn').click(function(){
-        $.post(__CTX + '/oauth/securityrequest/verify/logs/clear', function(){
+        wallPost(__CTX + '/oauth/securityrequest/verify/logs/clear', function(){
             msg('verifyStrong 日志已清空', 'success');
             loadVerifyStrongLogs(false);
-        }).fail(function(){
+        }, function(){
             msg('清空校验日志失败', 'error');
         });
     });
@@ -1596,7 +1760,7 @@ $(function(){
     $('#addBlackBtn').click(function(){
         var ip = $.trim($('#addBlackIp').val());
         if(ip) {
-            $.post(__CTX + '/wall/api/ipblack/add', {ip: ip}, function(res){
+            wallPost(__CTX + '/wall/api/ipblack/add', {ip: ip}, function(res){
                 if(res.success){
                     msg('已添加黑名单', 'success');
                     $('#addBlackIp').val('');
@@ -1604,7 +1768,7 @@ $(function(){
                     msg('添加黑名单失败', 'error');
                 }
                 loadBlackList();
-            }).fail(function(){
+            }, function(){
                 msg('添加黑名单失败', 'error');
             });
         }
@@ -1614,7 +1778,7 @@ $(function(){
     $('#addAdminWhiteBtn').click(function(){
         var ip = $.trim($('#addAdminWhiteIp').val());
         if(ip) {
-            $.post(__CTX + '/wall/api/ipadminwhite/add', {ip: ip}, function(res){
+            wallPost(__CTX + '/wall/api/ipadminwhite/add', {ip: ip}, function(res){
                 if(res.success){
                     msg('已添加管理IP', 'success');
                     $('#addAdminWhiteIp').val('');
@@ -1622,7 +1786,7 @@ $(function(){
                     msg('添加管理IP失败', 'error');
                 }
                 loadAdminWhiteList();
-            }).fail(function(){
+            }, function(){
                 msg('添加管理IP失败', 'error');
             });
         }
@@ -1634,7 +1798,7 @@ $(function(){
             msg('请输入启动临时密钥', 'warn');
             return;
         }
-        $.post(__CTX + '/wall/api/ipadminwhite/bootstrap', {secret: secret}, function(res){
+        wallPost(__CTX + '/wall/api/ipadminwhite/bootstrap', {secret: secret}, function(res){
             if(res && res.success){
                 msg('已认领管理IP: ' + (res.ip || ''), 'success');
                 $('#adminBootstrapSecret').val('');
@@ -1643,7 +1807,7 @@ $(function(){
             }else{
                 msg('认领失败', 'error');
             }
-        }).fail(function(){
+        }, function(){
             msg('认领失败（密钥无效或权限不足）', 'error');
         });
     });
@@ -1651,10 +1815,10 @@ $(function(){
     $('#adminWhiteTableBody').on('click', '.js-admin-white-del', function(){
         var ip = $(this).data('ip');
         if (!ip) return;
-        $.post(__CTX + '/wall/api/ipadminwhite/remove', {ip: ip}, function(){
+        wallPost(__CTX + '/wall/api/ipadminwhite/remove', {ip: ip}, function(){
             msg('已移除管理IP', 'success');
             loadAdminWhiteList();
-        }).fail(function(){
+        }, function(){
             msg('移除管理IP失败', 'error');
         });
     });
@@ -1662,7 +1826,7 @@ $(function(){
     $('#addWhiteBtn').click(function(){
         var ip = $.trim($('#addWhiteIp').val());
         if(ip) {
-            $.post(__CTX + '/wall/api/ipwhite/add', {ip: ip}, function(res){
+            wallPost(__CTX + '/wall/api/ipwhite/add', {ip: ip}, function(res){
                 if(res.success){
                     msg('已添加白名单', 'success');
                     $('#addWhiteIp').val('');
@@ -1670,7 +1834,7 @@ $(function(){
                     msg('添加白名单失败', 'error');
                 }
                 loadWhiteList();
-            }).fail(function(){
+            }, function(){
                 msg('添加白名单失败', 'error');
             });
         }
@@ -1681,14 +1845,14 @@ $(function(){
             msg('无法获取当前IP', 'warn');
             return;
         }
-        $.post(__CTX + '/wall/api/ipwhite/add', {ip: currentIp}, function(res){
+        wallPost(__CTX + '/wall/api/ipwhite/add', {ip: currentIp}, function(res){
             if(res.success){
                 msg('当前IP已加入白名单', 'success');
                 loadWhiteList();
             }else{
                 msg('添加白名单失败', 'error');
             }
-        }).fail(function(){
+        }, function(){
             msg('添加白名单失败', 'error');
         });
     });
@@ -1698,10 +1862,10 @@ $(function(){
             msg('无法获取当前IP', 'warn');
             return;
         }
-        $.post(__CTX + '/wall/api/ipwhite/remove', {ip: currentIp}, function(){
+        wallPost(__CTX + '/wall/api/ipwhite/remove', {ip: currentIp}, function(){
             msg('当前IP已从白名单移除', 'success');
             loadWhiteList();
-        }).fail(function(){
+        }, function(){
             msg('移除白名单失败', 'error');
         });
     });
@@ -1711,14 +1875,14 @@ $(function(){
             msg('无法获取当前IP', 'warn');
             return;
         }
-        $.post(__CTX + '/wall/api/ipblack/add', {ip: currentIp}, function(res){
+        wallPost(__CTX + '/wall/api/ipblack/add', {ip: currentIp}, function(res){
             if(res.success){
                 msg('当前IP已加入黑名单', 'success');
                 loadBlackList();
             }else{
                 msg('添加黑名单失败', 'error');
             }
-        }).fail(function(){
+        }, function(){
             msg('添加黑名单失败', 'error');
         });
     });
@@ -1728,10 +1892,10 @@ $(function(){
             msg('无法获取当前IP', 'warn');
             return;
         }
-        $.post(__CTX + '/wall/api/ipblack/remove', {ip: currentIp}, function(){
+        wallPost(__CTX + '/wall/api/ipblack/remove', {ip: currentIp}, function(){
             msg('当前IP已从黑名单移除', 'success');
             loadBlackList();
-        }).fail(function(){
+        }, function(){
             msg('移除黑名单失败', 'error');
         });
     });
@@ -1739,10 +1903,10 @@ $(function(){
     $('#blackTableBody').on('click', '.js-black-del', function(){
         var ip = $(this).data('ip');
         if (!ip) return;
-        $.post(__CTX + '/wall/api/ipblack/remove', {ip: ip}, function(){
+        wallPost(__CTX + '/wall/api/ipblack/remove', {ip: ip}, function(){
             msg('已移除黑名单', 'success');
             loadBlackList();
-        }).fail(function(){
+        }, function(){
             msg('移除黑名单失败', 'error');
         });
     });
@@ -1750,10 +1914,10 @@ $(function(){
     $('#whiteTableBody').on('click', '.js-white-del', function(){
         var ip = $(this).data('ip');
         if (!ip) return;
-        $.post(__CTX + '/wall/api/ipwhite/remove', {ip: ip}, function(){
+        wallPost(__CTX + '/wall/api/ipwhite/remove', {ip: ip}, function(){
             msg('已移除白名单', 'success');
             loadWhiteList();
-        }).fail(function(){
+        }, function(){
             msg('移除白名单失败', 'error');
         });
     });

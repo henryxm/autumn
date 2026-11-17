@@ -73,7 +73,7 @@
 
 1. 实体业务 → **`*Service`**（§2.1）。对内薄 Controller（§3）；对外 `POST /{module}/api/v1/{action}`（§4）。  
 2. 复杂页 → `pages/` + `Site` + `@PageAware`；list 可选 ZIP；FTL 见 §7。  
-3. `ControllerGen` 默认仅超管（§14 / 兼容手册 C-20）。
+3. `ControllerGen` 模板每个 CRUD 入口调用 **`AdminAccessGuard#enforceAdminIpApiIfRequired`**（系统管理员 + 管理 IP；自助模块自动跳过），并与 `GenAdminAccessAspect` 双保险（§14 / C-20 / **`docs/AI_ADMIN_IP_BIZ.md`**）。
 
 ---
 

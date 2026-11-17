@@ -98,6 +98,83 @@ class AdminAccessGuardTest {
     }
 
     @Test
+    void adminIpApi_coversGenModulesAndSubclassOverrides() {
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.sys.controller.SysUserController.class, "list", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.sys.controller.SysUserController.class, "info", 1));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.sys.controller.SysUserController.class, "info", 0));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.sys.controller.SysUserController.class, "password", 2));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.sys.controller.SysMenuController.class, "nav", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.sys.controller.SysMenuController.class, "list", 0));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.db.controller.DatabaseController.class, "list", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.gen.controller.GeneratorController.class, "code", 3));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.job.controller.ScheduleJobController.class, "run", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.wall.controller.ShieldController.class, "attack", 2));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.wall.controller.ShieldController.class, "test", 2));
+        assertTrue(guard.extendsRestrictedGenController(
+                cn.org.autumn.modules.wall.controller.ShieldController.class));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.wall.controller.WallController.class, "unlockIpAdminWhite", 2));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.sys.controller.SysLoginController.class, "login", 2));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.sys.controller.AuthLoginProviderController.class, "providers", 0));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.usr.controller.gen.UserProfileControllerGen.class, "list", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.oauth.controller.OauthAsAdminController.class, "overview", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.node.controller.ProfileController.class, "profile", 0));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.node.controller.ProfileController.class, "assign", 1));
+        assertTrue(guard.isGenGlobalModule("node"));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.install.InstallWizardApiController.class, "types", 0));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.install.InstallBootstrapStatusController.class, "status", 0));
+    }
+
+    @Test
+    void managedModulesSpi_extendsGenGlobalModule() {
+        cn.org.autumn.config.AdminAccessModuleHandler managed = new cn.org.autumn.config.AdminAccessModuleHandler() {
+            @Override
+            public java.util.Set<String> managedModules() {
+                return java.util.Set.of("goods", "order");
+            }
+        };
+        ReflectionTestUtils.setField(guard, "adminAccessModuleHandlers", java.util.List.of(managed));
+        assertTrue(guard.isGenGlobalModule("goods"));
+        assertTrue(guard.isGenGlobalModule("ORDER"));
+        assertFalse(guard.isGenGlobalModule("unknownbiz"));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.goods.controller.GoodsFixtureController.class, "list", 1));
+        ReflectionTestUtils.setField(guard, "adminAccessModuleHandlers", java.util.List.of());
+        assertFalse(guard.shouldRequireAdminIpApi(
+                cn.org.autumn.modules.goods.controller.GoodsFixtureController.class, "list", 1));
+    }
+
+    @Test
+    void enforceAdminIpApiIfRequired_callsRequireWhenNeeded() {
+        shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
+        shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin");
+        when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
+        guard.enforceAdminIpApiIfRequired(
+                cn.org.autumn.modules.sys.controller.SysUserController.class, "list", 1);
+        verify(ipAdminWhiteService).checkAdmin(any(), eq(AdminAccessGuard.class),
+                org.mockito.ArgumentMatchers.contains("SysUserController#list"));
+    }
+
+    @Test
     void selfGenModule_spiExtendsExempt() {
         cn.org.autumn.config.AdminAccessModuleHandler imExempt =
                 new cn.org.autumn.config.AdminAccessModuleHandler() {
@@ -230,17 +307,33 @@ class AdminAccessGuardTest {
         when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
         MockHttpServletRequest request = new MockHttpServletRequest();
         doThrow(new AException("服务繁忙")).when(ipAdminWhiteService).checkAdmin(any(), any(), any());
-        assertEquals("404", guard.gateView("wall", request, new MockHttpServletResponse(), new ConcurrentModel()));
+        assertEquals("404", guard.gateView("exec", request, new MockHttpServletResponse(), new ConcurrentModel()));
     }
 
     @Test
-    void wall_bootstrapPending_skipsAdminIp() {
+    void wall_ipWhiteFailure_allowsLockedPage() {
+        shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
+        shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin");
+        when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
+        when(ipAdminWhiteService.isBootstrapPending()).thenReturn(false);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        doThrow(new AException("服务繁忙")).when(ipAdminWhiteService).checkAdmin(any(), any(), any());
+        ConcurrentModel model = new ConcurrentModel();
+        assertEquals("wall", guard.gateView("wall", request, new MockHttpServletResponse(), model));
+        assertEquals(Boolean.TRUE, model.getAttribute("wallIpLocked"));
+    }
+
+    @Test
+    void wall_bootstrapPending_locksWithoutIpCheckPass() {
         shiroUtils.when(ShiroUtils::isLogin).thenReturn(true);
         shiroUtils.when(ShiroUtils::getUserUuid).thenReturn("admin");
         when(sysUserRoleService.isSystemAdministrator("admin")).thenReturn(true);
         when(ipAdminWhiteService.isBootstrapPending()).thenReturn(true);
         MockHttpServletRequest request = new MockHttpServletRequest();
-        assertEquals("wall", guard.gateView("wall", request, new MockHttpServletResponse(), new ConcurrentModel()));
+        ConcurrentModel model = new ConcurrentModel();
+        assertEquals("wall", guard.gateView("wall", request, new MockHttpServletResponse(), model));
+        assertEquals(Boolean.TRUE, model.getAttribute("wallIpLocked"));
+        assertEquals(Boolean.TRUE, model.getAttribute("wallBootstrapPending"));
         Mockito.verify(ipAdminWhiteService, Mockito.never()).checkAdmin(any(), any(), any());
     }
 

@@ -117,6 +117,7 @@ description: >-
 涉及 **支付密码 / `PayPinVerifier` / `modules.safe`** 时，追加 **`docs/AI_SAFE_CREDENTIAL_INTEGRATION.md`** + **`docs/AI_SAFE_CREDENTIAL.md`**。摘要：`POST /safe/api/v1/*`、`SafeConfig`、`gate/assess` → `PayPinVerifier`、错误码 838～852；**`jakarta.*` / MP3 / `lang3`**。
 
 涉及 **实体字段存储加密 / `@FieldEncrypt` / `EncryptModuleService`** 时，必读 **`docs/AI_FIELD_ENCRYPT.md`**（§0 易混概念；§7 **`@Cache` 加密缓存**；**`jakarta.*` / MP3**；与 **`docs/AI_CRYPTO.md`** 传输加密独立）。
+**`sys_config` 读写只经 `SysConfigService` 标准方法**：优先短名 **`str` / `bool` / `num` / `json` / `jsonOrNull` / `has`**（长名 `getValue`/`getBoolean`/`getInt`/`getConfigObject*`/`hasKey` 仍可用）；写入用 **`updateValueByKey` / `save` / `update`**；**禁止** `getByKey(...).getParamValue()` 或手写 Gson 解析 `paramValue` 作为业务取值（§3.2）。
 
 涉及 **授权登录 / OAuth / 开放平台 / 账号绑定** 时，**先读 **`docs/AI_AUTH_LOGIN_MODES.md`**（双轨总览），再按角色追加 **`docs/AI_OAUTH_INTEGRATION.md`**（方式一 uuid）或 **`docs/AI_OPC_INTEGRATION.md`** + **`docs/AI_OPL_INTEGRATION.md`**（方式二 openId）；见下文 **授权登录与账号绑定**（3.x 与 2.x **业务语义一致**，包名为 **`jakarta.*`**，以 **3.0.0** 分支代码为准）。
 
@@ -278,7 +279,7 @@ description: >-
 ## 资源与页面（§14）
 
 - **`resources/statics/`** 公共静态；新后台页 **`pages/`** + **`site/*Site`** + **`@PageAware`**；管理全表页 **`admin=true`**。
-- **gen CRUD 门禁**：`*.controller.gen.*` 默认仅系统管理员（`GenAdminAccessAspect`）；豁免 usr/safe/bot/qrc 或 `AdminAccessModuleHandler#selfGenModules`；公开/C 端接口写可维护 Controller。详见 **`docs/AI_STANDARDS.md` §14**、**`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md` C-20 / §4.4.1**。
+- **gen / 管理 API 门禁**：`GenAdminAccessAspect` 织入 `*..modules..controller..*` / `*..controller.gen..*`（不限 `cn.org.autumn`）；强制**系统管理员 + 管理 IP**（`wall_ip_admin_white`）；豁免 usr/safe/bot/qrc 或 `selfGenModules`；手写管理模块用 SPI **`managedModules()`**；异形包薄切面委托 **`enforceAdminIpApiIfRequired`**。详见 **`docs/AI_STANDARDS.md` §14**、**`docs/AI_ADMIN_IP_BIZ.md`**、**`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md` C-20**。
 - **安全告警**：门禁拒绝打 **`SecurityAlert denied`**（`reason`/`user`/`ip`/`uri`/`target`）；高危成功操作用 **`SecurityAlert audit`**。检索与 reason 表见兼容手册 **§4.4.2**。
 - **WebShell**：默认关（`webShellEnabled` / `autumn.webshell.enabled`）；开启后超管+IP 白名单+`allowed-hosts`；禁止 anon。见 **C-21**。
 

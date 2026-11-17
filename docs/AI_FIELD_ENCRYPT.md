@@ -210,7 +210,7 @@ afterRead(row);
 
 | 结论 | 说明 |
 |------|------|
-| **框架 Service CRUD + SysConfig 字符串 API：是（有密钥时）** | 凡继承 `EncryptModuleService` 的 `getById/list/page/select*/读链`，以及 `SysConfigService.getValue/getObject/getByKey`，读出后统一解密；业务仓零改代码即可拿明文 |
+| **框架 Service CRUD + SysConfig 字符串 API：是（有密钥时）** | 凡继承 `EncryptModuleService` 的 `getById/list/page/select*/读链`，以及 `SysConfigService.str/getValue/json/getObject/getByKey`，读出后统一解密；业务仓零改代码即可拿明文 |
 | **未覆盖 / 须人工** | ① `baseMapper`/Dao 直查且未调 `afterRead`；② `ChainWrappers` 绕过 Service；③ 密钥未配置或错误（`decryptValue` 原样返回 `ENC$`）；④ 运维 `runSkip` / `isParamValueEncryptedAtRest`（故意读密文） |
 | **当前仓库 `@FieldEncrypt` 实体** | 仅 `SysConfigEntity.paramValue`、`ConnectAppEntity.appSecret`（均已 `EncryptModuleService` + 约定测试） |
 | 运维页 | `configsecure.html` + `/sys/configsecure/*`（超管 + IP 白名单）；明文列表/编辑，密文落库；存量迁移复用 `FieldEncryptMigrationService`（实体全名 `cn.org.autumn.modules.sys.entity.SysConfigEntity`）；非 dryRun 后 `reloadAfterFieldEncryptMigration` |
@@ -255,10 +255,21 @@ IDEA「没配 yml key 却能加解密」= Redis/env 已有历史密钥。**推�
 
 **业务仓纪律（避免 ENC$ 进业务逻辑）**
 
-1. 只通过 `SysConfigService.getValue` / `getConfigObject*` / 继承 `EncryptModuleService` 的 Service 读加密字段；禁止 `baseMapper` 直出未 `afterRead`。
-2. 启动 `@PostConstruct` / `@Bean` 若必须读 JSON SysConfig：确保节点 yml 带 key，或依赖框架早期 Redis 加载；不要假设「无 key 也能解密」。
-3. 多节点：**同一** `crypto.field.key`；先迁密文再开写开关（§1.3）。
-4. 遇到回落默认：先看 warn 表处理，再核对业务是否依赖了非默认的 `SECURITY_*` / 其它 JSON 配置。
+1. 只通过 `SysConfigService` 标准读 API / 继承 `EncryptModuleService` 的 Service 读加密字段；禁止 `baseMapper` 直出未 `afterRead`。
+2. **`sys_config` 取值强制标准 API**（字段加密自动加解密）：
+   - **推荐短名**（与长名等价，前向兼容）：`str` / `bool` / `num` / `json` / `jsonOrNull` / `has`。
+   - **长名仍可用**：`getValue` / `getBoolean` / `getInt` / `getConfigObject` / `getConfigObjectValidate` / `hasKey`；写用 `updateValueByKey` / `save` / `update`。
+   - **空配置要 null**：用 `jsonOrNull(key, Type.class)`（勿 `getValue` 后再 `getConfigObject`，避免双读与默认对象）。
+   - **禁止**以 `getByKey(...).getParamValue()`、手写 `Gson.fromJson(entity.getParamValue(), …)`、Dao/Redis 直读 `param_value` 作为业务取值（解密失败时可能残留 `ENC$`，且无 `getValue` 的 null 兜底）。
+   - `getByKey` 仅用于元数据（id / type / remark / options）；需要**值**时仍调 `str`/`getValue` / `json`/`getConfigObject*`。
+   - 运维例外：`isParamValueEncryptedAtRest` / `FieldEncryptContext.runSkip` 仅用于看库内密文，业务逻辑勿模仿。
+3. **读路径缓存语义**（热路径）：
+   - 本机 map 命中且 `paramValue` **非** `ENC$` 前缀 → **跳过** `afterRead`，直接返回明文；Redis/DB 回源仍解密后再写入 Redis/map。
+   - `getObject` / `json` 对本机按 `paramKey + Class` 缓存解析结果；`invalidateLocalCache` / `updateValueByKey` / 集群失效 / `onFiveMinute` 同步清理。
+   - **勿原地 mutate** JSON 返回对象；改配置须 `updateValueByKey`（或需新实例时自行 `getValue`+`fromJson`）。
+4. 启动 `@PostConstruct` / `@Bean` 若必须读 JSON SysConfig：确保节点 yml 带 key，或依赖框架早期 Redis 加载；不要假设「无 key 也能解密」。
+5. 多节点：**同一** `crypto.field.key`；先迁密文再开写开关（§1.3）。
+6. 遇到回落默认：先看 warn 表处理，再核对业务是否依赖了非默认的 `SECURITY_*` / 其它 JSON 配置。
 
 ---
 
@@ -288,8 +299,11 @@ IDEA「没配 yml key 却能加解密」= Redis/env 已有历史密钥。**推�
 | `POST /save` / `POST /update` | 明文入参；有密钥时**强制** ENC$ 落库（不依赖全局写开关），缓存仍为明文 |
 | `POST /migrateOne` / `restoreOne` | 单条加密/还原；`id` + 非预检须 `confirm=true`；成功后刷新配置缓存 |
 | `POST /migrate` / `restore` | 仅针对 `SysConfigEntity`；默认 `dryRun=true`；非预检须 `confirm=true` |
+| `POST /clearLocalCache` | 清本机 map/JSON 缓存并从 DB 回源 |
+| `POST /clearRedis` | 清共享 Redis 中 SysConfig 值缓存 |
+| `POST /reload` | 清 Redis + 本机回源 DB + Pub/Sub 通知集群（同迁移后刷新） |
 
-菜单：**运维监控 → 配置安全**；**参数管理**（`modules/sys/config`）工具栏「配置安全」快捷跳转；数据库管理页快捷入口一并提供。列表支持单行「加密 / 解密 / 编辑」；编辑保存后自动加密落库；配置安全页可回跳参数管理 / 字段存储加密。
+菜单：**运维监控 → 配置安全**；**参数管理**（`modules/sys/config`）工具栏「配置安全」快捷跳转；数据库管理页快捷入口一并提供。列表支持单行「加密 / 解密 / 编辑」；编辑保存后自动加密落库；配置安全页可回跳参数管理 / 字段存储加密。页面「缓存管理」可手动清理本机/Redis 或全量重载。
 
 ---
 

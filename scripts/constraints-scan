@@ -13,6 +13,7 @@
 #   docs/AI_UPGRADE.md    §3.1（grep 级规则）
 #   docs/REDIS_TTL_GUIDE.md、docs/REDIS_REDISSON_SPRING_DATA.md — Redis TTL / RedisExpireUtil（H 组）
 #   docs/REDIS_KEYS_AND_SCAN.md — 禁止 RedisTemplate.keys / KEYS（J 组）
+#   docs/AI_FIELD_ENCRYPT.md §3.2 — SysConfig 标准读 API（K 组）
 #
 # 用法:
 #   ./scripts/constraints-scan [ROOT]
@@ -440,6 +441,39 @@ scan_group_j_redis_keys() {
 }
 
 # =====================================================================
+# K SysConfig 标准读 — 禁止 getByKey+getParamValue 作为业务取值
+# =====================================================================
+scan_group_k_sysconfig_read() {
+  section "K · SysConfig 标准读路径" \
+    "docs/AI_FIELD_ENCRYPT.md §3.2 — 业务取值必须 getValue / getConfigObject*；禁止 getByKey 后取 getParamValue / 手写 Gson 解析 paramValue（字段加密解密失败时可能残留 ENC\$）。"
+
+  subsection "K1 getByKey(...) 近邻 getParamValue(" \
+    "排除 SysConfigService 自身与 *Test；命中后改用 getValue / getConfigObject。"
+  local raw filtered n
+  # 同文件内 getByKey 与 getParamValue 共现（启发式；需人工确认是否为取值）
+  if [[ ${#GEN_GLOB_ARGS[@]} -gt 0 ]]; then
+    raw="$(rg_plain "${GEN_GLOB_ARGS[@]}" --glob "${JAVA_GLOB}" -U 'getByKey\s*\([^;]{0,400}?getParamValue\s*\(' 2>/dev/null || true)"
+  else
+    raw="$(rg_plain --glob "${JAVA_GLOB}" -U 'getByKey\s*\([^;]{0,400}?getParamValue\s*\(' 2>/dev/null || true)"
+  fi
+  if [[ -z "${raw}" ]]; then
+    filtered=""
+  else
+    filtered="$(echo "${raw}" | rg -v 'SysConfigService\.java|/src/test/|Test\.java:' 2>/dev/null || true)"
+  fi
+  if [[ -z "${filtered}" ]]; then
+    echo "${C_DIM}(无命中)${C_RST}"
+    n=0
+  else
+    echo "${filtered}" | head -80
+    n="$(echo "${filtered}" | wc -l | tr -d ' ')"
+    [[ "${n}" -gt 80 ]] && echo "${C_DIM}… 其余省略，共 ${n} 行${C_RST}"
+  fi
+  print_group_summary "K1" "${n}"
+  echo "${C_DIM}标准写法: getValue(key) / getConfigObject(key, Foo.class) / updateValueByKey(key, json)${C_RST}"
+}
+
+# =====================================================================
 echo "${C_SEC}${SCRIPT_NAME}${C_RST} 根目录: ${ROOT}  |  模式: ${SCAN_MODE}"
 echo "${C_DIM}Java: ${JAVA_GLOB} | SKIP_GEN=${AUTUMN_SCAN_SKIP_GEN:-0} | SKIP_REDIS=${AUTUMN_SCAN_SKIP_REDIS:-0} | EXTRA=${AUTUMN_SCAN_EXTRA:-0}${C_RST}"
 
@@ -489,6 +523,7 @@ if [[ "${AUTUMN_SCAN_SKIP_REDIS:-}" != "1" ]]; then
   scan_group_h_redis_expire
   scan_group_j_redis_keys
 fi
+scan_group_k_sysconfig_read
 
 echo ""
 echo "${C_HDR}════════════════════════════════════════════════════════════════${C_RST}"

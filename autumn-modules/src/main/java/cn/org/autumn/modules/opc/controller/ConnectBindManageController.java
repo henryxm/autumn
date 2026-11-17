@@ -1,10 +1,12 @@
 package cn.org.autumn.modules.opc.controller;
 
 import cn.org.autumn.annotation.SkipInterceptor;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.opc.OpcConstants;
 import cn.org.autumn.modules.opc.service.ConnectBindManageService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.utils.R;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -30,6 +32,9 @@ public class ConnectBindManageController {
 
     @Autowired
     private SysUserRoleService sysUserRoleService;
+
+    @Autowired
+    private AdminAccessGuard adminAccessGuard;
 
     @GetMapping("/overview")
     public R overview(HttpServletRequest request) {
@@ -88,7 +93,14 @@ public class ConnectBindManageController {
             if (!ShiroUtils.isLogin()) {
                 return R.error(401, "请先登录");
             }
+            // 超管看全站时须管理 IP；普通用户仅本人数据不强制
+            if (sysUserRoleService.isSystemAdministrator(ShiroUtils.getUserUuid())) {
+                adminAccessGuard.requireOpsAdmin(request, getClass(), "connectbind");
+            }
             return action.get();
+        } catch (AException e) {
+            int code = e.getCode() > 0 ? e.getCode() : 403;
+            return R.error(code, e.getMessage());
         } catch (Exception e) {
             log.error("ConnectBind manage API failed: {}", e.getMessage(), e);
             return R.error(e.getMessage());

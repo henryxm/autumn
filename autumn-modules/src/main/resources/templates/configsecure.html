@@ -199,6 +199,22 @@
 
             <div class="panel">
                 <div class="panel-head">
+                    <span>缓存管理</span>
+                    <button type="button" class="btn btn-outline btn-sm" :disabled="cacheBusy" @click="loadStatus">刷新状态</button>
+                </div>
+                <div class="panel-body">
+                    <div class="toolbar">
+                        <button type="button" class="btn btn-outline btn-sm" :disabled="cacheBusy" @click="clearLocalCache">清理本机缓存并加载</button>
+                        <button type="button" class="btn btn-warning btn-sm" :disabled="cacheBusy" @click="clearRedis">清理 Redis</button>
+                        <button type="button" class="btn btn-sm" :disabled="cacheBusy" @click="reloadCaches">清理并重新加载</button>
+                    </div>
+                    <div v-if="cacheResult" class="result-box" v-text="cacheResult"></div>
+                    <p class="hint">本机缓存 = map + JSON 解析结果；Redis = 共享配置值缓存。直改库或他机写入后可用「清理并重新加载」（清 Redis + 本机回源 DB + 通知集群）。仅清 Redis 后下次读会回源；仅清本机则从 Redis/DB 回填。</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
                     <span>存量迁移（SysConfigEntity）</span>
                 </div>
                 <div class="panel-body">
@@ -367,7 +383,9 @@
             messageType: 'ok',
             busyId: null,
             saving: false,
-            editAtRestEncrypted: false
+            editAtRestEncrypted: false,
+            cacheBusy: false,
+            cacheResult: ''
         },
         mounted: function() {
             this.loadStatus();
@@ -498,6 +516,39 @@
                         v.toast((res && res.msg) || '操作失败', true);
                     }
                 }, function() { v.busyId = null; v.toast('操作失败', true); });
+            },
+            clearLocalCache: function() {
+                if (!confirm('确认清理本机配置缓存并从数据库重新加载？')) return;
+                this.runCacheAction('clearLocalCache', '本机缓存');
+            },
+            clearRedis: function() {
+                if (!confirm('确认清理 Redis 中的 SysConfig 配置缓存？下次读将回源数据库。')) return;
+                this.runCacheAction('clearRedis', 'Redis');
+            },
+            reloadCaches: function() {
+                if (!confirm('确认清理 Redis + 本机缓存，从数据库重新加载，并通知集群？')) return;
+                this.runCacheAction('reload', '全量重载');
+            },
+            runCacheAction: function(path, label) {
+                var v = this;
+                if (v.cacheBusy) return;
+                v.cacheBusy = true;
+                v.cacheResult = '';
+                postApi(api + '/' + path, {}, function(res) {
+                    v.cacheBusy = false;
+                    if (res && res.code === 0) {
+                        var msg = (res.msg || (label + '完成'))
+                            + (res.loaded != null ? (' · loaded=' + res.loaded) : '');
+                        v.cacheResult = msg;
+                        v.toast(msg);
+                        v.reload();
+                    } else {
+                        v.toast((res && res.msg) || (label + '失败'), true);
+                    }
+                }, function() {
+                    v.cacheBusy = false;
+                    v.toast(label + '失败', true);
+                });
             },
             migrate: function(dryRun) {
                 this.runMigrate('migrate', dryRun);

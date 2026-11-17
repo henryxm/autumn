@@ -229,6 +229,72 @@ public class SysConfigFieldEncryptTest {
         Assertions.assertFalse(map.containsKey("CLUSTER_NAMESPACE"));
     }
 
+    @Test
+    public void getValue_mapPlainHit_skipsDecrypt_evenWithoutEncrypt() {
+        ReflectionTestUtils.setField(service, "encrypt", null);
+        @SuppressWarnings("unchecked")
+        ConcurrentHashMap<String, SysConfigEntity> map =
+                (ConcurrentHashMap<String, SysConfigEntity>) ReflectionTestUtils.getField(service, "map");
+        map.put("PLAIN_HIT", row("PLAIN_HIT", "cached-plain"));
+        Assertions.assertEquals("cached-plain", service.getValue("PLAIN_HIT"));
+        Assertions.assertEquals("cached-plain", service.str("PLAIN_HIT"));
+    }
+
+    @Test
+    public void jsonOrNull_blankReturnsNull_valueParsesOnceCached() {
+        Assertions.assertNull(service.jsonOrNull("MISSING_JSON", cn.org.autumn.model.RobotQuotaConfig.class));
+
+        dbRow.set(row("QUOTA_JSON", "{\"maxRobotsPerUser\":7}"));
+        ReflectionTestUtils.setField(service, "map", new ConcurrentHashMap<String, SysConfigEntity>());
+
+        cn.org.autumn.model.RobotQuotaConfig first =
+                service.jsonOrNull("QUOTA_JSON", cn.org.autumn.model.RobotQuotaConfig.class);
+        Assertions.assertNotNull(first);
+        Assertions.assertEquals(7, first.getMaxRobotsPerUser());
+
+        // map 已缓存明文；改 db 不应影响已解析的 JSON 缓存引用
+        dbRow.set(row("QUOTA_JSON", "{\"maxRobotsPerUser\":99}"));
+        cn.org.autumn.model.RobotQuotaConfig cached =
+                service.json("QUOTA_JSON", cn.org.autumn.model.RobotQuotaConfig.class);
+        Assertions.assertSame(first, cached);
+        Assertions.assertEquals(7, cached.getMaxRobotsPerUser());
+    }
+
+    @Test
+    public void invalidateLocalCache_clearsJsonObjectCache() {
+        dbRow.set(row("QUOTA_INV", "{\"maxRobotsPerUser\":3}"));
+        ReflectionTestUtils.setField(service, "map", new ConcurrentHashMap<String, SysConfigEntity>());
+
+        cn.org.autumn.model.RobotQuotaConfig before =
+                service.json("QUOTA_INV", cn.org.autumn.model.RobotQuotaConfig.class);
+        Assertions.assertEquals(3, before.getMaxRobotsPerUser());
+
+        dbRow.set(row("QUOTA_INV", "{\"maxRobotsPerUser\":11}"));
+        service.invalidateLocalCache("QUOTA_INV");
+
+        cn.org.autumn.model.RobotQuotaConfig after =
+                service.json("QUOTA_INV", cn.org.autumn.model.RobotQuotaConfig.class);
+        Assertions.assertEquals(11, after.getMaxRobotsPerUser());
+        Assertions.assertNotSame(before, after);
+    }
+
+    @Test
+    public void shortAliases_strBoolNumHas() {
+        dbRow.set(row("FLAG_KEY", "true"));
+        ReflectionTestUtils.setField(service, "map", new ConcurrentHashMap<String, SysConfigEntity>());
+        Assertions.assertTrue(service.bool("FLAG_KEY"));
+        Assertions.assertTrue(service.bool("MISSING_FLAG", true));
+        Assertions.assertFalse(service.bool("MISSING_FLAG", false));
+
+        dbRow.set(row("NUM_KEY", "42"));
+        ReflectionTestUtils.setField(service, "map", new ConcurrentHashMap<String, SysConfigEntity>());
+        Assertions.assertEquals(42, service.num("NUM_KEY"));
+        Assertions.assertEquals(8, service.num("MISSING_NUM", 8));
+
+        Assertions.assertEquals("fallback", service.str("MISSING_STR", "fallback"));
+        Assertions.assertFalse(service.has("NO_SUCH_KEY_XYZ"));
+    }
+
     private static SysConfigEntity row(String key, String value) {
         SysConfigEntity e = new SysConfigEntity();
         e.setId(1L);

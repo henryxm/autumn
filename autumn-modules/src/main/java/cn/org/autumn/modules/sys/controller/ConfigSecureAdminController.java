@@ -166,6 +166,43 @@ public class ConfigSecureAdminController {
         return admin(request, "restore", () -> runMigrate(request, dryRun, batchSize, false));
     }
 
+    /**
+     * 清理本机 map / JSON 解析缓存，并从数据库重新加载。
+     */
+    @PostMapping("/clearLocalCache")
+    public R clearLocalCache(HttpServletRequest request) {
+        return admin(request, "clearLocalCache", () -> {
+            int loaded = sysConfigService.reloadLocalFromDatabase();
+            adminAccessGuard.auditWithIp(request, "config_secure_clear_local_cache", "loaded=" + loaded);
+            return R.ok().put("msg", "本机缓存已清理并从数据库重新加载").put("loaded", loaded);
+        });
+    }
+
+    /**
+     * 清理共享 Redis 中的 SysConfig 值缓存（下次读回源 DB）。
+     */
+    @PostMapping("/clearRedis")
+    public R clearRedis(HttpServletRequest request) {
+        return admin(request, "clearRedis", () -> {
+            sysConfigService.clearRedisConfigCache();
+            adminAccessGuard.auditWithIp(request, "config_secure_clear_redis", "");
+            return R.ok().put("msg", "Redis 配置缓存已清理");
+        });
+    }
+
+    /**
+     * 清 Redis + 本机从 DB 回源 + 通知集群各节点丢弃脏缓存。
+     */
+    @PostMapping("/reload")
+    public R reload(HttpServletRequest request) {
+        return admin(request, "reload", () -> {
+            sysConfigService.reloadAfterFieldEncryptMigration();
+            int loaded = sysConfigService.getLocalCacheSize();
+            adminAccessGuard.auditWithIp(request, "config_secure_reload", "loaded=" + loaded);
+            return R.ok().put("msg", "已清理 Redis 与本机缓存并从数据库重新加载，已通知集群").put("loaded", loaded);
+        });
+    }
+
     private R runMigrate(HttpServletRequest request, boolean dryRun, int batchSize, boolean encrypt) {
         int size = Math.min(Math.max(batchSize, 1), MAX_BATCH_SIZE);
         try {

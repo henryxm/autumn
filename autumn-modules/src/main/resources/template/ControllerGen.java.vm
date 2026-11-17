@@ -2,6 +2,7 @@ package ${package}.${moduleName}.controller.gen;
 
 import java.util.Arrays;
 import java.util.Map;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.validator.ValidatorUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,19 +16,26 @@ import ${mainPath}.utils.PageUtils;
 import ${mainPath}.utils.R;
 
 /**
- * 代码生成 CRUD 基类。
- * 默认：任意 {@code *.controller.gen.*} 仅系统管理员可调（防菜单用户越权读全表）；
- * 豁免：usr/safe/bot/qrc，及子项目 {@code AdminAccessModuleHandler#selfGenModules()}；
- * 豁免模块仍按 {@code @RequiresPermissions} / 业务隔离。管理页请 {@code @PageAware(admin=true)}。
+ * 代码生成 CRUD 基类（可被 ZIP 整文件替换）。
+ * <p>
+ * 每个接口入口调用 {@link AdminAccessGuard#enforceAdminIpApiIfRequired}：非自助模块强制
+ * <strong>系统管理员 + 管理 IP</strong>（{@code wall_ip_admin_white}）；自助模块
+ * （usr/safe/bot/qrc 及 {@code AdminAccessModuleHandler#selfGenModules}）自动跳过。
+ * 另有 {@code GenAdminAccessAspect} 织入作双保险；菜单权限仍用 {@code @RequiresPermissions}。
+ * 管理页请 {@code @PageAware(admin=true)}。
  */
 public class ${className}ControllerGen {
 
     @Autowired
     protected ${className}Service ${classname}Service;
 
+    @Autowired
+    protected AdminAccessGuard adminAccessGuard;
+
     @RequestMapping("/list")
     @RequiresPermissions("${moduleName}:${pathName}:list")
     public R list(@RequestParam Map<String, Object> params) {
+        adminAccessGuard.enforceAdminIpApiIfRequired(getClass(), "list", 1);
         PageUtils page = ${classname}Service.queryPage(params);
         return R.ok().put("page" , page);
     }
@@ -35,6 +43,7 @@ public class ${className}ControllerGen {
     @RequestMapping("/info/{${pk.attrname}}")
     @RequiresPermissions("${moduleName}:${pathName}:info")
     public R info(@PathVariable("${pk.attrname}") ${pk.attrType} ${pk.attrname}) {
+        adminAccessGuard.enforceAdminIpApiIfRequired(getClass(), "info", 1);
         ${className}Entity ${classname} = ${classname}Service.getById(${pk.attrname});
         return R.ok().put("${classname}" , ${classname});
     }
@@ -42,6 +51,7 @@ public class ${className}ControllerGen {
     @RequestMapping("/save")
     @RequiresPermissions("${moduleName}:${pathName}:save")
     public R save(@RequestBody ${className}Entity ${classname}) {
+        adminAccessGuard.enforceAdminIpApiIfRequired(getClass(), "save", 1);
         ${classname}Service.save(${classname});
         return R.ok();
     }
@@ -49,6 +59,7 @@ public class ${className}ControllerGen {
     @RequestMapping("/update")
     @RequiresPermissions("${moduleName}:${pathName}:update")
     public R update(@RequestBody ${className}Entity ${classname}) {
+        adminAccessGuard.enforceAdminIpApiIfRequired(getClass(), "update", 1);
         ValidatorUtils.validateEntity(${classname});
         ${classname}Service.updateById(${classname});
         return R.ok();
@@ -57,6 +68,7 @@ public class ${className}ControllerGen {
     @RequestMapping("/delete")
     @RequiresPermissions("${moduleName}:${pathName}:delete")
     public R delete(@RequestBody ${pk.attrType}[] ${pk.attrname}s) {
+        adminAccessGuard.enforceAdminIpApiIfRequired(getClass(), "delete", 1);
         ${classname}Service.removeBatchByIds(Arrays.asList(${pk.attrname}s));
         return R.ok();
     }

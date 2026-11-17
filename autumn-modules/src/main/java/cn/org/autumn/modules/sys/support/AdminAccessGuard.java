@@ -56,7 +56,7 @@ public class AdminAccessGuard {
      * gen API 侧见 {@link #shouldRequireSystemAdminForGen(Class)}：默认拦截全部 gen，仅自助模块豁免。
      */
     public static final Set<String> GEN_MODULES = Set.of(
-            "sys", "wall", "db", "job", "gen", "oss", "lan", "spm"
+            "sys", "wall", "db", "job", "gen", "oss", "lan", "spm", "node"
     );
 
     /**
@@ -213,9 +213,9 @@ public class AdminAccessGuard {
             if (!isSystemAdmin()) {
                 return denyView("ops_view", key, request, response, model);
             }
-            // 空名单引导：仅 wall 页允许超管进入以认领首条管理 IP
-            if ("wall".equals(stripModulePrefix(key)) && ipAdminWhiteService.isBootstrapPending()) {
-                return view;
+            // wall：超管可进页；IP 未加白时锁内容，仅显示临时安全密码门禁（勿直接 404）
+            if ("wall".equals(stripModulePrefix(key))) {
+                return gateWallView(key, request, response, model, view);
             }
             return enforceAdminIpView(key, "ops_ip_white", request, response, model, view);
         }
@@ -235,10 +235,10 @@ public class AdminAccessGuard {
                 if (!isSystemAdmin()) {
                     return denyView("custom_manage_lockdown", key, request, response, model);
                 }
-                return view;
+                return enforceAdminIpView(key, "custom_manage_lockdown", request, response, model, view);
             }
             if (isSystemAdmin() || hasMenuForView(key)) {
-                return view;
+                return enforceAdminIpView(key, "custom_manage", request, response, model, view);
             }
             return denyView("custom_manage_no_menu", key, request, response, model);
         }
@@ -262,6 +262,29 @@ public class AdminAccessGuard {
     public void requireGenAdmin(String target) {
         requireSystemAdmin(target);
         ipAdminWhiteService.checkAdmin(currentRequest(), getClass(), StringUtils.defaultIfBlank(target, "gen"));
+    }
+
+    /**
+     * wall.html：已登录超管始终可渲染页面；管理 IP 未加白（或引导中）时标记 {@code wallIpLocked}，
+     * 由页面仅展示临时安全密码门禁，验证通过并认领 IP 后再显示内容。
+     */
+    private String gateWallView(String key, HttpServletRequest request,
+                                HttpServletResponse response, Model model, String view) {
+        boolean bootstrapPending = ipAdminWhiteService.isBootstrapPending();
+        boolean locked = bootstrapPending;
+        if (!locked) {
+            try {
+                ipAdminWhiteService.checkAdmin(request, getClass(), key);
+            } catch (AException e) {
+                locked = true;
+                warnDenied("ops_ip_white_wall_lock", key, request, StringUtils.defaultString(e.getMessage()));
+            }
+        }
+        if (model != null) {
+            model.addAttribute("wallIpLocked", locked);
+            model.addAttribute("wallBootstrapPending", bootstrapPending);
+        }
+        return view;
     }
 
     private String enforceAdminIpView(String key, String reason, HttpServletRequest request,
@@ -318,9 +341,52 @@ public class AdminAccessGuard {
         }
     }
 
-    /** 包名中的模块段是否属于框架典型全局表模块（sys/wall/db/...）。 */
+    /** 包名中的模块段是否属于框架典型全局表模块，或 SPI {@link AdminAccessModuleHandler#managedModules()}。 */
     public boolean isGenGlobalModule(String module) {
-        return StringUtils.isNotBlank(module) && GEN_MODULES.contains(module.toLowerCase(Locale.ROOT));
+        if (StringUtils.isBlank(module)) {
+            return false;
+        }
+        String m = module.toLowerCase(Locale.ROOT);
+        if (GEN_MODULES.contains(m)) {
+            return true;
+        }
+        for (AdminAccessModuleHandler handler : adminAccessModuleHandlers) {
+            if (handler == null || handler.managedModules() == null) {
+                continue;
+            }
+            for (String extra : handler.managedModules()) {
+                if (m.equalsIgnoreCase(extra)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 供框架切面与业务仓薄切面共用：若 {@link #shouldRequireAdminIpApi} 为 true 则 {@link #requireGenAdmin}。
+     * 业务异形包标准接入见 {@code docs/AI_ADMIN_IP_BIZ.md} 模式 C。
+     */
+    public void enforceAdminIpApiIfRequired(org.aspectj.lang.JoinPoint joinPoint) {
+        if (joinPoint == null) {
+            return;
+        }
+        Object target = joinPoint.getTarget();
+        Class<?> type = target != null ? target.getClass() : joinPoint.getSignature().getDeclaringType();
+        String method = joinPoint.getSignature().getName();
+        Object[] args = joinPoint.getArgs();
+        int argCount = args == null ? 0 : args.length;
+        enforceAdminIpApiIfRequired(type, method, argCount);
+    }
+
+    /** @see #enforceAdminIpApiIfRequired(org.aspectj.lang.JoinPoint) */
+    public void enforceAdminIpApiIfRequired(Class<?> type, String methodName, int argCount) {
+        if (!shouldRequireAdminIpApi(type, methodName, argCount)) {
+            return;
+        }
+        Class<?> raw = unwrapProxyClass(type);
+        String targetKey = "api:" + (raw != null ? raw.getName() : "-") + "#" + StringUtils.defaultString(methodName);
+        requireGenAdmin(targetKey);
     }
 
     /** 是否属于 gen 自助豁免模块（含 SPI）。 */
@@ -376,15 +442,137 @@ public class AdminAccessGuard {
         if (type == null) {
             return false;
         }
-        String name = type.getName();
+        Class<?> raw = unwrapProxyClass(type);
+        String name = raw.getName();
         if (!name.contains(".controller.gen.")) {
             return false;
         }
-        String module = extractModuleName(type);
+        String module = extractModuleName(raw);
         if (isSelfGenModule(module)) {
             return false;
         }
         return true;
+    }
+
+    /**
+     * 管理 API 是否强制「系统管理员 + 管理 IP（{@link cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity}）」。
+     * 覆盖：非自助 gen、继承 *ControllerGen 的子类覆写、GEN_MODULES 手写管理 Controller、*AdminController。
+     *
+     * @param argCount 方法实参个数（用于区分 {@code SysUserController#info()} 与 {@code info(uuid)}）
+     */
+    public boolean shouldRequireAdminIpApi(Class<?> type, String methodName, int argCount) {
+        if (type == null) {
+            return false;
+        }
+        Class<?> raw = unwrapProxyClass(type);
+        String method = StringUtils.defaultString(methodName);
+        String module = extractModuleName(raw);
+        // 安装向导：仅 autumn.install.mode=true 时装载；无管理 IP 可认领前须可访问
+        if ("install".equals(module) || raw.getName().contains(".modules.install.")) {
+            return false;
+        }
+        if (isAdminIpExemptController(raw)) {
+            return false;
+        }
+        if (isAdminIpExemptMethod(raw, method, argCount)) {
+            return false;
+        }
+        if (shouldRequireSystemAdminForGen(raw) || extendsRestrictedGenController(raw)) {
+            return true;
+        }
+        if (isGenGlobalModule(module)) {
+            return true;
+        }
+        String simple = raw.getSimpleName();
+        return simple.endsWith("AdminController");
+    }
+
+    public boolean shouldRequireAdminIpApi(Class<?> type, String methodName) {
+        return shouldRequireAdminIpApi(type, methodName, -1);
+    }
+
+    /** 继承受限 gen 基类（方法声明在父包时仍强制）。 */
+    public boolean extendsRestrictedGenController(Class<?> type) {
+        for (Class<?> c = unwrapProxyClass(type); c != null && c != Object.class; c = c.getSuperclass()) {
+            if (shouldRequireSystemAdminForGen(c)) {
+                return true;
+            }
+            if (c.getSimpleName().endsWith("ControllerGen") && !isSelfGenModule(extractModuleName(c))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static Class<?> unwrapProxyClass(Class<?> type) {
+        if (type == null) {
+            return null;
+        }
+        String name = type.getName();
+        if (name.contains("$$")) {
+            Class<?> s = type.getSuperclass();
+            if (s != null && s != Object.class) {
+                return s;
+            }
+        }
+        return type;
+    }
+
+    private boolean isAdminIpExemptController(Class<?> type) {
+        String name = type.getName();
+        String simple = type.getSimpleName();
+        // 登录/页面路由/公开探测；Wall 自带 requireOps + unlock 例外
+        if ("SysLoginController".equals(simple)
+                || "SysPageController".equals(simple)
+                || "SysProxyController".equals(simple)
+                || "AuthLoginProviderController".equals(simple)
+                || "AdminBootstrapController".equals(simple)
+                || "WallController".equals(simple)
+                || "SpmController".equals(simple)) {
+            return true;
+        }
+        // oauth2 / 开放 API 等非后台壳
+        if (name.contains(".oauth.oauth2.")
+                || name.contains(".opl.oauth2.")
+                || name.contains(".bot.controller.RobotApi")
+                || name.contains(".bot.controller.RobotInbound")
+                || name.contains(".qrc.controller.QrcApi")
+                || name.contains(".opl.controller.OplApi")
+                || name.contains(".opc.controller.OpcApi")) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isAdminIpExemptMethod(Class<?> type, String method, int argCount) {
+        if (StringUtils.isBlank(method)) {
+            return false;
+        }
+        String simple = type.getSimpleName();
+        // 任意用户自助会话
+        if (method.startsWith("self")
+                || "snoozePasswordReminder".equals(method)
+                || "acknowledgePasswordReminder".equals(method)) {
+            return true;
+        }
+        // 登录用户导航 / 本人资料与改密
+        if ("SysMenuController".equals(simple) && "nav".equals(method)) {
+            return true;
+        }
+        if ("SysUserController".equals(simple)) {
+            if ("password".equals(method)) {
+                return true;
+            }
+            // 仅无业务参的 info()（本人）；info(uuid) 仍强制管理 IP
+            if ("info".equals(method) && argCount == 0) {
+                return true;
+            }
+        }
+        // 防火墙探测入口（故意公开）
+        if ("ShieldController".equals(simple) && "test".equals(method)) {
+            return true;
+        }
+        return false;
     }
 
     /** @deprecated 使用 {@link #shouldRequireSystemAdminForGen(Class)} */

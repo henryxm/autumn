@@ -471,14 +471,16 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
 
   具体属性以 `cn.org.autumn.annotation.PageAware` 为准。
 
-- **生成 CRUD（`*.controller.gen.*`）与越权（硬约束）**：  
-  - 框架切面 **`GenAdminAccessAspect`**：默认**任意包**下 gen Controller 仅 **系统管理员**可调用，防止有菜单的普通账号读/写全表。  
-  - **豁免**（不强制超管，仍受 `@RequiresPermissions` / 业务隔离）：模块 **`usr` / `safe` / `bot` / `qrc`**；子项目若确有「本人数据」gen，实现 **`cn.org.autumn.config.AdminAccessModuleHandler#selfGenModules()`** 注册模块短名。  
-  - **禁止**把匿名首页、公开 CMS 读接口、C 端列表写进 `controller.gen`；公开**读**页可用可维护 Controller + `@PageAware(login=false)`；对外/对内**写接口禁止**整段 Shiro **`anon` 裸奔**（§4）。  
-  - **禁止**为「方便运营」通过 SPI 把整站业务模块全部加入自助豁免。  
-  - 兼容与回归清单见 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**（**C-20**、§4.4 / §4.4.1）。  
-  - 门禁拒绝须打 **`SecurityAlert denied`** 告警日志（字段与 `reason` 见同文档 **§4.4.2**），便于发现提权探测；勿在业务仓另造不兼容格式。  
-  - **WebShell**（`web-shell` 模块 `/webshell`、`/shell`、`/sftp`）：**默认关闭**；禁止 Shiro `anon`；开启须 `autumn.webshell.enabled=true` 且（3.x）`SECURITY_OPS_CONFIG.webShellEnabled=true`，并配置主机白名单；运行时仍须系统管理员 + IP 白名单（**C-21**）。
+- **生成 CRUD / 管理 API 与管理 IP（硬约束）**：  
+  - 强制语义：**系统管理员 + `wall_ip_admin_white`**（`IpAdminWhiteEntity`）。  
+  - 框架切面 **`GenAdminAccessAspect`** 织入 `*..modules..controller..*` 与 `*..controller.gen..*`（**不限** `cn.org.autumn` 前缀）；判定 `shouldRequireAdminIpApi`，执行 `requireGenAdmin`。  
+  - **`ControllerGen.java.vm`**：各 CRUD 入口显式调用 **`AdminAccessGuard#enforceAdminIpApiIfRequired`**（与切面双保险；ZIP 重生后生效）。  
+  - **豁免**（不强制超管+IP，仍受权限/行级隔离）：模块 **`usr` / `safe` / `bot` / `qrc`**；SPI **`AdminAccessModuleHandler#selfGenModules()`**。  
+  - **业务仓非标准包**：优先改用标准包；手写管理模块用 SPI **`managedModules()`**；异形包薄切面委托 **`AdminAccessGuard#enforceAdminIpApiIfRequired`**。完整标准见 **`docs/AI_ADMIN_IP_BIZ.md`**（模式 A/B/C）。  
+  - **禁止**把匿名首页、公开 CMS 读接口、C 端列表写进 `controller.gen`；写接口禁止整段 Shiro **`anon`**（§4）。  
+  - **禁止**为「方便运营」把整站业务模块塞进 `selfGenModules()`。  
+  - 兼容清单 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**（**C-20**、§4.4）；拒绝日志 **`SecurityAlert denied`**（§4.4.2）。  
+  - **WebShell**：**默认关闭**；开启后仍须超管 + 管理 IP + 主机白名单（**C-21**）。
 
 - **页面文案与功能描述（新增硬约束）**：除非需求中有**特殊说明**，所有页面开发都必须以**用户与使用者视角**进行描述与设计，禁止从开发实现视角表达。具体要求：
   - **禁止**出现开发相关专业术语（如接口、数据库、缓存、线程、方法、函数、参数、对象、JSON、SQL、鉴权链路等）。

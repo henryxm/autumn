@@ -169,6 +169,8 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
 
     private CloudStorageConfig cloudStorageConfig = null;
     private Map<String, SysConfigEntity> map = new ConcurrentHashMap<>();
+    /** 本机 JSON 解析缓存：key = paramKey + '#' + className；失效与 map 同步 */
+    private final Map<String, Object> jsonObjectCache = new ConcurrentHashMap<>();
     private String lastLoggerLevel = null;
     private String namespace = null;
     private volatile boolean configCacheSubscribed = false;
@@ -678,8 +680,12 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     public void update(SysConfigEntity config) {
         this.updateById(config);
         sysConfigRedis.saveOrUpdate(config);
-        if (null != map && config != null && StringUtils.isNotBlank(config.getParamKey()))
-            map.put(config.getParamKey(), config);
+        if (config != null && StringUtils.isNotBlank(config.getParamKey())) {
+            clearJsonObjectCache(config.getParamKey());
+            if (map != null) {
+                map.put(config.getParamKey(), config);
+            }
+        }
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL);
         }
@@ -696,17 +702,36 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     }
 
     /**
-     * 仅丢弃本机 map 中的一项，不删共享 Redis/DB。
+     * 仅丢弃本机 map / JSON 解析缓存中的一项，不删共享 Redis/DB。
      * 用于集群他机写配置后本机 miss 回源前避开脏 map（{@link #getValue} 优先读 map）。
      */
     public void invalidateLocalCache(String key) {
-        if (StringUtils.isBlank(key) || map == null) {
+        if (StringUtils.isBlank(key)) {
             return;
         }
-        map.remove(key);
+        if (map != null) {
+            map.remove(key);
+        }
+        clearJsonObjectCache(key);
         if (CLOUD_STORAGE_CONFIG_KEY.equalsIgnoreCase(key)) {
             cloudStorageConfig = null;
         }
+    }
+
+    private void clearJsonObjectCache(String paramKey) {
+        if (StringUtils.isBlank(paramKey) || jsonObjectCache.isEmpty()) {
+            return;
+        }
+        String prefix = paramKey + "#";
+        jsonObjectCache.keySet().removeIf(k -> k.startsWith(prefix));
+    }
+
+    private void clearAllJsonObjectCache() {
+        jsonObjectCache.clear();
+    }
+
+    private static String jsonCacheKey(String paramKey, Class<?> clazz) {
+        return paramKey + "#" + (clazz != null ? clazz.getName() : "");
     }
 
     /**
@@ -742,17 +767,53 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         return raw != null && encrypt.needsRestore(raw.getParamValue());
     }
 
+    /** 本机 map 当前条数（运维页展示用）。 */
+    public int getLocalCacheSize() {
+        return map == null ? 0 : map.size();
+    }
+
+    /**
+     * 清空本机 map / JSON 解析缓存（不删 Redis/DB）。返回清理前 map 条数。
+     */
+    public int clearLocalCacheAll() {
+        int n = getLocalCacheSize();
+        if (map != null) {
+            map.clear();
+        }
+        clearAllJsonObjectCache();
+        cloudStorageConfig = null;
+        namespace = null;
+        return n;
+    }
+
+    /**
+     * 清空本机缓存并从数据库回源填充 map（解密后明文）。
+     */
+    public int reloadLocalFromDatabase() {
+        clearLocalCacheAll();
+        onFiveMinute();
+        return map == null ? 0 : map.size();
+    }
+
+    /**
+     * 删除共享 Redis 中的 SysConfig 值缓存（SCAN 命名空间前缀），不碰本机 map / DB。
+     */
+    public void clearRedisConfigCache() {
+        clear();
+    }
+
     /**
      * 字段加密 migrate/restore 写库后：清共享 Redis 配置缓存、本机 map 回源解密，并向集群广播各 key 失效。
-     * 保证他机 {@link #getValue} 不再命中迁移前的明文/脏缓存。
+     * 保证他机 {@link #getValue} 不再命中迁移前的明文/脏缓存。运维页「清理并重新加载」同此路径。
      */
     public void reloadAfterFieldEncryptMigration() {
         try {
-            clear();
+            clearRedisConfigCache();
         } catch (Exception e) {
             log.warn("SysConfig clear after field-encrypt migration fail msg={}", e.getMessage());
         }
         try {
+            clearLocalCacheAll();
             onFiveMinute();
         } catch (Exception e) {
             log.warn("SysConfig reload after field-encrypt migration fail msg={}", e.getMessage());
@@ -843,10 +904,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         }
         baseMapper.updateValueByKey(key, stored);
         sysConfigRedis.delete(key);
-        if (null != map)
-            map.remove(key);
-        if (CLOUD_STORAGE_CONFIG_KEY.equalsIgnoreCase(key))
-            cloudStorageConfig = null;
+        invalidateLocalCache(key);
         if (LOGGER_LEVEL.equalsIgnoreCase(key))
             sysLogService.changeLevel(value, NULL);
         if (SYSTEM_UPGRADE.equalsIgnoreCase(key) && crudGuardService != null)
@@ -864,52 +922,81 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         onFiveMinute();
     }
 
+    /**
+     * 读取配置明文。热路径：本机 map 已是明文时跳过 afterRead；Redis/DB 回源仍解密后再缓存。
+     */
     public String getValue(String key) {
+        if (StringUtils.isBlank(key)) {
+            return null;
+        }
+        // 1) 本机 map：明文直接返回；脏 ENC$ 再走解密
+        if (map != null) {
+            SysConfigEntity cached = map.get(key);
+            if (cached != null) {
+                String cachedVal = cached.getParamValue();
+                if (!isCipherPrefix(cachedVal)) {
+                    return cachedVal == null ? null : cachedVal.trim();
+                }
+                return finalizePlainValue(key, decryptEntity(cached));
+            }
+        }
+        // 2) Redis / DB 回源
+        return finalizePlainValue(key, loadAndDecrypt(key));
+    }
+
+    /** Redis → DB 回源并解密；仅明文写入 Redis。 */
+    private SysConfigEntity loadAndDecrypt(String key) {
         SysConfigEntity config = null;
-        if (null != map && map.containsKey(key)) {
-            config = map.get(key);
-        }
-        if (null == config) {
-            try {
-                config = sysConfigRedis.get(key);
-            } catch (Exception e) {
-                // getNameSpace 可能在建表前查库失败，勿当作致命错误
-                if (isMissingRelation(e)) {
-                    log.debug("SysConfig redis/namespace unavailable before schema key={} msg={}", key, e.getMessage());
-                } else {
-                    log.warn("SysConfig redis unavailable fallback DB key={} msg={}", key, e.getMessage());
-                }
+        try {
+            config = sysConfigRedis.get(key);
+        } catch (Exception e) {
+            if (isMissingRelation(e)) {
+                log.debug("SysConfig redis/namespace unavailable before schema key={} msg={}", key, e.getMessage());
+            } else {
+                log.warn("SysConfig redis unavailable fallback DB key={} msg={}", key, e.getMessage());
             }
         }
+        if (config != null) {
+            if (!isCipherPrefix(config.getParamValue())) {
+                return config;
+            }
+            return decryptEntity(config);
+        }
+        try {
+            config = baseMapper.queryByKey(key);
+            if (config != null) {
+                config = decryptEntity(config);
+                if (config != null && !isCipherPrefix(config.getParamValue())) {
+                    sysConfigRedis.saveOrUpdate(config);
+                }
+            }
+            return config;
+        } catch (Exception e) {
+            if (isMissingRelation(e)) {
+                log.debug("SysConfig table unavailable key={} msg={}", key, e.getMessage());
+            } else {
+                log.warn("SysConfig DB query fail key={} msg={}", key, e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    private SysConfigEntity decryptEntity(SysConfigEntity config) {
         if (config == null) {
-            try {
-                config = baseMapper.queryByKey(key);
-                if (config != null) {
-                    // 先解密再写 Redis，避免共享缓存被 ENC$ 污染
-                    afterRead(config);
-                    if (!isCipherPrefix(config.getParamValue())) {
-                        sysConfigRedis.saveOrUpdate(config);
-                    }
-                }
-            } catch (Exception e) {
-                // 空库/建表前：返回 null 让调用方回落默认值，避免 @PostConstruct 阻断 TableInit 全量建表
-                if (isMissingRelation(e)) {
-                    log.debug("SysConfig table unavailable key={} msg={}", key, e.getMessage());
-                } else {
-                    log.warn("SysConfig DB query fail key={} msg={}", key, e.getMessage());
-                }
-                return null;
-            }
-        } else {
-            // map/Redis 命中也须 afterRead：滚动升级无 key 节点可能把 ENC$ 写入 map
-            afterRead(config);
+            return null;
         }
-        ensurePlainParamValue(config);
+        afterRead(config);
+        return ensurePlainParamValue(config);
+    }
+
+    /**
+     * 密文不返回、不缓存；明文写入本机 map。
+     */
+    private String finalizePlainValue(String key, SysConfigEntity config) {
         String r = config == null ? null : config.getParamValue();
-        if (null != r) {
+        if (r != null) {
             r = r.trim();
         }
-        // 密钥未就绪或密钥不匹配时：不返回/不缓存密文，避免命名空间/开关被 ENC$ 污染
         if (isCipherPrefix(r)) {
             if (encrypt == null || !encrypt.isKeyConfigured()) {
                 warnCipherKeyNotReadyOnce(key);
@@ -919,9 +1006,10 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
             if (map != null) {
                 map.remove(key);
             }
+            clearJsonObjectCache(key);
             return null;
         }
-        if (null != config && null != map) {
+        if (config != null && map != null) {
             map.put(key, config);
         }
         return r;
@@ -1031,6 +1119,84 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         } catch (Exception ignored) {
         }
         return 0;
+    }
+
+    // ---------- 短名 API（委托现有实现，前向兼容） ----------
+
+    /** {@link #getValue(String)} 别名 */
+    public String str(String key) {
+        return getValue(key);
+    }
+
+    /** 空则返回 defaultValue */
+    public String str(String key, String defaultValue) {
+        String v = getValue(key);
+        return StringUtils.isBlank(v) ? defaultValue : v;
+    }
+
+    /** {@link #getBoolean(String)} 别名 */
+    public boolean bool(String key) {
+        return getBoolean(key);
+    }
+
+    public boolean bool(String key, boolean defaultValue) {
+        String v = getValue(key);
+        if (StringUtils.isBlank(v)) {
+            return defaultValue;
+        }
+        return Utils.parseBoolean(v);
+    }
+
+    /** {@link #getInt(String)} 别名 */
+    public int num(String key) {
+        return getInt(key);
+    }
+
+    public int num(String key, int defaultValue) {
+        try {
+            String s = getValue(key);
+            if (StringUtils.isNotEmpty(s)) {
+                return Integer.parseInt(s);
+            }
+        } catch (Exception ignored) {
+        }
+        return defaultValue;
+    }
+
+    /** {@link #getConfigObject(String, Class)} 别名；返回对象勿原地 mutate */
+    public <T> T json(String key, Class<T> type) {
+        return getConfigObject(key, type);
+    }
+
+    /**
+     * 配置为空返回 null（不 new 默认对象）；有值则单次 getValue + fromJson（走 JSON 缓存）。
+     * 返回对象勿原地 mutate。
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T jsonOrNull(String key, Class<T> type) {
+        if (StringUtils.isBlank(key) || type == null) {
+            return null;
+        }
+        String cacheKey = jsonCacheKey(key, type);
+        Object cached = jsonObjectCache.get(cacheKey);
+        if (cached != null && type.isInstance(cached)) {
+            return (T) cached;
+        }
+        String value = getValue(key);
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        T parsed = parseObjectFromValue(key, type, value);
+        // parseObjectFromValue 在密文/坏 JSON 时会 new 默认对象；空串已在上方返回 null
+        if (parsed != null) {
+            jsonObjectCache.put(cacheKey, parsed);
+        }
+        return parsed;
+    }
+
+    /** {@link #hasKey(String)} 别名（不解密 value） */
+    public boolean has(String key) {
+        return hasKey(key);
     }
 
     public String getDefaultDepartKey() {
@@ -1351,8 +1517,32 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         return null;
     }
 
+    /**
+     * 解析 JSON 配置为对象。结果按 key+类型本机缓存；调用方勿原地 mutate 返回对象（改配置请走 updateValueByKey）。
+     */
+    @SuppressWarnings("unchecked")
     public <T> T getObject(String key, Class<T> clazz) {
+        if (StringUtils.isBlank(key) || clazz == null) {
+            return newConfigInstance(clazz);
+        }
+        String cacheKey = jsonCacheKey(key, clazz);
+        Object cached = jsonObjectCache.get(cacheKey);
+        if (cached != null && clazz.isInstance(cached)) {
+            return (T) cached;
+        }
         String value = getValue(key);
+        // 空配置不写缓存，避免与 jsonOrNull（空→null）互相污染
+        if (StringUtils.isBlank(value)) {
+            return newConfigInstance(clazz);
+        }
+        T parsed = parseObjectFromValue(key, clazz, value);
+        if (parsed != null) {
+            jsonObjectCache.put(cacheKey, parsed);
+        }
+        return parsed;
+    }
+
+    private <T> T parseObjectFromValue(String key, Class<T> clazz, String value) {
         if (StringUtils.isNotBlank(value)) {
             String encPrefix = encrypt != null && StringUtils.isNotBlank(encrypt.getPrefix())
                     ? encrypt.getPrefix() : "ENC$v1$";
@@ -1539,6 +1729,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
                 }
             }
             map = t;
+            clearAllJsonObjectCache();
             cloudStorageConfig = null;
             updateCookieDomain();
         }

@@ -19,11 +19,55 @@ var url = function(name) {
 };
 T.p = url;
 
-//全局配置
-$.ajaxSetup({
-	dataType: "json",
-	cache: false
-});
+//全局配置 + Cookie 会话 CSRF（csrfEnforce 开启时 POST/PUT/DELETE/PATCH 须带 X-CSRF-Token）
+(function () {
+	var csrfHeader = 'X-CSRF-Token';
+	var csrfToken = '';
+	function csrfUrl() {
+		try {
+			if (typeof baseURL === 'string' && baseURL) {
+				return baseURL + 'sys/session/self/csrf';
+			}
+		} catch (e) { /* ignore */ }
+		return '/sys/session/self/csrf';
+	}
+	function ensureCsrf(done) {
+		if (csrfToken) {
+			if (typeof done === 'function') done();
+			return;
+		}
+		$.ajax({
+			url: csrfUrl(),
+			type: 'GET',
+			dataType: 'json',
+			cache: false,
+			success: function (res) {
+				if (res && res.code === 0 && res.csrfToken) {
+					csrfToken = res.csrfToken;
+					if (res.header) csrfHeader = res.header;
+				}
+				if (typeof done === 'function') done();
+			},
+			error: function () {
+				if (typeof done === 'function') done();
+			}
+		});
+	}
+	$.ajaxSetup({
+		dataType: "json",
+		cache: false,
+		beforeSend: function (xhr, settings) {
+			var m = (settings && settings.type ? String(settings.type) : 'GET').toUpperCase();
+			if (m === 'POST' || m === 'PUT' || m === 'DELETE' || m === 'PATCH') {
+				if (csrfToken) {
+					xhr.setRequestHeader(csrfHeader, csrfToken);
+				}
+			}
+		}
+	});
+	ensureCsrf();
+	window.AutumnCsrf = { ensure: ensureCsrf, header: function () { return csrfHeader; }, token: function () { return csrfToken; } };
+})();
 
 //重写alert
 window.alert = function(msg, callback){

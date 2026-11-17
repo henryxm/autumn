@@ -5,6 +5,7 @@ import cn.org.autumn.modules.spm.service.SuperPositionModelService;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
+import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.MappingFactory;
 import cn.org.autumn.site.PageFactory;
@@ -43,6 +44,9 @@ public class SpmController {
     @Autowired
     SitePortalSupport sitePortalSupport;
 
+    @Autowired
+    AdminAccessGuard adminAccessGuard;
+
     List<String> active = new ArrayList<>();
 
     public void active(HttpServletRequest request) {
@@ -77,6 +81,13 @@ public class SpmController {
             SysUserEntity sysUserEntity = ShiroUtils.getUserEntity();
             if (sysUserRoleService.isSystemAdministrator(sysUserEntity)) {
                 String resourceId = superPositionModelService.getResourceId(httpServletRequest, httpServletResponse, model, spm);
+                // 超管 + 管理 IP：与其它管理页一致（resourceId 可能为 modules/sys/... 或裸运维页）
+                String gated = adminAccessGuard.gateView(
+                        StringUtils.defaultIfBlank(resourceId, "admin"),
+                        httpServletRequest, httpServletResponse, model);
+                if (gated != null && (gated.equals("404") || gated.contains("404"))) {
+                    return gated;
+                }
                 sitePortalSupport.applyToModelForView(httpServletRequest, model, resourceId);
                 if (log.isDebugEnabled())
                     log.debug("管理资源ID:{}", resourceId);
