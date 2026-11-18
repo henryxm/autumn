@@ -16,26 +16,31 @@ import java.util.List;
 @Getter
 @Setter
 @ConfigParam(paramKey = SecurityOpsConfig.CONFIG_KEY, category = SecurityOpsConfig.config,
-        name = "运维 Token", description = "clear/reinit 头认证 Token；Bean/WebShell/管理IP校验开关；空 Token 则拒绝")
+        name = "运维令牌", description = "运维清除/重初始化令牌，以及 Bean 执行器、WebShell、管理 IP 校验开关；令牌为空时相关危险操作一律拒绝")
 public class SecurityOpsConfig implements Serializable {
     private static final long serialVersionUID = 1L;
 
     public static final String CONFIG_KEY = "SECURITY_OPS_CONFIG";
     public static final String config = "security_hardening_config";
 
-    @ConfigField(category = InputType.StringType, name = "运维 clear Token", description = "clear 接口头 x-clear-authentication；亦用于 wall 关白名单/删当前 IP/关闭管理IP校验二次确认；空则拒绝")
+    @ConfigField(category = InputType.StringType, name = "清除确认令牌",
+            description = "危险操作二次确认令牌（如关闭管理 IP 校验、删除当前访问 IP 的白名单/管理 IP）；空则拒绝")
     private String clearToken = "";
 
-    @ConfigField(category = InputType.StringType, name = "运维 reinit Token", description = "reinit 接口头 x-reinit-authentication；空则拒绝")
+    @ConfigField(category = InputType.StringType, name = "重初始化令牌",
+            description = "运维重初始化接口认证令牌；空则拒绝")
     private String reinitToken = "";
 
-    @ConfigField(category = InputType.BooleanType, name = "启用 Bean 执行器", description = "关闭（默认）：/sys/exec/bean/execute 拒绝反射调用；开启后仍须系统管理员 + IP 白名单，并记审计日志")
+    @ConfigField(category = InputType.BooleanType, name = "启用 Bean 执行器",
+            description = "默认关闭：拒绝反射调用 Bean；开启后仍须系统管理员，并在开启管理 IP 校验时校验管理 IP，且记审计日志")
     private boolean beanExecuteEnabled = false;
 
-    @ConfigField(category = InputType.BooleanType, name = "启用 WebShell", description = "关闭（默认）：/webshell、/shell、/sftp 全部拒绝；开启后仍须系统管理员 + IP 白名单，并受主机白名单约束")
+    @ConfigField(category = InputType.BooleanType, name = "启用 WebShell",
+            description = "默认关闭：拒绝 WebShell/Shell/SFTP；开启后仍须系统管理员与主机白名单，并在开启管理 IP 校验时校验管理 IP")
     private boolean webShellEnabled = false;
 
-    @ConfigField(category = InputType.BooleanType, name = "启用管理IP校验", description = "关闭（默认）：管理/gen/运维接口仅校验系统管理员；开启后另须客户端 IP ∈ wall_ip_admin_white；遇账号泄露或攻击时开启")
+    @ConfigField(category = InputType.BooleanType, name = "启用管理IP校验",
+            description = "默认关闭：后台管理仅校验系统管理员；开启后客户端 IP 还必须在「管理级 IP 白名单」中；账号泄露或遇攻击时建议开启")
     private boolean adminIpEnable = false;
 
     public List<String> validateAndFix() {

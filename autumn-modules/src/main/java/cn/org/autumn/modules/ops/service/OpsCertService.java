@@ -3,6 +3,7 @@ package cn.org.autumn.modules.ops.service;
 import cn.org.autumn.config.GsonConfig;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.OpsClientCertEntry;
+import cn.org.autumn.model.OpsPendingClaimEntry;
 import cn.org.autumn.model.RsaKey;
 import cn.org.autumn.model.SecurityOpsCertConfig;
 import cn.org.autumn.modules.sys.service.SysConfigService;
@@ -18,7 +19,10 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -32,6 +36,9 @@ import java.util.UUID;
 public class OpsCertService implements InitFactory.Init {
 
     public static final String ENROLL_LOG_PREFIX = "OpsEnroll secret=";
+
+    /** 认领码有效期（毫秒）。 */
+    public static final long CLAIM_TTL_MS = 30L * 60L * 1000L;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -228,19 +235,156 @@ public class OpsCertService implements InitFactory.Init {
         }
     }
 
-    public synchronized boolean revoke(String certId) {
+    /**
+     * @return map: success, lastCert（吊销后是否已无未吊销客户端）
+     */
+    public synchronized Map<String, Object> revoke(String certId) {
+        Map<String, Object> out = new HashMap<>();
+        out.put("success", false);
+        out.put("lastCert", false);
         SecurityOpsCertConfig cfg = copy(getConfig());
         if (cfg.getClients() == null) {
-            return false;
+            return out;
         }
+        boolean found = false;
         for (OpsClientCertEntry c : cfg.getClients()) {
             if (c != null && certId.equals(c.getCertId())) {
                 c.setRevoked(true);
-                sysConfigService.saveSecurityOpsCertConfig(cfg);
-                return true;
+                found = true;
+                break;
             }
         }
-        return false;
+        if (!found) {
+            return out;
+        }
+        sysConfigService.saveSecurityOpsCertConfig(cfg);
+        boolean last = !hasActiveClient();
+        out.put("success", true);
+        out.put("lastCert", last);
+        if (last) {
+            log.warn("SecurityAlert ops_cert_last_revoked certId={} no active clients remain", certId);
+        }
+        return out;
+    }
+
+    public int countActiveClients() {
+        SecurityOpsCertConfig cfg = getConfig();
+        if (cfg.getClients() == null) {
+            return 0;
+        }
+        int n = 0;
+        for (OpsClientCertEntry c : cfg.getClients()) {
+            if (c != null && !c.isRevoked() && StringUtils.isNotBlank(c.getClientPublicKey())) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /**
+     * 已登录设备签发一次性认领码；明文 secret 仅返回一次。
+     *
+     * @return claimId, claimSecret, expiresAt, siteId, serverFingerprint, label
+     */
+    public synchronized Map<String, Object> issueClaim(String issuedByCertId, String label) {
+        if (!hasActiveClient() || !getConfig().hasServerKeyPair()) {
+            throw new AException("站点尚未完成运维证书入驻", 403);
+        }
+        if (StringUtils.isBlank(issuedByCertId) || findActive(issuedByCertId) == null) {
+            throw new AException("签发方证书无效", 403);
+        }
+        purgeExpiredClaims();
+        byte[] salt = new byte[16];
+        secureRandom.nextBytes(salt);
+        byte[] plain = new byte[24];
+        secureRandom.nextBytes(plain);
+        String secret = Base64.getUrlEncoder().withoutPadding().encodeToString(plain);
+        String claimId = "claim-" + UUID.randomUUID().toString().replace("-", "");
+        long expiresAt = System.currentTimeMillis() + CLAIM_TTL_MS;
+        OpsPendingClaimEntry claim = new OpsPendingClaimEntry();
+        claim.setClaimId(claimId);
+        claim.setSaltB64(Base64.getEncoder().encodeToString(salt));
+        claim.setSecretHashB64(Base64.getEncoder().encodeToString(sha256(salt, secret)));
+        claim.setLabel(StringUtils.defaultIfBlank(label, "ops-device"));
+        claim.setIssuedByCertId(issuedByCertId);
+        claim.setExpiresAt(expiresAt);
+        claim.setConsumed(false);
+        SecurityOpsCertConfig cfg = copy(getConfig());
+        if (cfg.getPendingClaims() == null) {
+            cfg.setPendingClaims(new ArrayList<>());
+        }
+        cfg.getPendingClaims().add(claim);
+        sysConfigService.saveSecurityOpsCertConfig(cfg);
+        log.info("OpsCert claim issued claimId={} by={} expiresAt={}", claimId, issuedByCertId, expiresAt);
+        Map<String, Object> data = new HashMap<>();
+        data.put("claimId", claimId);
+        data.put("claimSecret", secret);
+        data.put("expiresAt", expiresAt);
+        data.put("siteId", cfg.getSiteId());
+        data.put("serverFingerprint", cfg.getFingerprint());
+        data.put("label", claim.getLabel());
+        return data;
+    }
+
+    /**
+     * 新设备用认领码提交公钥，登记独立 certId（私钥仅新设备本地）。
+     */
+    public synchronized OpsClientCertEntry claim(String claimSecret, String clientPublicKey, String label) {
+        if (StringUtils.isBlank(clientPublicKey)) {
+            throw new AException("客户端公钥不能为空", 400);
+        }
+        if (StringUtils.isBlank(claimSecret)) {
+            throw new AException("认领码无效", 403);
+        }
+        if (!getConfig().hasServerKeyPair()) {
+            throw new AException("站点尚未完成运维证书入驻", 403);
+        }
+        purgeExpiredClaims();
+        SecurityOpsCertConfig cfg = copy(getConfig());
+        if (cfg.getPendingClaims() == null || cfg.getPendingClaims().isEmpty()) {
+            throw new AException("认领码无效或已过期", 403);
+        }
+        String secret = claimSecret.trim();
+        OpsPendingClaimEntry matched = null;
+        for (OpsPendingClaimEntry p : cfg.getPendingClaims()) {
+            if (p == null || p.isConsumed() || p.getExpiresAt() < System.currentTimeMillis()) {
+                continue;
+            }
+            byte[] salt;
+            byte[] expect;
+            try {
+                salt = Base64.getDecoder().decode(p.getSaltB64());
+                expect = Base64.getDecoder().decode(p.getSecretHashB64());
+            } catch (Exception e) {
+                continue;
+            }
+            if (MessageDigest.isEqual(sha256(salt, secret), expect)) {
+                matched = p;
+                break;
+            }
+        }
+        if (matched == null) {
+            log.warn("SecurityAlert denied reason=ops_claim detail=invalid_or_expired_claim");
+            throw new AException("认领码无效或已过期", 403);
+        }
+        matched.setConsumed(true);
+        OpsClientCertEntry entry = new OpsClientCertEntry();
+        entry.setCertId("ops-" + UUID.randomUUID().toString().replace("-", ""));
+        entry.setClientPublicKey(normalizeKey(clientPublicKey));
+        String resolvedLabel = StringUtils.isNotBlank(label) ? label.trim()
+                : StringUtils.defaultIfBlank(matched.getLabel(), "ops-device");
+        entry.setLabel(resolvedLabel);
+        entry.setCreatedAt(System.currentTimeMillis());
+        entry.setLastUsedAt(entry.getCreatedAt());
+        entry.setRevoked(false);
+        if (cfg.getClients() == null) {
+            cfg.setClients(new ArrayList<>());
+        }
+        cfg.getClients().add(entry);
+        sysConfigService.saveSecurityOpsCertConfig(cfg);
+        log.info("OpsCert client claimed certId={} label={} claimId={}",
+                entry.getCertId(), entry.getLabel(), matched.getClaimId());
+        return entry;
     }
 
     public List<OpsClientCertEntry> listClients() {
@@ -258,10 +402,31 @@ public class OpsCertService implements InitFactory.Init {
         cfg.setEnrollHashB64("");
         cfg.setResetAt(System.currentTimeMillis());
         cfg.setClients(new ArrayList<>());
+        cfg.setPendingClaims(new ArrayList<>());
         sysConfigService.saveSecurityOpsCertConfig(cfg);
         ensureEnrollSecretIfNeeded();
         log.warn("OpsCert reset completed; OpsEnroll reissued (server RSA deferred until enroll)");
         return getConfig();
+    }
+
+    private synchronized void purgeExpiredClaims() {
+        SecurityOpsCertConfig cfg = copy(getConfig());
+        if (cfg.getPendingClaims() == null || cfg.getPendingClaims().isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        boolean changed = false;
+        Iterator<OpsPendingClaimEntry> it = cfg.getPendingClaims().iterator();
+        while (it.hasNext()) {
+            OpsPendingClaimEntry p = it.next();
+            if (p == null || p.isConsumed() || p.getExpiresAt() < now) {
+                it.remove();
+                changed = true;
+            }
+        }
+        if (changed) {
+            sysConfigService.saveSecurityOpsCertConfig(cfg);
+        }
     }
 
     public boolean hasEnrollHash() {

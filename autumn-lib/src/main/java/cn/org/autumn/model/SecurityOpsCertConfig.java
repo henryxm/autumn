@@ -19,38 +19,43 @@ import java.util.List;
 @Getter
 @Setter
 @ConfigParam(paramKey = SecurityOpsCertConfig.CONFIG_KEY, category = SecurityOpsCertConfig.config,
-        name = "运维证书", description = "运维通道服务端密钥对与已入驻客户端公钥；私钥仅服务端，勿下发")
+        name = "运维证书", description = "运维通道的服务端密钥对与已入驻设备公钥；私钥仅存服务端，禁止下发到客户端")
 public class SecurityOpsCertConfig implements Serializable {
     private static final long serialVersionUID = 1L;
 
     public static final String CONFIG_KEY = "SECURITY_OPS_CERT_CONFIG";
     public static final String config = "security_hardening_config";
 
-    @ConfigField(category = InputType.StringType, name = "站点标识", description = "入驻返回的 siteId")
+    @ConfigField(category = InputType.StringType, name = "站点标识", description = "站点唯一标识，入驻成功后返回给运维 App")
     private String siteId = "";
 
-    @ConfigField(category = InputType.StringType, name = "服务端公钥", description = "Base64 X509 公钥")
+    @ConfigField(category = InputType.StringType, name = "服务端公钥", description = "服务端 RSA 公钥（Base64，X.509 编码）")
     private String serverPublicKey = "";
 
-    @ConfigField(category = InputType.StringType, name = "服务端私钥", description = "Base64 PKCS8 私钥（仅服务端）")
+    @ConfigField(category = InputType.StringType, name = "服务端私钥", description = "服务端 RSA 私钥（Base64，PKCS8；仅服务端持有）")
     private String serverPrivateKey = "";
 
-    @ConfigField(category = InputType.StringType, name = "公钥指纹", description = "SHA-256 指纹（短展示）")
+    @ConfigField(category = InputType.StringType, name = "公钥指纹", description = "服务端公钥 SHA-256 指纹，用于 App 核对站点")
     private String fingerprint = "";
 
-    @ConfigField(category = InputType.BooleanType, name = "入驻密钥已消费", description = "一次性 OpsEnroll 是否已用尽（仍可多设备用 reset 后重新入驻）")
+    @ConfigField(category = InputType.BooleanType, name = "入驻密钥已消费",
+            description = "一次性入驻口令是否已用尽；用尽后需通过 wall/数据库重置才能重新入驻，多设备请用已登录设备签发认领码")
     private boolean enrollSecretConsumed = false;
 
-    @ConfigField(category = InputType.StringType, name = "入驻盐", description = "OpsEnroll salt Base64（无明文）")
+    @ConfigField(category = InputType.StringType, name = "入驻盐值", description = "入驻口令盐值（Base64，库中不存明文口令）")
     private String enrollSaltB64 = "";
 
-    @ConfigField(category = InputType.StringType, name = "入驻哈希", description = "OpsEnroll SHA-256(salt+secret) Base64（无明文）")
+    @ConfigField(category = InputType.StringType, name = "入驻哈希",
+            description = "入驻口令哈希 SHA-256(盐值+口令) 的 Base64；核对后不回显明文")
     private String enrollHashB64 = "";
 
-    @ConfigField(category = InputType.NumberType, name = "重置时间", description = "最近一次 reset 的 epoch ms")
+    @ConfigField(category = InputType.NumberType, name = "最近重置时间", description = "最近一次运维证书重置的时间戳（毫秒）")
     private long resetAt = 0L;
 
     private List<OpsClientCertEntry> clients = new ArrayList<>();
+
+    /** 已登录设备签发的待认领码（明文不落库）。 */
+    private List<OpsPendingClaimEntry> pendingClaims = new ArrayList<>();
 
     public List<String> validateAndFix() {
         List<String> fixes = new ArrayList<>();
@@ -74,6 +79,9 @@ public class SecurityOpsCertConfig implements Serializable {
         }
         if (clients == null) {
             clients = new ArrayList<>();
+        }
+        if (pendingClaims == null) {
+            pendingClaims = new ArrayList<>();
         }
         return fixes;
     }

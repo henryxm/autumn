@@ -80,12 +80,15 @@ public class OpsApiController {
         String clientPublicKey = str(body, "clientPublicKey");
         String label = str(body, "label");
         OpsClientCertEntry entry = opsCertService.enroll(secret, clientPublicKey, label);
+        // App 首次入驻成功：自动开启管理 IP 校验并认领当前访问 IP
+        enableAdminIpGateAfterOpsCertBind(request, entry.getCertId(), "ops-enroll");
         SecurityOpsCertConfig cfg = opsCertService.getConfig();
         Map<String, Object> data = new HashMap<>();
         data.put("certId", entry.getCertId());
         data.put("siteId", cfg.getSiteId());
         data.put("serverPublicKey", cfg.getServerPublicKey());
         data.put("serverFingerprint", cfg.getFingerprint());
+        data.put("adminIpEnable", sysConfigService.isAdminIpEnable());
         // 私钥永不下发
         return Response.ok(data);
     }
@@ -119,7 +122,7 @@ public class OpsApiController {
     public Response<Map<String, Object>> adminIpList(@RequestBody(required = false) Map<String, Object> body,
                                                      HttpServletRequest request) {
         requireOpsSession(request);
-        Map<String, Object> params = body != null ? body : Map.of();
+        Map<String, Object> params = pageParams(body);
         PageUtils page = ipAdminWhiteService.queryPage(params);
         List<Map<String, Object>> rows = page.getList().stream().map(o -> {
             IpAdminWhiteEntity e = (IpAdminWhiteEntity) o;
@@ -127,13 +130,11 @@ public class OpsApiController {
             m.put("ip", e.getIp());
             m.put("tag", e.getTag());
             m.put("description", e.getDescription());
-            m.put("forbidden", e.getForbidden());
+            m.put("forbidden", e.getForbidden() == null ? 0 : e.getForbidden());
+            m.put("createTime", e.getCreateTime() == null ? null : e.getCreateTime().getTime());
             return m;
         }).collect(Collectors.toList());
-        Map<String, Object> data = new HashMap<>();
-        data.put("count", page.getTotalCount());
-        data.put("list", rows);
-        return Response.ok(data);
+        return Response.ok(pageData(page, rows));
     }
 
     @PostMapping("/adminip/add")
@@ -166,6 +167,28 @@ public class OpsApiController {
         return Response.ok(Map.of("success", true));
     }
 
+    /** 禁用/启用管理 IP：{@code forbidden=1} 禁用，{@code 0} 启用。 */
+    @PostMapping("/adminip/setForbidden")
+    public Response<Map<String, Object>> adminIpSetForbidden(@RequestBody Map<String, Object> body,
+                                                             HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        String ip = str(body, "ip");
+        int forbidden = require01(body, "forbidden");
+        if (StringUtils.isBlank(ip)) {
+            throw new AException("ip 不能为空", 400);
+        }
+        IpAdminWhiteEntity entity = ipAdminWhiteService.getByIp(ip);
+        if (entity == null) {
+            throw new AException("管理IP不存在", 404);
+        }
+        entity.setForbidden(forbidden);
+        entity.setUpdateTime(new java.util.Date());
+        ipAdminWhiteService.updateById(entity);
+        adminAccessGuard.auditWithIp(request, "ops.adminip.setForbidden",
+                "ip=" + ip + " forbidden=" + forbidden + " certId=" + session.getCertId());
+        return Response.ok(Map.of("ip", ip, "forbidden", forbidden, "success", true));
+    }
+
     @PostMapping("/currentIp")
     public Response<Map<String, Object>> currentIp(HttpServletRequest request) {
         requireOpsSession(request);
@@ -176,7 +199,7 @@ public class OpsApiController {
     public Response<Map<String, Object>> ipWhiteList(@RequestBody(required = false) Map<String, Object> body,
                                                      HttpServletRequest request) {
         requireOpsSession(request);
-        Map<String, Object> params = body != null ? body : Map.of();
+        Map<String, Object> params = pageParams(body);
         PageUtils page = ipWhiteService.queryPage(params);
         List<Map<String, Object>> rows = page.getList().stream().map(o -> {
             IpWhiteEntity e = (IpWhiteEntity) o;
@@ -184,10 +207,11 @@ public class OpsApiController {
             m.put("ip", e.getIp());
             m.put("tag", e.getTag());
             m.put("description", e.getDescription());
-            m.put("forbidden", e.getForbidden());
+            m.put("forbidden", e.getForbidden() == null ? 0 : e.getForbidden());
+            m.put("createTime", e.getCreateTime() == null ? null : e.getCreateTime().getTime());
             return m;
         }).collect(Collectors.toList());
-        return Response.ok(Map.of("count", page.getTotalCount(), "list", rows));
+        return Response.ok(pageData(page, rows));
     }
 
     @PostMapping("/ipwhite/add")
@@ -220,11 +244,33 @@ public class OpsApiController {
         return Response.ok(Map.of("success", true));
     }
 
+    /** 禁用/启用用户白名单：{@code forbidden=1} 禁用，{@code 0} 启用。 */
+    @PostMapping("/ipwhite/setForbidden")
+    public Response<Map<String, Object>> ipWhiteSetForbidden(@RequestBody Map<String, Object> body,
+                                                             HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        String ip = str(body, "ip");
+        int forbidden = require01(body, "forbidden");
+        if (StringUtils.isBlank(ip)) {
+            throw new AException("ip 不能为空", 400);
+        }
+        IpWhiteEntity entity = ipWhiteService.getByIp(ip);
+        if (entity == null) {
+            throw new AException("白名单IP不存在", 404);
+        }
+        entity.setForbidden(forbidden);
+        entity.setUpdateTime(new java.util.Date());
+        ipWhiteService.updateById(entity);
+        adminAccessGuard.auditWithIp(request, "ops.ipwhite.setForbidden",
+                "ip=" + ip + " forbidden=" + forbidden + " certId=" + session.getCertId());
+        return Response.ok(Map.of("ip", ip, "forbidden", forbidden, "success", true));
+    }
+
     @PostMapping("/ipblack/list")
     public Response<Map<String, Object>> ipBlackList(@RequestBody(required = false) Map<String, Object> body,
                                                      HttpServletRequest request) {
         requireOpsSession(request);
-        Map<String, Object> params = body != null ? body : Map.of();
+        Map<String, Object> params = pageParams(body);
         PageUtils page = ipBlackService.queryPage(params);
         List<Map<String, Object>> rows = page.getList().stream().map(o -> {
             IpBlackEntity e = (IpBlackEntity) o;
@@ -232,10 +278,11 @@ public class OpsApiController {
             m.put("ip", e.getIp());
             m.put("tag", e.getTag());
             m.put("description", e.getDescription());
-            m.put("available", e.getAvailable());
+            m.put("available", e.getAvailable() == null ? 0 : e.getAvailable());
+            m.put("createTime", e.getCreateTime() == null ? null : e.getCreateTime().getTime());
             return m;
         }).collect(Collectors.toList());
-        return Response.ok(Map.of("count", page.getTotalCount(), "list", rows));
+        return Response.ok(pageData(page, rows));
     }
 
     @PostMapping("/ipblack/add")
@@ -267,12 +314,98 @@ public class OpsApiController {
         return Response.ok(Map.of("success", true));
     }
 
+    /** 生效/停用黑名单：{@code available=1} 生效拦截，{@code 0} 停用（保留记录）。 */
+    @PostMapping("/ipblack/setAvailable")
+    public Response<Map<String, Object>> ipBlackSetAvailable(@RequestBody Map<String, Object> body,
+                                                             HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        String ip = str(body, "ip");
+        int available = require01(body, "available");
+        if (StringUtils.isBlank(ip)) {
+            throw new AException("ip 不能为空", 400);
+        }
+        IpBlackEntity entity = ipBlackService.getByIp(ip);
+        if (entity == null) {
+            throw new AException("黑名单IP不存在", 404);
+        }
+        entity.setAvailable(available);
+        entity.setUpdateTime(new java.util.Date());
+        ipBlackService.updateById(entity);
+        adminAccessGuard.auditWithIp(request, "ops.ipblack.setAvailable",
+                "ip=" + ip + " available=" + available + " certId=" + session.getCertId());
+        return Response.ok(Map.of("ip", ip, "available", available, "success", true));
+    }
+
     @PostMapping("/gate/get")
     public Response<Map<String, Object>> gateGet(HttpServletRequest request) {
         requireOpsSession(request);
+        SecurityOpsConfig ops = sysConfigService.getSecurityOpsConfig();
+        boolean clearTokenConfigured = ops != null && StringUtils.isNotBlank(ops.getClearToken());
         Map<String, Object> data = new HashMap<>();
         data.put("adminIpEnable", sysConfigService.isAdminIpEnable());
+        // 仅暴露是否已配置，不下发令牌明文
+        data.put("clearTokenConfigured", clearTokenConfigured);
         return Response.ok(data);
+    }
+
+    /** 校验清除确认令牌是否正确（无副作用，供运维 App 保存前核对）。 */
+    @PostMapping("/gate/verifyClearToken")
+    public Response<Map<String, Object>> gateVerifyClearToken(@RequestBody Map<String, Object> body,
+                                                             HttpServletRequest request) {
+        requireOpsSession(request);
+        assertClearToken(body);
+        return Response.ok(Map.of("valid", true));
+    }
+
+    /**
+     * 运维 App 配置/修改清除确认令牌（不下发明文）。
+     * <ul>
+     *   <li>服务端尚未配置：已认证运维会话可直接设置 {@code clearToken}</li>
+     *   <li>已配置：须提供正确 {@code oldClearToken}，再写入新 {@code clearToken}</li>
+     * </ul>
+     */
+    @PostMapping("/gate/setClearToken")
+    public Response<Map<String, Object>> gateSetClearToken(@RequestBody Map<String, Object> body,
+                                                          HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        String next = str(body, "clearToken");
+        if (StringUtils.isBlank(next)) {
+            throw new AException("请填写清除确认令牌", 400);
+        }
+        if (next.length() < 4 || next.length() > 256) {
+            throw new AException("清除确认令牌长度须为 4～256", 400);
+        }
+        if (next.chars().anyMatch(Character::isWhitespace)) {
+            throw new AException("清除确认令牌不能包含空白字符", 400);
+        }
+        SecurityOpsConfig current = sysConfigService.getSecurityOpsConfig();
+        if (current == null) {
+            current = new SecurityOpsConfig();
+        }
+        String configured = current.getClearToken();
+        boolean firstTime = StringUtils.isBlank(configured);
+        if (!firstTime) {
+            String old = str(body, "oldClearToken");
+            if (StringUtils.isBlank(old)) {
+                old = str(body, "clearTokenOld");
+            }
+            if (StringUtils.isBlank(old) || !configured.equals(old)) {
+                throw new AException("原清除确认令牌不正确", 403);
+            }
+            if (configured.equals(next)) {
+                return Response.ok(Map.of("clearTokenConfigured", true, "changed", false));
+            }
+        }
+        SecurityOpsConfig toSave = new SecurityOpsConfig();
+        toSave.setClearToken(next);
+        toSave.setReinitToken(current.getReinitToken());
+        toSave.setBeanExecuteEnabled(current.isBeanExecuteEnabled());
+        toSave.setWebShellEnabled(current.isWebShellEnabled());
+        toSave.setAdminIpEnable(current.isAdminIpEnable());
+        sysConfigService.saveSecurityOpsConfig(toSave);
+        adminAccessGuard.auditWithIp(request, "ops.gate.setClearToken",
+                "firstTime=" + firstTime + " certId=" + session.getCertId());
+        return Response.ok(Map.of("clearTokenConfigured", true, "changed", true));
     }
 
     @PostMapping("/gate/setAdminIpEnable")
@@ -283,20 +416,9 @@ public class OpsApiController {
                 || "true".equalsIgnoreCase(str(body, "enable"));
         if (!enable) {
             assertClearToken(body);
-        }
-        SecurityOpsConfig current = sysConfigService.getSecurityOpsConfig();
-        SecurityOpsConfig toSave = new SecurityOpsConfig();
-        toSave.setClearToken(current.getClearToken());
-        toSave.setReinitToken(current.getReinitToken());
-        toSave.setBeanExecuteEnabled(current.isBeanExecuteEnabled());
-        toSave.setWebShellEnabled(current.isWebShellEnabled());
-        toSave.setAdminIpEnable(enable);
-        sysConfigService.saveSecurityOpsConfig(toSave);
-        if (enable) {
-            String ip = IPUtils.getIp(request);
-            if (StringUtils.isNotBlank(ip) && !ipAdminWhiteService.isAdminWhite(ip)) {
-                ipAdminWhiteService.create(ip, "ops-enable", "运维证书开启管理IP时认领");
-            }
+            persistAdminIpEnable(false);
+        } else {
+            enableAdminIpGateAfterOpsCertBind(request, session.getCertId(), "ops-enable");
         }
         adminAccessGuard.auditWithIp(request, "ops.gate.adminIpEnable",
                 "enable=" + enable + " certId=" + session.getCertId());
@@ -305,7 +427,7 @@ public class OpsApiController {
 
     @PostMapping("/cert/list")
     public Response<Map<String, Object>> certList(HttpServletRequest request) {
-        requireOpsSession(request);
+        OpsSessionService.OpsSession session = requireOpsSession(request);
         List<Map<String, Object>> list = opsCertService.listClients().stream().map(c -> {
             Map<String, Object> m = new HashMap<>();
             m.put("certId", c.getCertId());
@@ -313,9 +435,52 @@ public class OpsApiController {
             m.put("revoked", c.isRevoked());
             m.put("createdAt", c.getCreatedAt());
             m.put("lastUsedAt", c.getLastUsedAt());
+            m.put("self", session.getCertId() != null && session.getCertId().equals(c.getCertId()));
             return m;
         }).collect(Collectors.toList());
-        return Response.ok(Map.of("list", list));
+        Map<String, Object> data = new HashMap<>();
+        data.put("list", list);
+        data.put("activeCount", opsCertService.countActiveClients());
+        return Response.ok(data);
+    }
+
+    /**
+     * 已登录设备签发一次性认领码，供新设备 {@code /cert/claim} 入驻（私钥仅新设备本地生成）。
+     */
+    @PostMapping("/cert/issue")
+    public Response<Map<String, Object>> certIssue(@RequestBody(required = false) Map<String, Object> body,
+                                                   HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        String label = body == null ? "" : str(body, "label");
+        Map<String, Object> data = opsCertService.issueClaim(session.getCertId(), label);
+        adminAccessGuard.auditWithIp(request, "ops.cert.issue",
+                "claimId=" + data.get("claimId") + " by=" + session.getCertId());
+        return Response.ok(data);
+    }
+
+    /**
+     * 新设备凭认领码提交公钥；响应与 enroll 同形（不下发私钥）。
+     * 成功后同样自动开启管理 IP 校验并认领当前访问 IP（幂等）。
+     */
+    @PostMapping("/cert/claim")
+    public Response<Map<String, Object>> certClaim(@RequestBody Map<String, Object> body,
+                                                   HttpServletRequest request) {
+        String claimSecret = str(body, "claimSecret");
+        if (StringUtils.isBlank(claimSecret)) {
+            claimSecret = str(body, "secret");
+        }
+        String clientPublicKey = str(body, "clientPublicKey");
+        String label = str(body, "label");
+        OpsClientCertEntry entry = opsCertService.claim(claimSecret, clientPublicKey, label);
+        enableAdminIpGateAfterOpsCertBind(request, entry.getCertId(), "ops-claim");
+        SecurityOpsCertConfig cfg = opsCertService.getConfig();
+        Map<String, Object> data = new HashMap<>();
+        data.put("certId", entry.getCertId());
+        data.put("siteId", cfg.getSiteId());
+        data.put("serverPublicKey", cfg.getServerPublicKey());
+        data.put("serverFingerprint", cfg.getFingerprint());
+        data.put("adminIpEnable", sysConfigService.isAdminIpEnable());
+        return Response.ok(data);
     }
 
     @PostMapping("/cert/revoke")
@@ -323,10 +488,11 @@ public class OpsApiController {
                                                     HttpServletRequest request) {
         OpsSessionService.OpsSession session = requireOpsSession(request);
         String certId = str(body, "certId");
-        boolean ok = opsCertService.revoke(certId);
+        Map<String, Object> result = opsCertService.revoke(certId);
         adminAccessGuard.auditWithIp(request, "ops.cert.revoke",
-                "target=" + certId + " by=" + session.getCertId());
-        return Response.ok(Map.of("success", ok));
+                "target=" + certId + " by=" + session.getCertId()
+                        + " lastCert=" + result.get("lastCert"));
+        return Response.ok(result);
     }
 
     @PostMapping("/reset")
@@ -341,7 +507,7 @@ public class OpsApiController {
         data.put("siteId", cfg.getSiteId());
         data.put("serverFingerprint", cfg.getFingerprint());
         data.put("enrollAvailable", true);
-        data.put("hint", "Check server log for OpsEnroll secret=");
+        data.put("hint", "请查看服务器日志中的入驻口令：OpsEnroll secret=");
         return Response.ok(data);
     }
 
@@ -361,9 +527,45 @@ public class OpsApiController {
         String clearToken = str(body, "clearToken");
         SecurityOpsConfig ops = sysConfigService.getSecurityOpsConfig();
         String configured = ops != null ? ops.getClearToken() : null;
-        if (StringUtils.isBlank(configured) || !configured.equals(clearToken)) {
-            throw new AException("须提供正确 clearToken", 403);
+        // 空配置 = 拒绝一切依赖 clearToken 的危险操作（与 SECURITY_OPS_CONFIG 语义一致）
+        if (StringUtils.isBlank(configured)) {
+            throw new AException("服务端尚未配置清除确认令牌", 403);
         }
+        if (StringUtils.isBlank(clearToken)) {
+            throw new AException("请填写清除确认令牌", 400);
+        }
+        if (!configured.equals(clearToken)) {
+            throw new AException("清除确认令牌不正确", 403);
+        }
+    }
+
+    /**
+     * App 运维证书入驻/认领成功后：开启管理 IP 校验，并将当前访问 IP 写入管理白名单（幂等）。
+     */
+    private void enableAdminIpGateAfterOpsCertBind(HttpServletRequest request, String certId, String tag) {
+        if (!sysConfigService.isAdminIpEnable()) {
+            persistAdminIpEnable(true);
+            adminAccessGuard.auditWithIp(request, "ops.gate.adminIpEnable.auto",
+                    "enable=true tag=" + tag + " certId=" + StringUtils.defaultString(certId));
+        }
+        String ip = IPUtils.getIp(request);
+        if (StringUtils.isNotBlank(ip) && !ipAdminWhiteService.isAdminWhite(ip)) {
+            ipAdminWhiteService.create(ip, tag, "运维证书对接后自动认领管理IP");
+        }
+    }
+
+    private void persistAdminIpEnable(boolean enable) {
+        SecurityOpsConfig current = sysConfigService.getSecurityOpsConfig();
+        if (current == null) {
+            current = new SecurityOpsConfig();
+        }
+        SecurityOpsConfig toSave = new SecurityOpsConfig();
+        toSave.setClearToken(current.getClearToken());
+        toSave.setReinitToken(current.getReinitToken());
+        toSave.setBeanExecuteEnabled(current.isBeanExecuteEnabled());
+        toSave.setWebShellEnabled(current.isWebShellEnabled());
+        toSave.setAdminIpEnable(enable);
+        sysConfigService.saveSecurityOpsConfig(toSave);
     }
 
     private String resolveIp(Map<String, Object> body, HttpServletRequest request) {
@@ -377,6 +579,71 @@ public class OpsApiController {
             throw new AException("ip 不能为空", 400);
         }
         return ip;
+    }
+
+    /** 规范化分页：page 从 1，limit 默认 20、最大 100。 */
+    private static Map<String, Object> pageParams(Map<String, Object> body) {
+        Map<String, Object> params = new HashMap<>();
+        if (body != null) {
+            params.putAll(body);
+        }
+        int page = parsePositiveInt(params.get("page"), 1);
+        int limit = parsePositiveInt(params.get("limit"), 20);
+        if (limit > 100) {
+            limit = 100;
+        }
+        params.put("page", String.valueOf(page));
+        params.put("limit", String.valueOf(limit));
+        return params;
+    }
+
+    private static Map<String, Object> pageData(PageUtils page, List<Map<String, Object>> rows) {
+        int pageNo = page.getCurrPage();
+        int limit = page.getPageSize();
+        int count = page.getTotalCount();
+        boolean hasMore = (long) pageNo * limit < count;
+        Map<String, Object> data = new HashMap<>();
+        data.put("count", count);
+        data.put("page", pageNo);
+        data.put("limit", limit);
+        data.put("hasMore", hasMore);
+        data.put("list", rows);
+        return data;
+    }
+
+    private static int require01(Map<String, Object> body, String key) {
+        Object raw = body == null ? null : body.get(key);
+        if (raw == null) {
+            throw new AException(key + " 不能为空", 400);
+        }
+        int v;
+        if (raw instanceof Number) {
+            v = ((Number) raw).intValue();
+        } else {
+            try {
+                v = Integer.parseInt(String.valueOf(raw).trim());
+            } catch (NumberFormatException e) {
+                throw new AException(key + " 须为 0 或 1", 400);
+            }
+        }
+        if (v != 0 && v != 1) {
+            throw new AException(key + " 须为 0 或 1", 400);
+        }
+        return v;
+    }
+
+    private static int parsePositiveInt(Object raw, int defaultValue) {
+        if (raw == null) {
+            return defaultValue;
+        }
+        try {
+            int v = raw instanceof Number
+                    ? ((Number) raw).intValue()
+                    : Integer.parseInt(String.valueOf(raw).trim());
+            return v < 1 ? defaultValue : v;
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     private static String str(Map<String, Object> body, String key) {

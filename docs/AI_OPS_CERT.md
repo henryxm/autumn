@@ -18,6 +18,7 @@
 |------|------|------|
 | 服务端 RSA、`siteId`、指纹、`clients[]` | `SECURITY_OPS_CERT_CONFIG` | 集群各节点只读同一配置；**不在启动时生成**，在 `enroll` 校验 OpsEnroll secret **成功后**「空则写」 |
 | OpsEnroll 校验 | 同配置 `enrollSaltB64` + `enrollHashB64` | 启动（或 reset）写入 hash；明文仅日志 `OpsEnroll secret=`；**无明文落库** |
+| 多设备认领码 | 同配置 `pendingClaims[]` | `issue` 写入 salt+hash；明文 `claimSecret` 仅 API 返回一次；TTL≈30min、单次消费 |
 | challenge / ops session | Redis 短 TTL（有 Redis）；否则本机内存 | 键：`{ns}:autumn:ops:challenge|session:*` |
 | 客户端私钥 | 仅 App 本机按站点分目录 | 永不上传 |
 
@@ -49,13 +50,30 @@
 | `POST /ops/api/v1/enroll` | body.`secret`=OpsEnroll | body.`clientPublicKey`；返回 `certId`/`siteId`/`serverPublicKey`；烧毁共享 enroll hash；**不下发私钥** |
 | `POST /ops/api/v1/challenge` | body.`certId` | `nonce`（TTL≈120s） |
 | `POST /ops/api/v1/session` | 签名 + AES 包裹 | 返回 `sessionId` |
-| `POST /ops/api/v1/adminip/list\|add\|remove` | `X-Ops-Session` | 管理 IP（`wall_ip_admin_white`）；`claimCurrent`；**删当前访问 IP 须 clearToken** |
+| `POST /ops/api/v1/adminip/list\|add\|remove\|setForbidden` | `X-Ops-Session` | 管理 IP（`wall_ip_admin_white`）；见下表 |
 | `POST /ops/api/v1/currentIp` | session | 当前访问 IP |
-| `POST /ops/api/v1/ipwhite/list\|add\|remove` | session | 用户防火墙白名单（`wall_ip_white`）；删当前 IP 须 clearToken |
-| `POST /ops/api/v1/ipblack/list\|add\|remove` | session | 用户防火墙黑名单（`wall_ip_black`） |
-| `POST /ops/api/v1/gate/get\|setAdminIpEnable` | session；**关须 clearToken** | 读/写 `adminIpEnable`；开启时自动认领当前管理 IP |
-| `POST /ops/api/v1/cert/list\|revoke` | session | 多设备吊销 |
-| `POST /ops/api/v1/reset` | 超管登录 + `clearToken` | 清客户端、清服务端钥、重发 OpsEnroll（RSA 延后到下次 enroll） |
+| `POST /ops/api/v1/ipwhite/list\|add\|remove\|setForbidden` | session | 用户防火墙白名单（`wall_ip_white`）；见下表 |
+| `POST /ops/api/v1/ipblack/list\|add\|remove\|setAvailable` | session | 用户防火墙黑名单（`wall_ip_black`）；见下表 |
+
+### 4.1 三类 IP 列表与禁用
+
+| 表 | 接口前缀 | 状态字段 | 语义 | 危险操作 |
+|----|----------|----------|------|----------|
+| 管理级 IP 白名单 | `/adminip` | `forbidden` | `0` 启用 / `1` 禁用 | 删除**当前访问 IP** 须 `clearToken` |
+| 用户白名单 | `/ipwhite` | `forbidden` | `0` 启用 / `1` 禁用 | 删除**当前访问 IP** 须 `clearToken` |
+| 用户黑名单 | `/ipblack` | `available` | `1` 生效拦截 / `0` 停用（保留记录） | 无 clearToken 要求 |
+
+列表约定（三表相同）：
+
+- 请求：`page`（从 1）、`limit`（默认 20，最大 100）；`add` 可传 `claimCurrent=true` 认领当前访问 IP
+- 响应：`count`、`page`、`limit`、`hasMore`、`list[]`（`ip` / `tag` / `description` / 状态字段 / `createTime` 毫秒时间戳）
+- `setForbidden` body：`ip` + `forbidden`∈{0,1}
+- `setAvailable` body：`ip` + `available`∈{0,1}
+| `POST /ops/api/v1/gate/get\|setAdminIpEnable\|verifyClearToken\|setClearToken` | session；关校验 / 改令牌须原 clearToken | `get` 含 `adminIpEnable` + `clearTokenConfigured`；未配置时 App 可 `setClearToken` 首次写入；已配置须 `oldClearToken`；空令牌时危险操作拒绝；`enroll`/`claim` 自动开管理IP |
+| `POST /ops/api/v1/cert/list\|revoke` | session | 多设备列表/吊销；`revoke` 响应含 `lastCert`（吊销后是否已无有效证） |
+| `POST /ops/api/v1/cert/issue` | session | 已登录设备签发一次性认领码（明文仅返回一次；落库 salt+hash，TTL≈30min） |
+| `POST /ops/api/v1/cert/claim` | body.`claimSecret` | 新设备本地生成 RSA → 提交公钥认领；返回同 enroll（**不下发私钥**） |
+| `POST /ops/api/v1/reset` | 超管登录 + `clearToken` | 清客户端、清 pendingClaims、清服务端钥、重发 OpsEnroll（RSA 延后到下次 enroll） |
 
 Shiro：`/ops/api/v1/**` = `anon`。`AdminAccessGuard` 豁免 `OpsApiController`。  
 Wall：`GET /wall/api/opscert/status`、`POST /wall/api/opscert/reset`。
@@ -64,8 +82,9 @@ Wall：`GET /wall/api/opscert/status`、`POST /wall/api/opscert/reset`。
 
 1. App 多站点列表 → 添加标题 + Base URL → **自动 probe**。
 2. 不兼容则提示并留在添加页；可返回列表。
-3. `pending`：粘贴控制台 `OpsEnroll secret=` → 本地生成 RSA → `enroll` → 分站目录存私钥。
-4. `challenge` → `session` → `adminip/add claimCurrent` → 可选 `gate/setAdminIpEnable` / `ipwhite` / `ipblack`。
+3. `pending`：粘贴控制台 `OpsEnroll secret=` → 本地生成 RSA → `enroll` → 分站目录存私钥。  
+   **`enroll` / `cert/claim` 成功后服务端自动：`adminIpEnable=true` + 认领当前访问 IP 到管理白名单**（默认关闭，对接成功即开启；幂等）。
+4. `challenge` → `session` → 可选继续管理 `ipwhite` / `ipblack`；门禁开关亦可在 App 概览手动关（须 clearToken）。
 5. 浏览器在该管理 IP 用**账号密码**登录后台做日常管理；用户白名单只管防火墙防拉黑，与管理 IP **分表**。
 6. 返回列表可添加下一 Autumn 系统；各站证书文件隔离。
 
@@ -84,7 +103,9 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 
 ### 5.2 多设备
 
-首次 enroll 烧掉 OpsEnroll 后，第二台设备靠**口令导出同一客户端私钥包**导入；或服务端 reset 后再入驻。
+1. **推荐（独立密钥）**：已登录设备 `POST /ops/api/v1/cert/issue` → 将 `claimSecret` 分享给新设备 → 新设备本地生成 RSA → `POST /ops/api/v1/cert/claim`。每台设备各自 `certId`，可单独吊销。
+2. **同证备份/迁移**：App 口令导出**同一**客户端私钥包并在另一设备导入（共享同一 `certId`；适合备份，不适合作为「给同事单独一台机」的主路径）。
+3. **唯一设备丢失 / 全部吊销**：走 §5.1 wall 重置或 DB 清空后再 `OpsEnroll` 入驻。
 
 ## 6. 错误与安全
 
@@ -115,5 +136,7 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 - [ ] 双节点同一 OpsEnroll 均可 enroll；fingerprint/clients 一致
 - [ ] session → claimCurrent → wall 可见管理 IP
 - [ ] App 两站点证书互不覆盖
+- [ ] `cert/issue` → 他机 `cert/claim` 得独立 certId；认领码不可复用
+- [ ] 吊销最后一张有效证响应 `lastCert=true`
 - [ ] `/rsa/api/v1` 与账号密码登录回归
 - [ ] wall bootstrap / clearToken 解锁仍可用

@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -162,6 +163,82 @@ class OpsCertServiceTest {
         assertNotNull(sessions.requireSession(session.getSessionId()));
     }
 
+    @Test
+    void issueClaim_thenClaim_registersNewClient() {
+        byte[] salt = "ops-enroll-salt!".getBytes(StandardCharsets.UTF_8);
+        String secret = "ops-claim-enroll";
+        SecurityOpsCertConfig seeded = new SecurityOpsCertConfig();
+        seeded.setEnrollSaltB64(Base64.getEncoder().encodeToString(salt));
+        seeded.setEnrollHashB64(Base64.getEncoder().encodeToString(sha256(salt, secret)));
+        store.set(seeded);
+        RsaKey deviceA = RsaUtil.generate(2048);
+        OpsClientCertEntry a = service.enroll(secret, deviceA.getPublicKey(), "device-a");
+        assertEquals(1, service.countActiveClients());
+
+        Map<String, Object> issued = service.issueClaim(a.getCertId(), "device-b");
+        assertNotNull(issued.get("claimSecret"));
+        assertNotNull(issued.get("claimId"));
+        String claimSecret = String.valueOf(issued.get("claimSecret"));
+
+        RsaKey deviceB = RsaUtil.generate(2048);
+        OpsClientCertEntry b = service.claim(claimSecret, deviceB.getPublicKey(), "device-b");
+        assertNotNull(b.getCertId());
+        assertNotEquals(a.getCertId(), b.getCertId());
+        assertEquals(2, service.countActiveClients());
+
+        assertThrows(AException.class, () -> service.claim(claimSecret, deviceB.getPublicKey(), "again"));
+    }
+
+    @Test
+    void claim_expiredOrWrong_fails() {
+        byte[] salt = "ops-enroll-salt!".getBytes(StandardCharsets.UTF_8);
+        String secret = "ops-claim-bad";
+        SecurityOpsCertConfig seeded = new SecurityOpsCertConfig();
+        seeded.setEnrollSaltB64(Base64.getEncoder().encodeToString(salt));
+        seeded.setEnrollHashB64(Base64.getEncoder().encodeToString(sha256(salt, secret)));
+        store.set(seeded);
+        RsaKey deviceA = RsaUtil.generate(2048);
+        OpsClientCertEntry a = service.enroll(secret, deviceA.getPublicKey(), "device-a");
+        Map<String, Object> issued = service.issueClaim(a.getCertId(), "x");
+        RsaKey deviceB = RsaUtil.generate(2048);
+        assertThrows(AException.class, () -> service.claim("wrong-secret", deviceB.getPublicKey(), "x"));
+        assertEquals(1, service.countActiveClients());
+        assertNotNull(issued.get("claimSecret"));
+    }
+
+    @Test
+    void revoke_lastActive_setsLastCert() {
+        byte[] salt = "ops-enroll-salt!".getBytes(StandardCharsets.UTF_8);
+        String secret = "ops-revoke-last";
+        SecurityOpsCertConfig seeded = new SecurityOpsCertConfig();
+        seeded.setEnrollSaltB64(Base64.getEncoder().encodeToString(salt));
+        seeded.setEnrollHashB64(Base64.getEncoder().encodeToString(sha256(salt, secret)));
+        store.set(seeded);
+        RsaKey deviceA = RsaUtil.generate(2048);
+        OpsClientCertEntry a = service.enroll(secret, deviceA.getPublicKey(), "only");
+        Map<String, Object> result = service.revoke(a.getCertId());
+        assertEquals(Boolean.TRUE, result.get("success"));
+        assertEquals(Boolean.TRUE, result.get("lastCert"));
+        assertEquals(0, service.countActiveClients());
+    }
+
+    @Test
+    void reset_clearsPendingClaims() {
+        byte[] salt = "ops-enroll-salt!".getBytes(StandardCharsets.UTF_8);
+        String secret = "ops-reset-claims";
+        SecurityOpsCertConfig seeded = new SecurityOpsCertConfig();
+        seeded.setEnrollSaltB64(Base64.getEncoder().encodeToString(salt));
+        seeded.setEnrollHashB64(Base64.getEncoder().encodeToString(sha256(salt, secret)));
+        store.set(seeded);
+        RsaKey deviceA = RsaUtil.generate(2048);
+        OpsClientCertEntry a = service.enroll(secret, deviceA.getPublicKey(), "a");
+        service.issueClaim(a.getCertId(), "pending");
+        assertFalse(service.getConfig().getPendingClaims().isEmpty());
+        SecurityOpsCertConfig after = service.reset();
+        assertTrue(after.getPendingClaims() == null || after.getPendingClaims().isEmpty());
+        assertTrue(after.getClients().isEmpty());
+    }
+
     private static SecurityOpsCertConfig copy(SecurityOpsCertConfig src) {
         SecurityOpsCertConfig c = new SecurityOpsCertConfig();
         c.setSiteId(src.getSiteId());
@@ -173,6 +250,7 @@ class OpsCertServiceTest {
         c.setEnrollHashB64(src.getEnrollHashB64());
         c.setResetAt(src.getResetAt());
         c.setClients(src.getClients() == null ? new ArrayList<>() : new ArrayList<>(src.getClients()));
+        c.setPendingClaims(src.getPendingClaims() == null ? new ArrayList<>() : new ArrayList<>(src.getPendingClaims()));
         return c;
     }
 

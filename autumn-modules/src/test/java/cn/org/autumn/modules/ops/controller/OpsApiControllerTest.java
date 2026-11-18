@@ -10,6 +10,7 @@ import cn.org.autumn.modules.ops.service.OpsSessionService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
+import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
 import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.modules.wall.service.IpBlackService;
@@ -81,7 +82,7 @@ class OpsApiControllerTest {
     }
 
     @Test
-    void enroll_returnsPublicMaterialOnly() {
+    void enroll_returnsPublicMaterialOnly_andAutoEnablesAdminIp() {
         OpsClientCertEntry entry = new OpsClientCertEntry();
         entry.setCertId("ops-1");
         when(opsCertService.enroll(anyString(), anyString(), anyString())).thenReturn(entry);
@@ -91,15 +92,23 @@ class OpsApiControllerTest {
         cfg.setServerPrivateKey("SERVER_PRIV_MUST_NOT_LEAK");
         cfg.setFingerprint("fp");
         when(opsCertService.getConfig()).thenReturn(cfg);
+        when(sysConfigService.isAdminIpEnable()).thenReturn(false, true);
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(new SecurityOpsConfig());
+        when(ipAdminWhiteService.isAdminWhite(anyString())).thenReturn(false);
 
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setRemoteAddr("198.51.100.20");
         Map<String, Object> body = new HashMap<>();
         body.put("secret", "s");
         body.put("clientPublicKey", "CLIENT_PUB");
-        Response<Map<String, Object>> res = controller.enroll(body, new MockHttpServletRequest());
+        Response<Map<String, Object>> res = controller.enroll(body, req);
         assertEquals("ops-1", res.getData().get("certId"));
         assertEquals("SERVER_PUB", res.getData().get("serverPublicKey"));
+        assertEquals(true, res.getData().get("adminIpEnable"));
         assertFalse(res.getData().containsKey("serverPrivateKey"));
         assertFalse(res.getData().values().stream().anyMatch(v -> "SERVER_PRIV_MUST_NOT_LEAK".equals(String.valueOf(v))));
+        verify(sysConfigService).saveSecurityOpsConfig(argThat(c -> c.isAdminIpEnable()));
+        verify(ipAdminWhiteService).create(eq("198.51.100.20"), eq("ops-enroll"), anyString());
     }
 
     @Test
@@ -119,6 +128,79 @@ class OpsApiControllerTest {
         Response<Map<String, Object>> res = controller.adminIpAdd(Map.of("claimCurrent", true), req);
         assertEquals(true, res.getData().get("success"));
         assertEquals("198.51.100.9", res.getData().get("ip"));
+    }
+
+    @Test
+    void gateVerifyClearToken_okAndReject() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        SecurityOpsConfig empty = new SecurityOpsConfig();
+        empty.setClearToken("");
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(empty);
+        AException unset = assertThrows(AException.class, () -> controller.gateVerifyClearToken(
+                Map.of("clearToken", "any"), req));
+        assertTrue(unset.getMessage().contains("尚未配置"));
+
+        SecurityOpsConfig ops = new SecurityOpsConfig();
+        ops.setClearToken("tok");
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(ops);
+
+        assertThrows(AException.class, () -> controller.gateVerifyClearToken(
+                Map.of("clearToken", "bad"), req));
+
+        Response<Map<String, Object>> res = controller.gateVerifyClearToken(
+                Map.of("clearToken", "tok"), req);
+        assertEquals(true, res.getData().get("valid"));
+    }
+
+    @Test
+    void gateSetClearToken_firstTimeAndChange() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        SecurityOpsConfig empty = new SecurityOpsConfig();
+        empty.setClearToken("");
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(empty);
+
+        Response<Map<String, Object>> created = controller.gateSetClearToken(
+                Map.of("clearToken", "new-token-1"), req);
+        assertEquals(true, created.getData().get("clearTokenConfigured"));
+        verify(sysConfigService).saveSecurityOpsConfig(argThat(c -> "new-token-1".equals(c.getClearToken())));
+
+        SecurityOpsConfig existing = new SecurityOpsConfig();
+        existing.setClearToken("new-token-1");
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(existing);
+        assertThrows(AException.class, () -> controller.gateSetClearToken(
+                Map.of("clearToken", "new-token-2", "oldClearToken", "wrong"), req));
+
+        Response<Map<String, Object>> changed = controller.gateSetClearToken(
+                Map.of("clearToken", "new-token-2", "oldClearToken", "new-token-1"), req);
+        assertEquals(true, changed.getData().get("changed"));
+    }
+
+    @Test
+    void gateGet_exposesClearTokenConfiguredOnly() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+        when(sysConfigService.isAdminIpEnable()).thenReturn(false);
+
+        SecurityOpsConfig ops = new SecurityOpsConfig();
+        ops.setClearToken("secret-token");
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(ops);
+
+        Response<Map<String, Object>> res = controller.gateGet(req);
+        assertEquals(true, res.getData().get("clearTokenConfigured"));
+        assertFalse(res.getData().values().stream().anyMatch(v -> "secret-token".equals(String.valueOf(v))));
     }
 
     @Test
@@ -190,8 +272,73 @@ class OpsApiControllerTest {
                 "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
         when(opsSessionService.requireSession("opss-1")).thenReturn(session);
         req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
-        when(ipWhiteService.queryPage(anyMap())).thenReturn(new PageUtils(List.of(), 0, 10, 1));
+        when(ipWhiteService.queryPage(anyMap())).thenReturn(new PageUtils(List.of(), 0, 20, 1));
         Response<Map<String, Object>> res = controller.ipWhiteList(Map.of(), req);
         assertEquals(0, res.getData().get("count"));
+        assertEquals(1, res.getData().get("page"));
+        assertEquals(20, res.getData().get("limit"));
+        assertEquals(false, res.getData().get("hasMore"));
+    }
+
+    @Test
+    void adminIpSetForbidden_togglesAndRejectsInvalid() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        assertThrows(AException.class, () -> controller.adminIpSetForbidden(
+                Map.of("ip", "198.51.100.9", "forbidden", 2), req));
+
+        IpAdminWhiteEntity entity = new IpAdminWhiteEntity();
+        entity.setIp("198.51.100.9");
+        entity.setForbidden(0);
+        when(ipAdminWhiteService.getByIp("198.51.100.9")).thenReturn(entity);
+
+        Response<Map<String, Object>> res = controller.adminIpSetForbidden(
+                Map.of("ip", "198.51.100.9", "forbidden", 1), req);
+        assertEquals(true, res.getData().get("success"));
+        assertEquals(1, res.getData().get("forbidden"));
+        verify(ipAdminWhiteService).updateById(argThat(e -> e.getForbidden() != null && e.getForbidden() == 1));
+    }
+
+    @Test
+    void ipBlackSetAvailable_toggles() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        IpBlackEntity entity = new IpBlackEntity();
+        entity.setIp("203.0.113.8");
+        entity.setAvailable(1);
+        when(ipBlackService.getByIp("203.0.113.8")).thenReturn(entity);
+
+        Response<Map<String, Object>> res = controller.ipBlackSetAvailable(
+                Map.of("ip", "203.0.113.8", "available", 0), req);
+        assertEquals(true, res.getData().get("success"));
+        assertEquals(0, res.getData().get("available"));
+        verify(ipBlackService).updateById(argThat(e -> e.getAvailable() != null && e.getAvailable() == 0));
+    }
+
+    @Test
+    void adminIpList_pageMeta_hasMore() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        IpAdminWhiteEntity e = new IpAdminWhiteEntity();
+        e.setIp("198.51.100.1");
+        e.setForbidden(0);
+        when(ipAdminWhiteService.queryPage(anyMap())).thenReturn(new PageUtils(List.of(e), 25, 20, 1));
+
+        Response<Map<String, Object>> res = controller.adminIpList(Map.of("page", 1, "limit", 20), req);
+        assertEquals(25, res.getData().get("count"));
+        assertEquals(true, res.getData().get("hasMore"));
+        assertEquals(1, ((List<?>) res.getData().get("list")).size());
     }
 }
