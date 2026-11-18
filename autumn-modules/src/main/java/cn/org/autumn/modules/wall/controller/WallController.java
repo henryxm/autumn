@@ -77,6 +77,63 @@ public class WallController {
         return getFirewallOpen(request);
     }
 
+    /** 管理 IP 校验开关：默认关；开启后运维/gen 须 IP ∈ wall_ip_admin_white。 */
+    @GetMapping("/adminIpEnable")
+    public Map<String, Object> getAdminIpEnable(HttpServletRequest request) {
+        requireOps(request, "adminIpEnable");
+        Map<String, Object> map = new HashMap<>();
+        map.put("adminIpEnable", ipAdminWhiteService.isAdminIpEnable());
+        return map;
+    }
+
+    /**
+     * 设置管理 IP 校验。关闭须 clearToken；开启时若当前 IP 未在名单则自动认领，避免自锁。
+     */
+    @PostMapping("/adminIpEnable")
+    public Map<String, Object> setAdminIpEnable(@RequestParam boolean enable, HttpServletRequest request) {
+        requireOps(request, "adminIpEnable");
+        if (!enable) {
+            assertClearToken(request);
+        }
+        SecurityOpsConfig current = sysConfigService.getSecurityOpsConfig();
+        SecurityOpsConfig toSave = copyOpsConfig(current);
+        toSave.setAdminIpEnable(enable);
+        sysConfigService.saveSecurityOpsConfig(toSave);
+        String claimedIp = null;
+        if (enable) {
+            String ip = IPUtils.getIp(request);
+            if (StringUtils.isNotBlank(ip) && !ipAdminWhiteService.isAdminWhite(ip)) {
+                IpAdminWhiteEntity entity = ipAdminWhiteService.create(ip, "enable", "开启管理IP校验时认领");
+                if (entity == null) {
+                    toSave.setAdminIpEnable(false);
+                    sysConfigService.saveSecurityOpsConfig(toSave);
+                    throw new AException("写入管理IP失败，已回滚开关", 500);
+                }
+                claimedIp = entity.getIp();
+            }
+        }
+        adminAccessGuard.auditWithIp(request, "wall.adminIpEnable",
+                "enable=" + enable + (claimedIp != null ? " claimedIp=" + claimedIp : ""));
+        Map<String, Object> map = getAdminIpEnable(request);
+        if (claimedIp != null) {
+            map.put("claimedIp", claimedIp);
+        }
+        return map;
+    }
+
+    private static SecurityOpsConfig copyOpsConfig(SecurityOpsConfig src) {
+        SecurityOpsConfig c = new SecurityOpsConfig();
+        if (src == null) {
+            return c;
+        }
+        c.setClearToken(src.getClearToken());
+        c.setReinitToken(src.getReinitToken());
+        c.setBeanExecuteEnabled(src.isBeanExecuteEnabled());
+        c.setWebShellEnabled(src.isWebShellEnabled());
+        c.setAdminIpEnable(src.isAdminIpEnable());
+        return c;
+    }
+
     // 2. 黑名单阈值
     @GetMapping("/firewallCount")
     public Map<String, Object> getFirewallCount(HttpServletRequest request) {
@@ -275,17 +332,21 @@ public class WallController {
     public Map<String, Object> getIpAdminWhiteGate(HttpServletRequest request) {
         adminAccessGuard.requireSystemAdmin("ipadminwhiteGate");
         String ip = IPUtils.getIp(request);
-        boolean bootstrapPending = ipAdminWhiteService.isBootstrapPending();
-        boolean locked;
-        try {
-            ipAdminWhiteService.checkAdmin(request, getClass(), "ipadminwhiteGate");
-            // dev 下放行 IP，但引导态仍须临时密钥认领
-            locked = bootstrapPending;
-        } catch (AException ignored) {
-            locked = true;
+        boolean adminIpEnable = ipAdminWhiteService.isAdminIpEnable();
+        boolean bootstrapPending = adminIpEnable && ipAdminWhiteService.isBootstrapPending();
+        boolean locked = false;
+        if (adminIpEnable) {
+            try {
+                ipAdminWhiteService.checkAdmin(request, getClass(), "ipadminwhiteGate");
+                // 校验开启且 IP 放行时，引导态仍须临时密钥认领
+                locked = bootstrapPending;
+            } catch (AException ignored) {
+                locked = true;
+            }
         }
         Map<String, Object> map = new HashMap<>();
         map.put("locked", locked);
+        map.put("adminIpEnable", adminIpEnable);
         map.put("bootstrapPending", bootstrapPending);
         map.put("empty", ipAdminWhiteService.isEmpty());
         map.put("currentIp", ip);

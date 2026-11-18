@@ -123,6 +123,7 @@ class WallControllerIpAdminWhiteTest {
     void gate_reportsLockedForNonAdminIp() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRemoteAddr("198.51.100.9");
+        when(ipAdminWhiteService.isAdminIpEnable()).thenReturn(true);
         when(ipAdminWhiteService.isBootstrapPending()).thenReturn(false);
         doThrow(new AException("服务繁忙")).when(ipAdminWhiteService)
                 .checkAdmin(eq(request), eq(WallController.class), eq("ipadminwhiteGate"));
@@ -131,5 +132,67 @@ class WallControllerIpAdminWhiteTest {
         assertFalse(Boolean.TRUE.equals(gate.get("bootstrapPending")));
         assertEquals("clearToken", gate.get("mode"));
         verify(adminAccessGuard).requireSystemAdmin("ipadminwhiteGate");
+    }
+
+    @Test
+    void gate_unlockedWhenAdminIpDisabled() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        when(ipAdminWhiteService.isAdminIpEnable()).thenReturn(false);
+        when(ipAdminWhiteService.isBootstrapPending()).thenReturn(true);
+        Map<String, Object> gate = controller.getIpAdminWhiteGate(request);
+        assertFalse(Boolean.TRUE.equals(gate.get("locked")));
+        assertFalse(Boolean.TRUE.equals(gate.get("bootstrapPending")));
+        assertFalse(Boolean.TRUE.equals(gate.get("adminIpEnable")));
+        verify(ipAdminWhiteService, never()).checkAdmin(any(), any(), anyString());
+    }
+
+    @Test
+    void setAdminIpEnable_offRequiresClearToken() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        when(ipAdminWhiteService.isAdminIpEnable()).thenReturn(true);
+        SecurityOpsConfig ops = new SecurityOpsConfig();
+        ops.setClearToken("ops-secret");
+        ops.setAdminIpEnable(true);
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(ops);
+        assertThrows(AException.class, () -> controller.setAdminIpEnable(false, request));
+        verify(sysConfigService, never()).saveSecurityOpsConfig(any());
+    }
+
+    @Test
+    void setAdminIpEnable_onClaimsCurrentIp() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("203.0.113.55");
+        when(ipAdminWhiteService.isAdminIpEnable()).thenReturn(false, true);
+        when(ipAdminWhiteService.isAdminWhite("203.0.113.55")).thenReturn(false);
+        SecurityOpsConfig ops = new SecurityOpsConfig();
+        ops.setAdminIpEnable(false);
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(ops);
+        when(sysConfigService.saveSecurityOpsConfig(any())).thenAnswer(inv -> inv.getArgument(0));
+        IpAdminWhiteEntity entity = new IpAdminWhiteEntity();
+        entity.setIp("203.0.113.55");
+        when(ipAdminWhiteService.create(eq("203.0.113.55"), eq("enable"), anyString())).thenReturn(entity);
+
+        Map<String, Object> result = controller.setAdminIpEnable(true, request);
+        assertTrue(Boolean.TRUE.equals(result.get("adminIpEnable")));
+        assertEquals("203.0.113.55", result.get("claimedIp"));
+        verify(sysConfigService).saveSecurityOpsConfig(any());
+        verify(ipAdminWhiteService).create(eq("203.0.113.55"), eq("enable"), anyString());
+        verify(adminAccessGuard).auditWithIp(eq(request), eq("wall.adminIpEnable"), anyString());
+    }
+
+    @Test
+    void setAdminIpEnable_offWithClearToken() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("x-clear-authentication", "ops-secret");
+        when(ipAdminWhiteService.isAdminIpEnable()).thenReturn(true, false);
+        SecurityOpsConfig ops = new SecurityOpsConfig();
+        ops.setClearToken("ops-secret");
+        ops.setAdminIpEnable(true);
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(ops);
+        when(sysConfigService.saveSecurityOpsConfig(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Map<String, Object> result = controller.setAdminIpEnable(false, request);
+        assertFalse(Boolean.TRUE.equals(result.get("adminIpEnable")));
+        verify(sysConfigService).saveSecurityOpsConfig(any());
     }
 }

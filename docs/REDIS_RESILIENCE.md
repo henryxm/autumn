@@ -96,6 +96,7 @@ public Optional<String> readPromotion(String id) {
 | `autumn.redis.max-value-bytes` | 默认 `1048576`（1MB）。`RedisUtils.get` 先 **STRLEN**，超限 **删键并返回 null**，禁止 GET。 |
 | 反序列化失败 | `RedisUtils.get` 捕获 `SerializationException` / 堆相关消息，删键回空。 |
 | SysConfig | `SysConfigRedis` 只缓存 `paramValue` **String**（键后缀 `:pv1`）；本地 map 用 `ConcurrentHashMap`，`onOneMinute` **不再全清** map。 |
+| 门禁 L0 | `SECURITY_OPS_CONFIG` 本机 `volatile` 快照 + 布尔位；`invalidateLocalCache` / Pub/Sub / `onFiveMinute` / 实体 `save`·`update` / `saveSecurityOpsConfig` 均立即 bump 或重装；失效时布尔 **fail-closed**（先 false 再懒装）；`getSecurityOpsConfig()` 返回拷贝；热路径读布尔勿打 Redis/DB。 |
 | Primary 序列化 | 仍为 JDK；全量迁 JSON 需单独迁移任务。 |
 
 详见 **`docs/REDIS_KEYS_AND_SCAN.md`** §8.1。

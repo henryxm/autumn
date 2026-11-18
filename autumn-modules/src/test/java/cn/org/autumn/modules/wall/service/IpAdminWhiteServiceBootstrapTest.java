@@ -2,6 +2,7 @@ package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.config.Config;
 import cn.org.autumn.exception.AException;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.wall.dao.IpAdminWhiteDao;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,14 +34,18 @@ class IpAdminWhiteServiceBootstrapTest {
 
     private IpAdminWhiteService service;
     private IpAdminWhiteDao dao;
+    private SysConfigService sysConfigService;
 
     @BeforeEach
     void setUp() {
         service = spy(new IpAdminWhiteService());
         dao = mock(IpAdminWhiteDao.class);
+        sysConfigService = mock(SysConfigService.class);
         ReflectionTestUtils.setField(service, "baseMapper", dao);
+        ReflectionTestUtils.setField(service, "sysConfigService", sysConfigService);
         when(dao.getIps(0)).thenReturn(new HashSet<>());
         when(dao.activeCount()).thenReturn(0);
+        when(sysConfigService.isAdminIpEnable()).thenReturn(true);
     }
 
     @Test
@@ -146,6 +151,20 @@ class IpAdminWhiteServiceBootstrapTest {
             cfg.when(Config::isDev).thenReturn(false);
             assertThrows(AException.class, () -> service.checkAdmin(request, getClass(), "noMigrate"));
         }
+    }
+
+    @Test
+    void checkAdmin_skipsWhenAdminIpEnableFalse() {
+        when(sysConfigService.isAdminIpEnable()).thenReturn(false);
+        ReflectionTestUtils.setField(service, "adminIpList", new HashSet<String>());
+        ReflectionTestUtils.setField(service, "adminIpSectionList", new HashSet<String>());
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("198.51.100.1");
+        try (MockedStatic<Config> cfg = Mockito.mockStatic(Config.class)) {
+            cfg.when(Config::isDev).thenReturn(false);
+            service.checkAdmin(request, getClass(), "disabled");
+        }
+        assertFalse(service.isAdminIpEnable());
     }
 
     private static byte[] sha256(byte[] salt, String secret) {

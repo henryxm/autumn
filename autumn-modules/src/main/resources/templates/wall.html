@@ -177,6 +177,46 @@
             font-size: 12px;
             color: #64748b;
         }
+        .security-guide {
+            margin: 0 0 14px;
+            padding: 12px 14px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 8px;
+        }
+        .security-guide-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #9a3412;
+            margin-bottom: 6px;
+        }
+        .security-guide-title i { margin-right: 6px; }
+        .security-guide-list {
+            margin: 0 0 10px;
+            padding-left: 18px;
+            font-size: 12px;
+            color: #9a3412;
+            line-height: 1.65;
+        }
+        .security-guide-list strong { color: #7c2d12; }
+        .security-guide-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .security-guide-actions .layui-btn {
+            height: 30px;
+            line-height: 30px;
+            padding: 0 12px;
+            font-size: 12px;
+        }
+        .security-guide-note {
+            margin: 8px 0 0;
+            font-size: 12px;
+            color: #c2410c;
+            line-height: 1.5;
+        }
         .flow-card {
             margin-bottom: 12px;
             background: #f8fafc;
@@ -552,6 +592,20 @@
     <div class="content">
         <div class="section">
             <div class="section-title"><i class="fa fa-cog"></i>安全设置</div>
+            <div class="security-guide" id="adminIpSecurityGuide">
+                <div class="security-guide-title"><i class="fa fa-exclamation-triangle"></i>遇险处置（立即阻断风险）</div>
+                <ol class="security-guide-list">
+                    <li>发现<strong>异常登录、暴力破解、接口被扫</strong>，或怀疑<strong>管理账号被盗</strong>时：先开启上方「管理IP校验」，仅允许白名单 IP 进入后台与运维接口。</li>
+                    <li>开启后请确认当前 IP 已在「管理 IP 白名单」；必要时先把可信办公网/VPN 地址加白，再收紧访问。</li>
+                    <li>立刻<strong>修改管理账号密码</strong>（右上角「修改密码」），使已泄露口令失效；有多人共用超管时，通知相关人员一并更换。</li>
+                    <li>风险解除且环境确认安全后，可用运维临时安全密码关闭「管理IP校验」，恢复日常低摩擦运维。</li>
+                </ol>
+                <div class="security-guide-actions">
+                    <button type="button" class="layui-btn layui-btn-danger" id="adminIpEmergencyEnableBtn"><i class="fa fa-shield"></i> 一键开启管理IP校验</button>
+                    <button type="button" class="layui-btn layui-btn-warm" id="adminChangePasswordBtn"><i class="fa fa-lock"></i> 修改管理密码</button>
+                </div>
+                <p class="security-guide-note">平时可关闭管理IP校验以降低运维成本；遇攻击或账号泄露时务必先开校验、再改密码，两步缺一不可。</p>
+            </div>
             <form class="settings-form">
                 <div class="settings-grid">
                     <div class="settings-item">
@@ -559,6 +613,16 @@
                         <label class="switch-wrap" for="firewallOpen">
                             <span class="switch">
                                 <input type="checkbox" id="firewallOpen">
+                                <span class="switch-slider"></span>
+                                <span class="switch-text">关闭</span>
+                            </span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="item-label">管理IP校验</div>
+                        <label class="switch-wrap" for="adminIpEnable">
+                            <span class="switch">
+                                <input type="checkbox" id="adminIpEnable">
                                 <span class="switch-slider"></span>
                                 <span class="switch-text">关闭</span>
                             </span>
@@ -920,8 +984,9 @@ $(function(){
         });
     }
 
-    function wallPost(url, data, ok, fail) {
+    function wallPost(url, data, ok, fail, headers) {
         if (typeof data === 'function') {
+            headers = fail;
             fail = ok;
             ok = data;
             data = {};
@@ -930,6 +995,7 @@ $(function(){
             type: 'POST',
             url: url,
             data: data || {},
+            headers: headers || {},
             success: ok,
             error: fail
         });
@@ -1531,6 +1597,10 @@ $(function(){
             $('#firewallOpen').prop('checked', res.firewallOpen);
             syncSwitchText('#firewallOpen');
         });
+        $.get(__CTX + '/wall/api/adminIpEnable', function(res){
+            $('#adminIpEnable').prop('checked', !!res.adminIpEnable);
+            syncSwitchText('#adminIpEnable');
+        });
         $.get(__CTX + '/wall/api/firewallCount', function(res){
             $('#firewallCount').val(res.firewallCount);
         });
@@ -1585,6 +1655,81 @@ $(function(){
         }, function(){
             msg('防火墙切换失败', 'error');
         });
+    });
+
+    function setAdminIpEnableSwitch(enable, headers, onDone) {
+        wallPost(__CTX + '/wall/api/adminIpEnable', {enable: !!enable}, function(res){
+            $('#adminIpEnable').prop('checked', !!res.adminIpEnable);
+            syncSwitchText('#adminIpEnable');
+            var tip = '管理IP校验已' + (enable ? '开启' : '关闭');
+            if (enable && res && res.claimedIp) {
+                tip += '（已认领 ' + res.claimedIp + '）';
+            }
+            msg(tip, 'success');
+            loadAll();
+            if (onDone) onDone(true, res);
+        }, function(xhr){
+            var errTip = '管理IP校验切换失败';
+            if (xhr && xhr.status === 403) {
+                errTip = enable ? '开启失败（权限不足）' : '关闭失败（须运维 clear Token）';
+            }
+            msg(errTip, 'error');
+            if (onDone) onDone(false);
+        }, headers || {});
+    }
+
+    function openParentChangePassword() {
+        try {
+            var p = window.parent;
+            if (p && p !== window && p.vm && typeof p.vm.updatePassword === 'function') {
+                p.vm.updatePassword();
+                return true;
+            }
+        } catch (e) {}
+        msg('请到后台右上角菜单选择「修改密码」', 'warn');
+        return false;
+    }
+
+    $('#adminIpEnable').on('change', function(){
+        var $input = $(this);
+        var checked = $input.is(':checked');
+        syncSwitchText('#adminIpEnable');
+        function rollback() {
+            $input.prop('checked', !checked);
+            syncSwitchText('#adminIpEnable');
+        }
+        if (!checked) {
+            var secret = window.prompt('关闭管理IP校验须运维临时安全密码（clearToken）');
+            if (!secret) {
+                rollback();
+                return;
+            }
+            setAdminIpEnableSwitch(false, {'x-clear-authentication': secret}, function(ok){
+                if (!ok) rollback();
+            });
+        } else {
+            setAdminIpEnableSwitch(true, {}, function(ok){
+                if (!ok) rollback();
+            });
+        }
+    });
+
+    $('#adminIpEmergencyEnableBtn').on('click', function(){
+        if ($('#adminIpEnable').is(':checked')) {
+            msg('管理IP校验已开启，请继续修改管理密码', 'warn');
+            openParentChangePassword();
+            return;
+        }
+        setAdminIpEnableSwitch(true, {}, function(ok){
+            if (ok) {
+                msg('请立即修改管理密码，使泄露口令失效', 'warn');
+                openParentChangePassword();
+            }
+        });
+    });
+
+    $('#adminChangePasswordBtn').on('click', function(){
+        openParentChangePassword();
     });
 
     $('#setCountBtn').click(function(){

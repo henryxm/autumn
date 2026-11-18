@@ -539,15 +539,15 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
   具体属性以 `cn.org.autumn.annotation.PageAware` 为准。
 
 - **生成 CRUD / 管理 API 与管理 IP（硬约束）**：  
-  - 强制语义：**系统管理员 + `wall_ip_admin_white`**（`IpAdminWhiteEntity`）。  
+  - 强制语义：**系统管理员**；当 **`SECURITY_OPS_CONFIG.adminIpEnable=true`** 时另须 **`wall_ip_admin_white`**（`IpAdminWhiteEntity`）。`adminIpEnable` **默认 false**（wall「管理IP校验」可开；关须 clearToken）。  
   - 框架切面 **`GenAdminAccessAspect`** 织入 `*..modules..controller..*` 与 `*..controller.gen..*`（**不限** `cn.org.autumn` 前缀）；判定 `shouldRequireAdminIpApi`，执行 `requireGenAdmin`。  
   - **`ControllerGen.java.vm`**：各 CRUD 入口显式调用 **`AdminAccessGuard#enforceAdminIpApiIfRequired`**（与切面双保险；ZIP 重生后生效）。  
   - **豁免**（不强制超管+IP，仍受权限/行级隔离）：模块 **`usr` / `safe` / `bot` / `qrc`**；SPI **`AdminAccessModuleHandler#selfGenModules()`**。  
   - **业务仓非标准包**：优先改用标准包；手写管理模块用 SPI **`managedModules()`**；异形包薄切面委托 **`AdminAccessGuard#enforceAdminIpApiIfRequired`**。完整标准见 **`docs/AI_ADMIN_IP_BIZ.md`**（模式 A/B/C）；**API/页面强制对比矩阵**见 **`docs/AI_ADMIN_ACCESS_MATRIX.md`**。  
   - **禁止**把匿名首页、公开 CMS 读接口、C 端列表写进 `controller.gen`；写接口禁止整段 Shiro **`anon`**（§4）。  
-  - **禁止**为「方便运营」把整站业务模块塞进 `selfGenModules()`。  
+  - **禁止**为「方便运营」把整站业务模块塞进 `selfGenModules()`；**禁止**用 `WallDefault.ipWhiteEnable` 代替 `adminIpEnable`。  
   - 兼容清单 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**（**C-20**、§4.4）；拒绝日志 **`SecurityAlert denied`**（§4.4.2）。  
-  - **WebShell**：**默认关闭**；开启后仍须超管 + 管理 IP + 主机白名单（**C-21**）。
+  - **WebShell**：**默认关闭**；开启后仍须超管（+ 可选管理 IP）+ 主机白名单（**C-21**）。
 
 - **页面文案与功能描述（新增硬约束）**：除非需求中有**特殊说明**，所有页面开发都必须以**用户与使用者视角**进行描述与设计，禁止从开发实现视角表达。具体要求：
   - **禁止**出现开发相关专业术语（如接口、数据库、缓存、线程、方法、函数、参数、对象、JSON、SQL、鉴权链路等）。

@@ -9,12 +9,12 @@
 
 | 符号 | 含义 |
 |------|------|
-| **强制** | 须已登录 **系统管理员** ∧ 客户端 IP ∈ **`wall_ip_admin_white`**（`requireGenAdmin` / `requireOpsAdmin`） |
+| **强制** | 须已登录 **系统管理员**；若 **`SECURITY_OPS_CONFIG.adminIpEnable=true`** 另须客户端 IP ∈ **`wall_ip_admin_white`**（`requireGenAdmin` / `requireOpsAdmin`） |
 | **否\*** | **本层（L2）不强制**；仍可能受 Shiro / `@RequiresPermissions` / 业务 Token 约束 |
 | 超管 | `SysUserRoleService.isSystemAdministrator` |
-| 管理 IP | `IpAdminWhiteService.checkAdmin`（与用户防拉黑 `wall_ip_white` 隔离） |
+| 管理 IP | `IpAdminWhiteService.checkAdmin`（与用户防拉黑 `wall_ip_white` 隔离；受 `adminIpEnable` 控制，**默认关**） |
 
-生产 profile **勿**叠 `dev`/`h2`/`sqlite`：`Config.isDev()` 下 `checkAdmin` 会短路。
+生产 profile **勿**叠 `dev`/`h2`/`sqlite`：`Config.isDev()` 下 `checkAdmin` 会短路。`adminIpEnable=false`（默认）时非 dev 也不验管理 IP。
 
 ---
 
@@ -24,7 +24,7 @@
 |----|------|--------|----------|
 | **L0** Shiro Filter | `anon` / `authc` / `spm` 等 | 是否登录、匿名是否可达 | 超管、管理 IP |
 | **L1** 菜单权限 | `@RequiresPermissions` | 角色菜单 | 管理 IP |
-| **L2** 管理门禁 | `AdminAccessGuard` + `GenAdminAccessAspect` | **系统管理员 + 管理 IP** | 行级数据隔离 |
+| **L2** 管理门禁 | `AdminAccessGuard` + `GenAdminAccessAspect` | **系统管理员**（+ 可选管理 IP） | 行级数据隔离 |
 | **L3** 页面 | `gateView` / `@PageAware(admin=true)` | 后台页能否渲染 | REST 方法细节 |
 
 ```mermaid
@@ -148,7 +148,7 @@ within(*..modules..controller..*)
 | 自助模块页 | `SELF_MODULES` 且非管理后缀 | 按 PageAware / Spm | 否* | 否* | — |
 | 其它 `modules/**`、`pages/**` | 默认兼容 | Spm 等 | `adminLockdown` 时仅超管 | — | lockdown 时 404 |
 
-`wall.html`：超管可渲染；管理 IP 未加白或引导态 → `wallIpLocked`，用引导密钥 / `clearToken` 认领当前 IP（勿直接当普通 404）。
+`wall.html`：超管可渲染；仅当 `adminIpEnable=true` 且管理 IP 未加白或引导态 → `wallIpLocked`，用引导密钥 / `clearToken` 认领当前 IP（勿直接当普通 404）。安全设置含「管理IP校验」开关（关须 clearToken；开自动认领当前 IP）。
 
 Cookie 写操作另受 `SECURITY_AUTH_CONFIG.csrfEnforce` + `X-CSRF-Token`（与 L2 正交）。
 

@@ -6,6 +6,7 @@ import cn.org.autumn.database.CrudGuard;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
 import cn.org.autumn.modules.job.task.LoopJob;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.wall.dao.IpAdminWhiteDao;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
@@ -16,6 +17,7 @@ import cn.org.autumn.thread.FunctionQueues;
 import cn.org.autumn.utils.IPUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,7 +34,8 @@ import java.util.Set;
  * 管理级 IP 白名单：运维页 / 超管 API / gen 全表门禁。
  * <p>
  * 与用户表 {@code wall_ip_white} 物理分离；不跟随 {@code WallFactory.isIpWhiteEnable()}；
- * <strong>不从用户白名单迁移</strong>，初始化为空，空名单时走一次性临时密钥引导。
+ * 是否强制校验受 {@code SECURITY_OPS_CONFIG.adminIpEnable} 控制（默认关）；
+ * <strong>不从用户白名单迁移</strong>，初始化为空，空名单且校验开启时走一次性临时密钥引导。
  * 用户防火墙 {@link IpWhiteService#isWhite} 逻辑上继承本名单（管理 IP 默认免拉黑）。
  */
 @Slf4j
@@ -44,12 +47,26 @@ public class IpAdminWhiteService extends WallCounter<IpAdminWhiteDao, IpAdminWhi
 
     private final SecureRandom secureRandom = new SecureRandom();
 
+    @Autowired
+    private SysConfigService sysConfigService;
+
     private volatile Set<String> adminIpList = new HashSet<>();
     private volatile Set<String> adminIpSectionList = new HashSet<>();
 
     /** 引导盐与 hash；认领成功或名单非空时均为 null。永不存明文。 */
     private volatile byte[] bootstrapSalt;
     private volatile byte[] bootstrapHash;
+
+    /**
+     * 是否启用管理 IP 校验。默认 false（仅超管门禁）；开启后 {@link #checkAdmin} 才验白名单。
+     * 委托 {@link SysConfigService#isAdminIpEnable()}（SECURITY_OPS_CONFIG L0 热路径）。
+     */
+    public boolean isAdminIpEnable() {
+        if (sysConfigService == null) {
+            return false;
+        }
+        return sysConfigService.isAdminIpEnable();
+    }
 
     @Override
     public String[][] getMenuItems() {
@@ -147,10 +164,14 @@ public class IpAdminWhiteService extends WallCounter<IpAdminWhiteDao, IpAdminWhi
     }
 
     /**
-     * 管理门禁：非 dev 须在管理白名单。不绑定用户防火墙开关，不回退用户白名单。
+     * 管理门禁：非 dev 且 {@link #isAdminIpEnable()} 时须在管理白名单。
+     * 不绑定用户防火墙开关，不回退用户白名单。
      */
     public void checkAdmin(HttpServletRequest servlet, Class<?> clazz, String method) {
         if (Config.isDev()) {
+            return;
+        }
+        if (!isAdminIpEnable()) {
             return;
         }
         if (servlet == null) {

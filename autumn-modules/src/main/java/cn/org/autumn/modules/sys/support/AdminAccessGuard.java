@@ -4,7 +4,6 @@ import cn.org.autumn.config.AdminAccessModuleHandler;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.model.IP;
 import cn.org.autumn.model.SecurityAuthConfig;
-import cn.org.autumn.model.SecurityOpsConfig;
 import cn.org.autumn.modules.sys.entity.SysMenuEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.service.SysMenuService;
@@ -125,14 +124,12 @@ public class AdminAccessGuard {
     }
 
     public boolean isBeanExecuteEnabled() {
-        SecurityOpsConfig cfg = sysConfigService.getSecurityOpsConfig();
-        return cfg != null && cfg.isBeanExecuteEnabled();
+        return sysConfigService != null && sysConfigService.isBeanExecuteEnabled();
     }
 
     /** WebShell 总开关（默认关）；与业务属性 autumn.webshell.enabled 取更严。 */
     public boolean isWebShellEnabled() {
-        SecurityOpsConfig cfg = sysConfigService.getSecurityOpsConfig();
-        return cfg != null && cfg.isWebShellEnabled();
+        return sysConfigService != null && sysConfigService.isWebShellEnabled();
     }
 
     /**
@@ -271,11 +268,18 @@ public class AdminAccessGuard {
     }
 
     /**
-     * wall.html：已登录超管始终可渲染页面；管理 IP 未加白（或引导中）时标记 {@code wallIpLocked}，
+     * wall.html：已登录超管始终可渲染页面；仅当管理 IP 校验开启且未加白（或引导中）时标记 {@code wallIpLocked}，
      * 由页面仅展示临时安全密码门禁，验证通过并认领 IP 后再显示内容。
      */
     private String gateWallView(String key, HttpServletRequest request,
                                 HttpServletResponse response, Model model, String view) {
+        if (!ipAdminWhiteService.isAdminIpEnable()) {
+            if (model != null) {
+                model.addAttribute("wallIpLocked", false);
+                model.addAttribute("wallBootstrapPending", false);
+            }
+            return view;
+        }
         boolean bootstrapPending = ipAdminWhiteService.isBootstrapPending();
         boolean locked = bootstrapPending;
         if (!locked) {

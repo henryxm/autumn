@@ -266,7 +266,8 @@ IDEA「没配 yml key 却能加解密」= Redis/env 已有历史密钥。**推�
 3. **读路径缓存语义**（热路径）：
    - 本机 map 命中且 `paramValue` **非** `ENC$` 前缀 → **跳过** `afterRead`，直接返回明文；Redis/DB 回源仍解密后再写入 Redis/map。
    - `getObject` / `json` 对本机按 `paramKey + Class` 缓存解析结果；`invalidateLocalCache` / `updateValueByKey` / 集群失效 / `onFiveMinute` 同步清理。
-   - **勿原地 mutate** JSON 返回对象；改配置须 `updateValueByKey`（或需新实例时自行 `getValue`+`fromJson`）。
+   - **`SECURITY_OPS_CONFIG` 门禁 L0**：本机 `volatile` 快照 + `isAdminIpEnable` / `isBeanExecuteEnabled` / `isWebShellEnabled` 布尔位；失效与 map 同步（epoch）；详见 `docs/REDIS_RESILIENCE.md` §7。
+   - **勿原地 mutate** JSON 返回对象（含 `getSecurityOpsConfig()`）；改配置须 `updateValueByKey` / `saveSecurityOpsConfig`（或需新实例时自行 `getValue`+`fromJson`）。
 4. 启动 `@PostConstruct` / `@Bean` 若必须读 JSON SysConfig：确保节点 yml 带 key，或依赖框架早期 Redis 加载；不要假设「无 key 也能解密」。
 5. 多节点：**同一** `crypto.field.key`；先迁密文再开写开关（§1.3）。
 6. 遇到回落默认：先看 warn 表处理，再核对业务是否依赖了非默认的 `SECURITY_*` / 其它 JSON 配置。

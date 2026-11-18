@@ -279,7 +279,7 @@ description: >-
 ## 资源与页面（§14）
 
 - **`resources/statics/`** 公共静态；新后台页 **`pages/`** + **`site/*Site`** + **`@PageAware`**；管理全表页 **`admin=true`**。
-- **gen / 管理 API 门禁**：`GenAdminAccessAspect` 织入 `*..modules..controller..*` / `*..controller.gen..*`（不限 `cn.org.autumn`）；强制**系统管理员 + 管理 IP**（`wall_ip_admin_white`）；豁免 usr/safe/bot/qrc 或 `selfGenModules`；手写管理模块用 SPI **`managedModules()`**；异形包薄切面委托 **`enforceAdminIpApiIfRequired`**。详见 **`docs/AI_STANDARDS.md` §14**、**`docs/AI_ADMIN_IP_BIZ.md`**、**`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md` C-20**。
+- **gen / 管理 API 门禁**：`GenAdminAccessAspect` 织入 `*..modules..controller..*` / `*..controller.gen..*`（不限 `cn.org.autumn`）；强制**系统管理员**；管理 IP（`wall_ip_admin_white`）受 **`SECURITY_OPS_CONFIG.adminIpEnable`** 控制（**默认关**，wall 可开；关须 clearToken）；豁免 usr/safe/bot/qrc 或 `selfGenModules`；手写管理模块用 SPI **`managedModules()`**；异形包薄切面委托 **`enforceAdminIpApiIfRequired`**。详见 **`docs/AI_STANDARDS.md` §14**、**`docs/AI_ADMIN_IP_BIZ.md`**、**`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md` C-20**。
 - **安全告警**：门禁拒绝打 **`SecurityAlert denied`**（`reason`/`user`/`ip`/`uri`/`target`）；高危成功操作用 **`SecurityAlert audit`**。检索与 reason 表见兼容手册 **§4.4.2**。
 - **WebShell**：默认关（`webShellEnabled` / `autumn.webshell.enabled`）；开启后超管+IP 白名单+`allowed-hosts`；禁止 anon。见 **C-21**。
 

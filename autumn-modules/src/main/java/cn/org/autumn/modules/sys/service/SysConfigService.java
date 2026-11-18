@@ -73,6 +73,7 @@ import java.net.URI;
 import java.util.*;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Service
@@ -174,6 +175,18 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     private String lastLoggerLevel = null;
     private String namespace = null;
     private volatile boolean configCacheSubscribed = false;
+
+    /**
+     * SECURITY_OPS_CONFIG 门禁 L0：本机 volatile 快照 + 布尔位；失效与 {@link #invalidateLocalCache} 同步。
+     * 热路径读布尔勿经 Redis/DB；调用方勿原地 mutate {@link #getSecurityOpsConfig()} 返回值。
+     */
+    private final Object opsGateLock = new Object();
+    private final AtomicLong opsGateEpoch = new AtomicLong();
+    private volatile long opsGateInstalledEpoch = -1L;
+    private volatile SecurityOpsConfig opsGateSnapshot;
+    private volatile boolean gateAdminIpEnable;
+    private volatile boolean gateBeanExecuteEnabled;
+    private volatile boolean gateWebShellEnabled;
 
     /** 启动期「密文但密钥未就绪」按 key 只告警一次，避免 Shiro 多 Bean 刷屏 */
     private final Set<String> cipherKeyNotReadyWarned = ConcurrentHashMap.newKeySet();
@@ -326,7 +339,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
                 {configName(SECURITY_HTTP_PROXY_CONFIG), "HTTP 代理安全", "HTTP Proxy Security"},
                 {configDescription(SECURITY_HTTP_PROXY_CONFIG), "代理开关、DNS 校验、上游白名单", "Proxy switch, DNS check, upstream allowlist"},
                 {configName(SECURITY_OPS_CONFIG), "运维 Token", "Ops Tokens"},
-                {configDescription(SECURITY_OPS_CONFIG), "clear/reinit 头认证 Token、Bean 执行开关", "clear/reinit header auth tokens, bean execute switch"},
+                {configDescription(SECURITY_OPS_CONFIG), "clear/reinit 头认证 Token、Bean/WebShell/管理IP校验开关", "clear/reinit header auth tokens, bean/webshell/admin-IP switches"},
                 {configName(SECURITY_SESSION_CONFIG), "会话与 RememberMe", "Session and RememberMe"},
                 {configDescription(SECURITY_SESSION_CONFIG), "Cookie Secure/SameSite 与 RememberMe AES 密钥", "Cookie Secure/SameSite and RememberMe AES key"},
                 {"sys_string_config_secure_management", "配置安全", "Config storage security"},
@@ -365,7 +378,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
                 {SITE_PORTAL_CONFIG, GsonConfig.getGson().toJson(new SitePortalConfig()), "1", "登录页品牌、版权、备案与法律链接", config, json_type, SitePortalConfig.class.getName()},
                 {SECURITY_AUTH_CONFIG, GsonConfig.getGson().toJson(seedSecurityAuthConfig()), "1", "安全认证配置（集群统一）", SecurityAuthConfig.config, json_type, SecurityAuthConfig.class.getName()},
                 {SECURITY_HTTP_PROXY_CONFIG, GsonConfig.getGson().toJson(seedSecurityHttpProxyConfig()), "1", "HTTP 代理安全（集群统一）", SecurityHttpProxyConfig.config, json_type, SecurityHttpProxyConfig.class.getName()},
-                {SECURITY_OPS_CONFIG, GsonConfig.getGson().toJson(seedSecurityOpsConfig()), "1", "运维 Token（集群统一）", SecurityOpsConfig.config, json_type, SecurityOpsConfig.class.getName()},
+                {SECURITY_OPS_CONFIG, GsonConfig.getGson().toJson(seedSecurityOpsConfig()), "1", "运维 Token / Bean·WebShell·管理IP校验（集群统一）", SecurityOpsConfig.config, json_type, SecurityOpsConfig.class.getName()},
                 {SECURITY_SESSION_CONFIG, GsonConfig.getGson().toJson(seedSecuritySessionConfig()), "1", "会话与 RememberMe（集群统一）", SecuritySessionConfig.config, json_type, SecuritySessionConfig.class.getName()},
         };
     }
@@ -685,7 +698,13 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL);
         }
-        if (config != null) {
+        if (config != null && StringUtils.isNotBlank(config.getParamKey())) {
+            // 与 update 对齐：本机 map/JSON/门禁 L0 立刻跟上，不依赖 Pub/Sub 自回环
+            clearJsonObjectCache(config.getParamKey());
+            if (map != null) {
+                map.put(config.getParamKey(), config);
+            }
+            refreshOpsGateAfterEntityWrite(config.getParamKey(), config.getParamValue());
             publishConfigCacheInvalidate(config.getParamKey());
         }
         return result;
@@ -700,6 +719,8 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
             if (map != null) {
                 map.put(config.getParamKey(), config);
             }
+            // 写节点立即刷新门禁 L0，避免依赖异步 onFiveMinute / Pub/Sub 自回环
+            refreshOpsGateAfterEntityWrite(config.getParamKey(), config.getParamValue());
         }
         if (LOGGER_LEVEL.equalsIgnoreCase(config.getParamKey())) {
             sysLogService.changeLevel(config.getParamValue(), NULL);
@@ -730,6 +751,50 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         clearJsonObjectCache(key);
         if (CLOUD_STORAGE_CONFIG_KEY.equalsIgnoreCase(key)) {
             cloudStorageConfig = null;
+        }
+        if (SECURITY_OPS_CONFIG.equals(key)) {
+            invalidateOpsGateL0();
+        }
+    }
+
+    /**
+     * 丢弃 SECURITY_OPS_CONFIG 门禁 L0（epoch bump，下一读回源）。
+     * 布尔位 fail-closed 置 false，避免失效与重装竞态窗口仍读到旧 true。
+     */
+    private void invalidateOpsGateL0() {
+        opsGateEpoch.incrementAndGet();
+        opsGateSnapshot = null;
+        opsGateInstalledEpoch = -1L;
+        gateAdminIpEnable = false;
+        gateBeanExecuteEnabled = false;
+        gateWebShellEnabled = false;
+    }
+
+    /**
+     * SysConfig 实体 save/update 写本机后：若为 ops 键则 bump 并按新明文立刻重装 L0。
+     */
+    private void refreshOpsGateAfterEntityWrite(String paramKey, String paramValuePlain) {
+        if (!SECURITY_OPS_CONFIG.equals(paramKey)) {
+            return;
+        }
+        invalidateOpsGateL0();
+        installOpsGate(copyOpsConfig(parseOpsConfigPlain(paramValuePlain)), opsGateEpoch.get());
+    }
+
+    private SecurityOpsConfig parseOpsConfigPlain(String json) {
+        if (StringUtils.isBlank(json)) {
+            return seedSecurityOpsConfig();
+        }
+        try {
+            SecurityOpsConfig cfg = GsonConfig.getGson().fromJson(json, SecurityOpsConfig.class);
+            if (cfg == null) {
+                return seedSecurityOpsConfig();
+            }
+            cfg.validateAndFix();
+            return cfg;
+        } catch (Exception e) {
+            log.warn("SECURITY_OPS_CONFIG 解析失败，回落默认门禁 msg={}", e.getMessage());
+            return seedSecurityOpsConfig();
         }
     }
 
@@ -798,6 +863,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         clearAllJsonObjectCache();
         cloudStorageConfig = null;
         namespace = null;
+        invalidateOpsGateL0();
         return n;
     }
 
@@ -1376,11 +1442,104 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     }
 
     public SecurityOpsConfig getSecurityOpsConfig() {
+        ensureOpsGate();
+        SecurityOpsConfig snap = opsGateSnapshot;
+        // 返回拷贝，避免调用方 mutate 污染 L0
+        return copyOpsConfig(snap != null ? snap : seedSecurityOpsConfig());
+    }
+
+    /** 管理 IP 校验开关（L0 热路径）。 */
+    public boolean isAdminIpEnable() {
+        ensureOpsGate();
+        return gateAdminIpEnable;
+    }
+
+    /** Bean 执行器开关（L0 热路径）。 */
+    public boolean isBeanExecuteEnabled() {
+        ensureOpsGate();
+        return gateBeanExecuteEnabled;
+    }
+
+    /** WebShell 开关（L0 热路径）。 */
+    public boolean isWebShellEnabled() {
+        ensureOpsGate();
+        return gateWebShellEnabled;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public SecurityOpsConfig saveSecurityOpsConfig(SecurityOpsConfig config) {
+        SecurityOpsConfig toSave = config == null ? new SecurityOpsConfig() : config;
+        List<String> fixes = toSave.validateAndFix();
+        for (String fix : fixes) {
+            log.debug("[Config validation] {}", fix);
+        }
+        updateValueByKey(SECURITY_OPS_CONFIG, GsonConfig.getGson().toJson(toSave));
+        // updateValueByKey 已 bump epoch；本机按当前 epoch 重装，避免同线程立刻 miss 打 Redis
+        installOpsGate(copyOpsConfig(toSave), opsGateEpoch.get());
+        return copyOpsConfig(toSave);
+    }
+
+    /**
+     * 确保 SECURITY_OPS_CONFIG 门禁 L0 已安装；命中则 O(1)，未命中则回源 L1/L2/L3。
+     * 加载中途 epoch 被 bump 时最多重试，避免返回未安装态的旧布尔。
+     */
+    private void ensureOpsGate() {
+        for (int attempt = 0; attempt < 3; attempt++) {
+            long epoch = opsGateEpoch.get();
+            if (opsGateInstalledEpoch == epoch && opsGateSnapshot != null) {
+                return;
+            }
+            synchronized (opsGateLock) {
+                epoch = opsGateEpoch.get();
+                if (opsGateInstalledEpoch == epoch && opsGateSnapshot != null) {
+                    return;
+                }
+                SecurityOpsConfig loaded = loadOpsConfigUncached();
+                if (opsGateEpoch.get() != epoch) {
+                    continue;
+                }
+                installOpsGate(copyOpsConfig(loaded != null ? loaded : seedSecurityOpsConfig()), epoch);
+                return;
+            }
+        }
+    }
+
+    /**
+     * 回源加载 ops 配置（L1/L2/L3），禁止读 {@link #opsGateSnapshot}，避免递归。
+     * 仅内存 validate，不走 {@link #getConfigObjectValidate} 写回，避免加载路径触发 updateValueByKey。
+     */
+    private SecurityOpsConfig loadOpsConfigUncached() {
         if (StringUtils.isBlank(getValue(SECURITY_OPS_CONFIG))) {
             return seedSecurityOpsConfig();
         }
-        SecurityOpsConfig cfg = getConfigObjectValidate(SECURITY_OPS_CONFIG, SecurityOpsConfig.class);
-        return cfg != null ? cfg : seedSecurityOpsConfig();
+        SecurityOpsConfig cfg = getConfigObject(SECURITY_OPS_CONFIG, SecurityOpsConfig.class);
+        if (cfg == null) {
+            return seedSecurityOpsConfig();
+        }
+        cfg.validateAndFix();
+        return cfg;
+    }
+
+    private void installOpsGate(SecurityOpsConfig cfg, long epoch) {
+        SecurityOpsConfig snap = cfg != null ? cfg : seedSecurityOpsConfig();
+        gateAdminIpEnable = snap.isAdminIpEnable();
+        gateBeanExecuteEnabled = snap.isBeanExecuteEnabled();
+        gateWebShellEnabled = snap.isWebShellEnabled();
+        opsGateSnapshot = snap;
+        opsGateInstalledEpoch = epoch;
+    }
+
+    private static SecurityOpsConfig copyOpsConfig(SecurityOpsConfig src) {
+        SecurityOpsConfig c = new SecurityOpsConfig();
+        if (src == null) {
+            return c;
+        }
+        c.setClearToken(src.getClearToken());
+        c.setReinitToken(src.getReinitToken());
+        c.setBeanExecuteEnabled(src.isBeanExecuteEnabled());
+        c.setWebShellEnabled(src.isWebShellEnabled());
+        c.setAdminIpEnable(src.isAdminIpEnable());
+        return c;
     }
 
     public SecuritySessionConfig getSecuritySessionConfig() {
@@ -1748,6 +1907,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
             map = t;
             clearAllJsonObjectCache();
             cloudStorageConfig = null;
+            invalidateOpsGateL0();
             updateCookieDomain();
         }
     }

@@ -7,17 +7,18 @@
 
 ---
 
-## 1. 目标语义（不可降级）
+## 1. 目标语义
 
 | 项 | 要求 |
 |----|------|
-| 管理 API / gen 全表 CRUD | 已登录 **系统管理员** + 客户端 IP ∈ **`wall_ip_admin_white`**（`IpAdminWhiteEntity`） |
-| 真相源 | `AdminAccessGuard.requireGenAdmin` / `requireOpsAdmin` → `IpAdminWhiteService.checkAdmin` |
+| 管理 API / gen 全表 CRUD | 已登录 **系统管理员**；当 **`SECURITY_OPS_CONFIG.adminIpEnable=true`** 时另须客户端 IP ∈ **`wall_ip_admin_white`**（`IpAdminWhiteEntity`） |
+| 管理 IP 开关 | `adminIpEnable` **默认 false**（平时仅超管）；遇账号泄露/攻击时在 wall「管理IP校验」开启；关闭须 `clearToken`；开启时自动认领当前 IP |
+| 真相源 | `AdminAccessGuard.requireGenAdmin` / `requireOpsAdmin` → `IpAdminWhiteService.checkAdmin`（开关短路在 `checkAdmin` 内） |
 | 框架切面 | `GenAdminAccessAspect`（判定 `shouldRequireAdminIpApi`） |
 | 自助例外 | `usr` / `safe` / `bot` / `qrc` + SPI `selfGenModules()`；本人 `nav` / `info()` / `password` / `session/self*` 等 |
 | Cookie 写操作 | 另受 `SECURITY_AUTH_CONFIG.csrfEnforce` + `X-CSRF-Token` |
 
-**禁止**：仅靠菜单 `@RequiresPermissions`、仅超管不验 IP、对 gen 前缀 Shiro `anon`。
+**禁止**：仅靠菜单 `@RequiresPermissions`、对 gen 前缀 Shiro `anon`；**禁止**用 `WallDefault.ipWhiteEnable` 代替管理 IP 开关。
 
 ---
 
