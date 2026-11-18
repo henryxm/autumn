@@ -42,12 +42,33 @@
             padding: 24px 28px;
         }
         .header h1 { font-size: 22px; font-weight: 700; }
-        .header-sub { opacity: 0.9; font-size: 13px; margin-top: 6px; max-width: 720px; }
+        .header-sub { opacity: 0.9; font-size: 13px; margin-top: 6px; max-width: 760px; }
+        .flow {
+            display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+            margin-top: 12px; font-size: 12px;
+        }
+        .flow-step {
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.28);
+            border-radius: 999px;
+            padding: 4px 10px;
+            white-space: nowrap;
+        }
+        .flow-arrow { opacity: 0.7; }
         .body { padding: 22px 26px 28px; display: flex; flex-direction: column; gap: 18px; }
+        .top-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+        @media (max-width: 960px) {
+            .top-grid { grid-template-columns: 1fr; }
+        }
         .panel {
             border: 1px solid var(--border);
             border-radius: var(--radius);
             background: #fff;
+            min-width: 0;
         }
         .panel-head {
             padding: 12px 16px;
@@ -60,7 +81,11 @@
             font-weight: 600;
         }
         .panel-body { padding: 16px; }
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+        .panel-migrate {
+            border-color: #bfdbfe;
+            background: linear-gradient(180deg, #f8fbff 0%, #fff 48%);
+        }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
         .stat {
             background: var(--bg);
             border-radius: 10px;
@@ -70,6 +95,11 @@
         .stat .label { font-size: 12px; color: var(--muted); }
         .stat .value { font-size: 16px; font-weight: 700; margin-top: 4px; word-break: break-all; }
         .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+        .toolbar-split {
+            display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+            justify-content: space-between; margin-bottom: 12px;
+        }
+        .toolbar-left, .toolbar-right { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         .toolbar input[type=text] {
             min-width: 220px;
             padding: 8px 12px;
@@ -91,10 +121,22 @@
         .btn-danger { background: var(--danger); }
         .btn-warning { background: var(--warning); }
         .btn-sm { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
-        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .batch-box {
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+            padding: 10px 12px; background: #f8fafc; border: 1px solid var(--border);
+            border-radius: 10px; margin-bottom: 12px;
+        }
+        .batch-box input[type=number] {
+            width: 110px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
+        }
+        .table-wrap {
+            width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;
+            max-height: min(62vh, 640px); border: 1px solid var(--border); border-radius: 10px;
+        }
         table.config-table {
             width: 100%;
-            min-width: 960px;
+            min-width: 980px;
             border-collapse: collapse;
             font-size: 13px;
             table-layout: fixed;
@@ -105,13 +147,18 @@
             text-align: left;
             vertical-align: middle;
         }
-        table.config-table th { color: var(--muted); font-weight: 600; background: #f8fafc; }
-        table.config-table .col-id { width: 56px; }
-        table.config-table .col-key { width: 22%; }
-        table.config-table .col-rest { width: 72px; }
+        table.config-table thead th {
+            color: var(--muted); font-weight: 600; background: #f8fafc;
+            position: sticky; top: 0; z-index: 2;
+            box-shadow: 0 1px 0 var(--border);
+        }
+        table.config-table .col-id { width: 52px; }
+        table.config-table .col-key { width: 24%; }
+        table.config-table .col-rest { width: 76px; text-align: center; }
+        table.config-table td.col-rest { text-align: center; }
         table.config-table .col-val { width: auto; }
-        table.config-table .col-remark { width: 18%; min-width: 120px; }
-        table.config-table .col-ops { width: 210px; }
+        table.config-table .col-remark { width: 16%; min-width: 110px; }
+        table.config-table .col-ops { width: 220px; }
         .cell-clip {
             overflow: hidden;
             text-overflow: ellipsis;
@@ -130,7 +177,11 @@
         .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
         .muted { color: var(--muted); }
         .empty { text-align: center; color: var(--muted); padding: 24px; }
-        .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; }
+        .pager {
+            display: flex; gap: 8px; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; margin-top: 12px;
+        }
+        .pager-nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .form-row { display: grid; grid-template-columns: 120px 1fr; gap: 10px; margin-bottom: 12px; align-items: start; }
         .form-row label { color: var(--muted); font-size: 13px; padding-top: 8px; }
         .form-row input, .form-row textarea {
@@ -150,10 +201,21 @@
         }
         .toast.err { background: #7f1d1d; }
         .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
-        .result-box {
-            margin-top: 12px; padding: 10px 12px; background: #f8fafc;
-            border: 1px solid var(--border); border-radius: 8px; font-size: 12px; white-space: pre-wrap;
+        .hint-list { margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+        .hint-list li { margin: 2px 0; }
+        .result-card {
+            margin-top: 12px; padding: 12px 14px; background: #f8fafc;
+            border: 1px solid var(--border); border-radius: 10px;
         }
+        .result-grid {
+            display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+        }
+        @media (max-width: 640px) {
+            .result-grid { grid-template-columns: 1fr; }
+        }
+        .result-item .k { font-size: 11px; color: var(--muted); }
+        .result-item .v { font-size: 18px; font-weight: 700; margin-top: 2px; }
+        .result-note { margin-top: 10px; font-size: 12px; color: var(--muted); }
         .badge {
             display: inline-block; padding: 2px 8px; border-radius: 999px;
             font-size: 11px; font-weight: 600; white-space:nowrap;
@@ -162,6 +224,10 @@
         .badge-plain { background: #fef3c7; color: #92400e; }
         .badge-unk { background: #e2e8f0; color: #475569; }
         .ops { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; }
+        select.limit-select {
+            padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+            background: #fff;
+        }
         [v-cloak] { display: none; }
     </style>
 </head>
@@ -172,7 +238,16 @@
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
                 <div>
                     <h1>配置安全</h1>
-                    <div class="header-sub">sys_config.paramValue 字段存储加密：页面展示与编辑均为明文，落库为 ENC$ 密文。业务侧 getValue/updateValueByKey 无需改代码。滚动发布：先全节点配 key 且保持写加密关闭 → 本页预检/迁移 → 在「字段存储加密」页打开写开关；迁移后会刷新本机与集群配置缓存。</div>
+                    <div class="header-sub">sys_config.paramValue 字段存储加密：页面展示与编辑为明文，落库为 ENC$ 密文。业务侧 getValue / updateValueByKey 无需改代码。</div>
+                    <div class="flow">
+                        <span class="flow-step">1 配密钥</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step">2 预检</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step">3 执行迁移</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step">4 开写开关</span>
+                    </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;">
                     <a class="btn btn-outline btn-sm" :href="ctx + '/modules/sys/config.html'" target="_blank" rel="noopener">参数管理</a>
@@ -181,53 +256,73 @@
             </div>
         </div>
         <div class="body">
-            <div class="panel">
-                <div class="panel-head">
-                    <span>加密状态</span>
-                    <button type="button" class="btn btn-outline btn-sm" @click="loadStatus">刷新</button>
-                </div>
-                <div class="panel-body">
-                    <div class="stats">
-                        <div class="stat"><div class="label">写入加密</div><div class="value" v-text="yn(status.writeEncryptEnabled)"></div></div>
-                        <div class="stat"><div class="label">读解密</div><div class="value" v-text="yn(status.readDecryptEnabled)"></div></div>
-                        <div class="stat"><div class="label">密钥就绪</div><div class="value" v-text="yn(status.keyConfigured)"></div></div>
-                        <div class="stat"><div class="label">前缀</div><div class="value mono" v-text="status.prefix || '-'"></div></div>
+            <div class="top-grid">
+                <div class="panel">
+                    <div class="panel-head">
+                        <span>加密状态</span>
+                        <button type="button" class="btn btn-outline btn-sm" @click="loadStatus">刷新</button>
                     </div>
-                    <p class="hint">实体：{{ entity }} · 字段：paramValue（TEXT，可容纳 ENC$ 密文）</p>
+                    <div class="panel-body">
+                        <div class="stats">
+                            <div class="stat"><div class="label">写入加密</div><div class="value" v-text="yn(status.writeEncryptEnabled)"></div></div>
+                            <div class="stat"><div class="label">读解密</div><div class="value" v-text="yn(status.readDecryptEnabled)"></div></div>
+                            <div class="stat"><div class="label">密钥就绪</div><div class="value" v-text="yn(status.keyConfigured)"></div></div>
+                            <div class="stat"><div class="label">前缀</div><div class="value mono" v-text="status.prefix || '-'"></div></div>
+                        </div>
+                        <p class="hint">实体：{{ entity }} · 字段：paramValue（TEXT）</p>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <span>缓存管理</span>
+                        <button type="button" class="btn btn-outline btn-sm" :disabled="cacheBusy" @click="loadStatus">刷新状态</button>
+                    </div>
+                    <div class="panel-body">
+                        <div class="toolbar">
+                            <button type="button" class="btn btn-outline btn-sm" :disabled="cacheBusy" @click="clearLocalCache">清理本机缓存并加载</button>
+                            <button type="button" class="btn btn-warning btn-sm" :disabled="cacheBusy" @click="clearRedis">清理 Redis</button>
+                            <button type="button" class="btn btn-sm" :disabled="cacheBusy" @click="reloadCaches">清理并重新加载</button>
+                        </div>
+                        <div v-if="cacheResult" class="result-note" style="padding:8px 10px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;" v-text="cacheResult"></div>
+                        <p class="hint">本机 = map + JSON；Redis = 共享值缓存。直改库或他机写入后用「清理并重新加载」。</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="panel">
-                <div class="panel-head">
-                    <span>缓存管理</span>
-                    <button type="button" class="btn btn-outline btn-sm" :disabled="cacheBusy" @click="loadStatus">刷新状态</button>
-                </div>
-                <div class="panel-body">
-                    <div class="toolbar">
-                        <button type="button" class="btn btn-outline btn-sm" :disabled="cacheBusy" @click="clearLocalCache">清理本机缓存并加载</button>
-                        <button type="button" class="btn btn-warning btn-sm" :disabled="cacheBusy" @click="clearRedis">清理 Redis</button>
-                        <button type="button" class="btn btn-sm" :disabled="cacheBusy" @click="reloadCaches">清理并重新加载</button>
-                    </div>
-                    <div v-if="cacheResult" class="result-box" v-text="cacheResult"></div>
-                    <p class="hint">本机缓存 = map + JSON 解析结果；Redis = 共享配置值缓存。直改库或他机写入后可用「清理并重新加载」（清 Redis + 本机回源 DB + 通知集群）。仅清 Redis 后下次读会回源；仅清本机则从 Redis/DB 回填。</p>
-                </div>
-            </div>
-
-            <div class="panel">
+            <div class="panel panel-migrate">
                 <div class="panel-head">
                     <span>存量迁移（SysConfigEntity）</span>
                 </div>
                 <div class="panel-body">
-                    <div class="toolbar">
-                        <label class="muted">batchSize</label>
-                        <input type="number" v-model.number="batchSize" min="1" max="2000" style="width:100px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;">
-                        <button type="button" class="btn btn-warning btn-sm" :disabled="!status.keyConfigured" @click="migrate(true)">预检加密</button>
-                        <button type="button" class="btn btn-success btn-sm" :disabled="!status.keyConfigured" @click="migrate(false)">执行加密</button>
-                        <button type="button" class="btn btn-outline btn-sm" :disabled="!status.readDecryptEnabled" @click="restore(true)">预检还原</button>
-                        <button type="button" class="btn btn-danger btn-sm" :disabled="!status.readDecryptEnabled" @click="restore(false)">执行还原</button>
+                    <div class="batch-box">
+                        <label class="muted">每批拉取条数 <span class="mono">(batchSize)</span></label>
+                        <input type="number" v-model.number="batchSize" min="1" max="2000" :disabled="migrateBusy">
+                        <span class="muted">上限 2000</span>
                     </div>
-                    <div v-if="migrateResult" class="result-box" v-text="migrateResult"></div>
-                    <p class="hint">预检只统计 pending；执行写入须 confirm。建议：预检 → 核对 → 执行 → 刷新列表。</p>
+                    <div class="toolbar" style="margin-bottom:0;">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-warning btn-sm" :disabled="migrateBusy || !status.keyConfigured" @click="migrate(true)">预检加密</button>
+                            <button type="button" class="btn btn-success btn-sm" :disabled="migrateBusy || !status.keyConfigured" @click="migrate(false)">执行加密</button>
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline btn-sm" :disabled="migrateBusy || !status.readDecryptEnabled" @click="restore(true)">预检还原</button>
+                            <button type="button" class="btn btn-danger btn-sm" :disabled="migrateBusy || !status.readDecryptEnabled" @click="restore(false)">执行还原</button>
+                        </div>
+                    </div>
+                    <ul class="hint-list">
+                        <li><strong>batchSize</strong> 只控制一次调用里每次 SQL 拉取多少行；服务端会按 OFFSET 自动翻页直到扫完。</li>
+                        <li>点一次「执行」即处理全表待迁移项，<strong>不是</strong>只处理前 N 条，也无需靠多次点击递进。</li>
+                        <li>建议：预检查看 pending → 核对 → 执行 → 刷新列表。</li>
+                    </ul>
+                    <div v-if="migrateResult" class="result-card">
+                        <div class="result-grid">
+                            <div class="result-item"><div class="k">scanned 扫描</div><div class="v" v-text="migrateResult.scanned"></div></div>
+                            <div class="result-item"><div class="k">pending 待处理</div><div class="v" v-text="migrateResult.pending"></div></div>
+                            <div class="result-item"><div class="k">processed 已写入</div><div class="v" v-text="migrateResult.processed"></div></div>
+                        </div>
+                        <div class="result-note" v-text="migrateResult.note"></div>
+                    </div>
                 </div>
             </div>
 
@@ -237,10 +332,21 @@
                     <button type="button" class="btn btn-outline btn-sm" @click="reload">刷新</button>
                 </div>
                 <div class="panel-body">
-                    <div class="toolbar">
-                        <input type="text" v-model="q.paramKey" @keyup.enter="query" placeholder="按参数名筛选">
-                        <button type="button" class="btn btn-sm" @click="query">查询</button>
-                        <button type="button" class="btn btn-success btn-sm" @click="add">新增</button>
+                    <div class="toolbar-split">
+                        <div class="toolbar-left">
+                            <input type="text" v-model="q.paramKey" @keyup.enter="query" placeholder="按参数名筛选">
+                            <button type="button" class="btn btn-sm" @click="query">查询</button>
+                            <button type="button" class="btn btn-success btn-sm" @click="add">新增</button>
+                        </div>
+                        <div class="toolbar-right">
+                            <span class="muted">每页</span>
+                            <select class="limit-select" v-model.number="limit" @change="changeLimit">
+                                <option :value="10">10</option>
+                                <option :value="20">20</option>
+                                <option :value="50">50</option>
+                            </select>
+                            <span class="muted">条</span>
+                        </div>
                     </div>
                     <div class="table-wrap">
                     <table class="config-table">
@@ -264,13 +370,13 @@
                         <tr v-for="row in list" :key="row.id">
                             <td class="mono" v-text="row.id"></td>
                             <td class="mono"><span class="cell-clip" :title="row.paramKey" v-text="row.paramKey"></span></td>
-                            <td>
+                            <td class="col-rest">
                                 <span class="badge" :class="row.atRestEncrypted ? 'badge-enc' : (status.keyConfigured ? 'badge-plain' : 'badge-unk')"
                                       v-text="row.atRestEncrypted ? '已加密' : '明文'"></span>
                             </td>
-                            <td class="mono"><span class="cell-clip" :title="displayValue(row)" v-text="truncate(displayValue(row), 80)"></span></td>
+                            <td class="mono"><span class="cell-clip" :title="displayValue(row)" v-text="truncate(displayValue(row), 96)"></span></td>
                             <td class="muted"><span class="cell-wrap" :title="row.remark || ''" v-text="row.remark || '-'"></span></td>
-                            <td>
+                            <td class="col-ops">
                                 <div class="ops">
                                     <button type="button" class="btn btn-outline btn-sm" @click="edit(row.id)">编辑</button>
                                     <button type="button" class="btn btn-success btn-sm"
@@ -287,8 +393,12 @@
                     </div>
                     <div class="pager">
                         <span class="muted">共 {{ totalCount }} 条 · 第 {{ page }} / {{ totalPage || 1 }} 页</span>
-                        <button type="button" class="btn btn-outline btn-sm" :disabled="page<=1" @click="gotoPage(page-1)">上一页</button>
-                        <button type="button" class="btn btn-outline btn-sm" :disabled="page>=totalPage" @click="gotoPage(page+1)">下一页</button>
+                        <div class="pager-nav">
+                            <button type="button" class="btn btn-outline btn-sm" :disabled="page<=1" @click="gotoPage(1)">首页</button>
+                            <button type="button" class="btn btn-outline btn-sm" :disabled="page<=1" @click="gotoPage(page-1)">上一页</button>
+                            <button type="button" class="btn btn-outline btn-sm" :disabled="page>=totalPage" @click="gotoPage(page+1)">下一页</button>
+                            <button type="button" class="btn btn-outline btn-sm" :disabled="page>=totalPage" @click="gotoPage(totalPage)">末页</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -377,8 +487,9 @@
             showList: true,
             title: '',
             config: {},
-            batchSize: 200,
-            migrateResult: '',
+            batchSize: 1000,
+            migrateResult: null,
+            migrateBusy: false,
             message: '',
             messageType: 'ok',
             busyId: null,
@@ -397,7 +508,6 @@
                 s = s == null ? '' : String(s);
                 return s.length > n ? s.substring(0, n) + '…' : s;
             },
-            /** 列表展示：避免把 ENC$ 长密文撑破表格；解密失败时给短提示 */
             displayValue: function(row) {
                 var s = row && row.paramValue != null ? String(row.paramValue) : '';
                 if (!s) return '';
@@ -426,7 +536,18 @@
                 }).fail(function() { v.toast('状态加载失败', true); });
             },
             query: function() { this.page = 1; this.reload(); },
-            gotoPage: function(p) { this.page = p; this.reload(); },
+            changeLimit: function() {
+                this.page = 1;
+                this.reload();
+            },
+            gotoPage: function(p) {
+                var total = this.totalPage || 1;
+                if (p < 1) p = 1;
+                if (p > total) p = total;
+                if (p === this.page && this.list.length) return;
+                this.page = p;
+                this.reload();
+            },
             reload: function() {
                 var v = this;
                 v.showList = true;
@@ -558,26 +679,40 @@
             },
             runMigrate: function(path, dryRun) {
                 var v = this;
-                if (!dryRun && !confirm('确认对 SysConfigEntity 执行非预检' + (path === 'migrate' ? '加密' : '还原') + '？')) {
+                if (v.migrateBusy) return;
+                if (!dryRun && !confirm('确认对 SysConfigEntity 执行非预检' + (path === 'migrate' ? '加密' : '还原') + '？\n将按每批 ' + v.batchSize + ' 条自动翻页扫完全表。')) {
                     return;
                 }
+                var size = Number(v.batchSize) || 1000;
+                if (size < 1) size = 1;
+                if (size > 2000) size = 2000;
+                v.batchSize = size;
+                v.migrateBusy = true;
                 postApi(api + '/' + path, {
                     dryRun: dryRun,
-                    batchSize: v.batchSize,
+                    batchSize: size,
                     confirm: !dryRun
                 }, function(res) {
+                    v.migrateBusy = false;
                     if (res && res.code === 0) {
-                        v.migrateResult = (path === 'migrate' ? '加密' : '还原')
-                            + (dryRun ? '预检' : '执行')
-                            + ' · scanned=' + res.scanned
-                            + ' pending=' + res.pending
-                            + ' processed=' + res.processed;
-                        v.toast(v.migrateResult);
+                        var action = (path === 'migrate' ? '加密' : '还原') + (dryRun ? '预检' : '执行');
+                        v.migrateResult = {
+                            scanned: res.scanned != null ? res.scanned : 0,
+                            pending: res.pending != null ? res.pending : 0,
+                            processed: res.processed != null ? res.processed : 0,
+                            note: action + '完成 · 每批拉取上限 ' + size + '（服务端已自动 OFFSET 翻页扫完）'
+                        };
+                        v.toast(action + ' · scanned=' + v.migrateResult.scanned
+                            + ' pending=' + v.migrateResult.pending
+                            + ' processed=' + v.migrateResult.processed);
                         if (!dryRun) v.reload();
                     } else {
                         v.toast((res && res.msg) || '迁移失败', true);
                     }
-                }, function() { v.toast('迁移失败', true); });
+                }, function() {
+                    v.migrateBusy = false;
+                    v.toast('迁移失败', true);
+                });
             }
         }
     });

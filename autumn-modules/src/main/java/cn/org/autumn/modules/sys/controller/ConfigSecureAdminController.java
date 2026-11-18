@@ -146,7 +146,7 @@ public class ConfigSecureAdminController {
 
     @PostMapping("/migrate")
     public R migrate(@RequestParam(value = "dryRun", defaultValue = "true") boolean dryRun,
-                     @RequestParam(value = "batchSize", defaultValue = "200") int batchSize,
+                     @RequestParam(value = "batchSize", defaultValue = "1000") int batchSize,
                      @RequestParam(value = "confirm", defaultValue = "false") boolean confirm,
                      HttpServletRequest request) {
         if (!dryRun && !confirm) {
@@ -157,7 +157,7 @@ public class ConfigSecureAdminController {
 
     @PostMapping("/restore")
     public R restore(@RequestParam(value = "dryRun", defaultValue = "true") boolean dryRun,
-                     @RequestParam(value = "batchSize", defaultValue = "200") int batchSize,
+                     @RequestParam(value = "batchSize", defaultValue = "1000") int batchSize,
                      @RequestParam(value = "confirm", defaultValue = "false") boolean confirm,
                      HttpServletRequest request) {
         if (!dryRun && !confirm) {

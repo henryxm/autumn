@@ -299,7 +299,7 @@ IDEA「没配 yml key 却能加解密」= Redis/env 已有历史密钥。**推�
 | `GET /list` / `GET /info/{id}` | 明文列表与详情（读路径已解密）；列表行含 `atRestEncrypted` / `canEncrypt` / `canDecrypt`；详情另回 `atRestEncrypted` |
 | `POST /save` / `POST /update` | 明文入参；有密钥时**强制** ENC$ 落库（不依赖全局写开关），缓存仍为明文 |
 | `POST /migrateOne` / `restoreOne` | 单条加密/还原；`id` + 非预检须 `confirm=true`；成功后刷新配置缓存 |
-| `POST /migrate` / `restore` | 仅针对 `SysConfigEntity`；默认 `dryRun=true`；非预检须 `confirm=true` |
+| `POST /migrate` / `restore` | 仅针对 `SysConfigEntity`；默认 `dryRun=true`；非预检须 `confirm=true`；`batchSize` 默认 **1000**、上限 2000，表示**单次调用内每次 SQL 拉取行数**，服务端按 OFFSET **自动翻页扫完全表**（点一次执行即处理全部待迁移项，不是只打前 N 条） |
 | `POST /clearLocalCache` | 清本机 map/JSON 缓存并从 DB 回源 |
 | `POST /clearRedis` | 清共享 Redis 中 SysConfig 值缓存 |
 | `POST /reload` | 清 Redis + 本机回源 DB + Pub/Sub 通知集群（同迁移后刷新） |
