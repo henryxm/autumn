@@ -30,6 +30,12 @@ nbdist/
 
 logs/
 .storage/
+
+# Flutter ops client local SDK / build (app/ is not a Maven module)
+app/.flutter-sdk/
+app/**/build/
+app/**/.dart_tool/
+
 # 内嵌 H2 文件库（application-h2.yml 默认路径）
 embedded/
 /.vscode/settings.json

@@ -637,12 +637,14 @@ public class AdminAccessGuard {
                 || "AuthLoginProviderController".equals(simple)
                 || "AdminBootstrapController".equals(simple)
                 || "WallController".equals(simple)
+                || "OpsApiController".equals(simple)
                 || "SpmController".equals(simple)) {
             return true;
         }
         // oauth2 / 开放 API 等非后台壳
         if (name.contains(".oauth.oauth2.")
                 || name.contains(".opl.oauth2.")
+                || name.contains(".modules.ops.controller.")
                 || name.contains(".bot.controller.RobotApi")
                 || name.contains(".bot.controller.RobotInbound")
                 || name.contains(".qrc.controller.QrcApi")

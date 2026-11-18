@@ -23,6 +23,7 @@ import cn.org.autumn.model.RsaConfig;
 import cn.org.autumn.model.SecurityAuthConfig;
 import cn.org.autumn.model.SecurityHttpProxyConfig;
 import cn.org.autumn.model.SecurityOpsConfig;
+import cn.org.autumn.model.SecurityOpsCertConfig;
 import cn.org.autumn.model.SecuritySessionConfig;
 import cn.org.autumn.model.SitePortalConfig;
 import cn.org.autumn.modules.job.task.LoopJob;
@@ -119,6 +120,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     public static final String SECURITY_AUTH_CONFIG = SecurityAuthConfig.CONFIG_KEY;
     public static final String SECURITY_HTTP_PROXY_CONFIG = SecurityHttpProxyConfig.CONFIG_KEY;
     public static final String SECURITY_OPS_CONFIG = SecurityOpsConfig.CONFIG_KEY;
+    public static final String SECURITY_OPS_CERT_CONFIG = SecurityOpsCertConfig.CONFIG_KEY;
     public static final String SECURITY_SESSION_CONFIG = SecuritySessionConfig.CONFIG_KEY;
     public static final String Localhost = "localhost";
     public static final String config_lang_prefix = "config_lang_string_";
@@ -379,6 +381,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
                 {SECURITY_AUTH_CONFIG, GsonConfig.getGson().toJson(seedSecurityAuthConfig()), "1", "安全认证配置（集群统一）", SecurityAuthConfig.config, json_type, SecurityAuthConfig.class.getName()},
                 {SECURITY_HTTP_PROXY_CONFIG, GsonConfig.getGson().toJson(seedSecurityHttpProxyConfig()), "1", "HTTP 代理安全（集群统一）", SecurityHttpProxyConfig.config, json_type, SecurityHttpProxyConfig.class.getName()},
                 {SECURITY_OPS_CONFIG, GsonConfig.getGson().toJson(seedSecurityOpsConfig()), "1", "运维 Token / Bean·WebShell·管理IP校验（集群统一）", SecurityOpsConfig.config, json_type, SecurityOpsConfig.class.getName()},
+                {SECURITY_OPS_CERT_CONFIG, GsonConfig.getGson().toJson(new SecurityOpsCertConfig()), "1", "运维双边RSA证书（集群统一）", SecurityOpsCertConfig.config, json_type, SecurityOpsCertConfig.class.getName()},
                 {SECURITY_SESSION_CONFIG, GsonConfig.getGson().toJson(seedSecuritySessionConfig()), "1", "会话与 RememberMe（集群统一）", SecuritySessionConfig.config, json_type, SecuritySessionConfig.class.getName()},
         };
     }
@@ -793,7 +796,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
             cfg.validateAndFix();
             return cfg;
         } catch (Exception e) {
-            log.warn("SECURITY_OPS_CONFIG 解析失败，回落默认门禁 msg={}", e.getMessage());
+            log.warn("SECURITY_OPS_CONFIG parse failed; falling back to default gate msg={}", e.getMessage());
             return seedSecurityOpsConfig();
         }
     }
@@ -1477,6 +1480,22 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         // updateValueByKey 已 bump epoch；本机按当前 epoch 重装，避免同线程立刻 miss 打 Redis
         installOpsGate(copyOpsConfig(toSave), opsGateEpoch.get());
         return copyOpsConfig(toSave);
+    }
+
+    public SecurityOpsCertConfig getSecurityOpsCertConfig() {
+        if (StringUtils.isBlank(getValue(SECURITY_OPS_CERT_CONFIG))) {
+            return new SecurityOpsCertConfig();
+        }
+        SecurityOpsCertConfig cfg = getConfigObjectValidate(SECURITY_OPS_CERT_CONFIG, SecurityOpsCertConfig.class);
+        return cfg != null ? cfg : new SecurityOpsCertConfig();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public SecurityOpsCertConfig saveSecurityOpsCertConfig(SecurityOpsCertConfig config) {
+        SecurityOpsCertConfig toSave = config == null ? new SecurityOpsCertConfig() : config;
+        toSave.validateAndFix();
+        updateValueByKey(SECURITY_OPS_CERT_CONFIG, GsonConfig.getGson().toJson(toSave));
+        return toSave;
     }
 
     /**

@@ -150,7 +150,16 @@ public class AcmeAdminIpAspect {
 
 ---
 
-## 7. 相关源码
+## 7. 运维证书通道（旁路加白）
+
+新 IP 且未加白时，浏览器 wall 仍可用 bootstrap/`clearToken`；**App** 可用双边 RSA 运维通道：
+
+- 协议与 API：[`AI_OPS_CERT.md`](AI_OPS_CERT.md)（`POST /ops/api/v1/*`）
+- Shiro anon + **豁免管理 IP**（`OpsApiController`），否则无法从被锁 IP 加白
+- 与 `AdminIpBootstrap` / 业务 `/rsa/api/v1` **密钥与会话分离**；入驻密钥日志前缀 `OpsEnroll secret=`
+- **证书 ≠ 登录**：证书只解决管理 IP / 门禁开关；日常后台仍用用户名密码。客户端为多 Autumn 站点列表。单机/集群共用 `SECURITY_OPS_CERT_CONFIG`。
+
+## 8. 相关源码
 
 | 组件 | 位置 |
 |------|------|
@@ -159,3 +168,4 @@ public class AcmeAdminIpAspect {
 | gen 模板 | `template/ControllerGen.java.vm`（各 CRUD 入口显式 `enforceAdminIpApiIfRequired`） |
 | SPI | `autumn-handler` … `AdminAccessModuleHandler` |
 | 管理 IP 实体 | `IpAdminWhiteEntity`（`wall_ip_admin_white`） |
+| 运维证书 | `OpsCertService` / `OpsApiController` / `SECURITY_OPS_CERT_CONFIG` |

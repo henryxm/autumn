@@ -3,6 +3,8 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -11,6 +13,8 @@ import java.util.List;
 /**
  * 安全加固 · 认证与 CSRF/CORS（SysConfig {@link #CONFIG_KEY}）。
  */
+@Getter
+@Setter
 @ConfigParam(paramKey = SecurityAuthConfig.CONFIG_KEY, category = SecurityAuthConfig.config,
         name = "安全认证配置", description = "超级密码、引导口令待办、口令升级、历史口令复用、hint、CSRF、CORS、后台门禁（集群统一）")
 public class SecurityAuthConfig implements Serializable {
@@ -59,77 +63,5 @@ public class SecurityAuthConfig implements Serializable {
 
     public List<String> corsOriginList() {
         return SecurityConfigLists.splitList(corsAllowedOrigins);
-    }
-
-    public boolean isSuperPasswordEnabled() {
-        return superPasswordEnabled;
-    }
-
-    public void setSuperPasswordEnabled(boolean superPasswordEnabled) {
-        this.superPasswordEnabled = superPasswordEnabled;
-    }
-
-    public boolean isPasswordUpgradeOnLogin() {
-        return passwordUpgradeOnLogin;
-    }
-
-    public void setPasswordUpgradeOnLogin(boolean passwordUpgradeOnLogin) {
-        this.passwordUpgradeOnLogin = passwordUpgradeOnLogin;
-    }
-
-    public boolean isPasswordReuseAllowed() {
-        return passwordReuseAllowed;
-    }
-
-    public void setPasswordReuseAllowed(boolean passwordReuseAllowed) {
-        this.passwordReuseAllowed = passwordReuseAllowed;
-    }
-
-    public boolean isAllowUserUuidHint() {
-        return allowUserUuidHint;
-    }
-
-    public void setAllowUserUuidHint(boolean allowUserUuidHint) {
-        this.allowUserUuidHint = allowUserUuidHint;
-    }
-
-    public boolean isCsrfEnforce() {
-        return csrfEnforce;
-    }
-
-    public void setCsrfEnforce(boolean csrfEnforce) {
-        this.csrfEnforce = csrfEnforce;
-    }
-
-    public String getCorsAllowedOrigins() {
-        return corsAllowedOrigins;
-    }
-
-    public void setCorsAllowedOrigins(String corsAllowedOrigins) {
-        this.corsAllowedOrigins = corsAllowedOrigins;
-    }
-
-    public boolean isAdminBootstrapPending() {
-        return adminBootstrapPending;
-    }
-
-    public void setAdminBootstrapPending(boolean adminBootstrapPending) {
-        this.adminBootstrapPending = adminBootstrapPending;
-    }
-
-    public String getBootstrapAcknowledgedAt() {
-        return bootstrapAcknowledgedAt;
-    }
-
-    public void setBootstrapAcknowledgedAt(String bootstrapAcknowledgedAt) {
-        this.bootstrapAcknowledgedAt = bootstrapAcknowledgedAt;
-    }
-
-    public boolean isAdminLockdown() {
-        return adminLockdown;
-    }
-
-    public void setAdminLockdown(boolean adminLockdown) {
-        this.adminLockdown = adminLockdown;
     }
 }

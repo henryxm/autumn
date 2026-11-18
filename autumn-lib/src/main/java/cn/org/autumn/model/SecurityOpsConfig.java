@@ -3,6 +3,8 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -11,6 +13,8 @@ import java.util.List;
 /**
  * 安全加固 · 运维接口 Token（SysConfig {@link #CONFIG_KEY}）。
  */
+@Getter
+@Setter
 @ConfigParam(paramKey = SecurityOpsConfig.CONFIG_KEY, category = SecurityOpsConfig.config,
         name = "运维 Token", description = "clear/reinit 头认证 Token；Bean/WebShell/管理IP校验开关；空 Token 则拒绝")
 public class SecurityOpsConfig implements Serializable {
@@ -43,45 +47,5 @@ public class SecurityOpsConfig implements Serializable {
             reinitToken = "";
         }
         return fixes;
-    }
-
-    public String getClearToken() {
-        return clearToken;
-    }
-
-    public void setClearToken(String clearToken) {
-        this.clearToken = clearToken;
-    }
-
-    public String getReinitToken() {
-        return reinitToken;
-    }
-
-    public void setReinitToken(String reinitToken) {
-        this.reinitToken = reinitToken;
-    }
-
-    public boolean isBeanExecuteEnabled() {
-        return beanExecuteEnabled;
-    }
-
-    public void setBeanExecuteEnabled(boolean beanExecuteEnabled) {
-        this.beanExecuteEnabled = beanExecuteEnabled;
-    }
-
-    public boolean isWebShellEnabled() {
-        return webShellEnabled;
-    }
-
-    public void setWebShellEnabled(boolean webShellEnabled) {
-        this.webShellEnabled = webShellEnabled;
-    }
-
-    public boolean isAdminIpEnable() {
-        return adminIpEnable;
-    }
-
-    public void setAdminIpEnable(boolean adminIpEnable) {
-        this.adminIpEnable = adminIpEnable;
     }
 }

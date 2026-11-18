@@ -290,6 +290,7 @@ public class ShiroConfig {
         filterMap.put("/captcha.jpg", "anon");
         filterMap.put("/oauth2/**", "anon");
         filterMap.put("/rsa/api/v1/**", "anon");
+        filterMap.put("/ops/api/v1/**", "anon");
         filterMap.put("/client/**", "anon");
         // /actuator/**、/plugin/load 不再 anon：需登录（spm）
         filterMap.put("/http/proxy/v1/**", "anon");

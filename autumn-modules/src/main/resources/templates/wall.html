@@ -875,6 +875,22 @@
             </div>
         </div>
 
+        <div class="section" id="opsCertSection">
+            <div class="section-title"><i class="fa fa-certificate"></i>运维证书（App 双边 RSA）</div>
+            <p style="margin:0 0 12px;color:#666;font-size:13px;">
+                与业务传输加密、管理 IP 引导密钥分离。入驻密钥见启动日志 <code>OpsEnroll secret=</code>（一次性）。
+                状态：<strong id="opsCertStatusText">-</strong>
+                · siteId=<code id="opsCertSiteId">-</code>
+                · 指纹=<code id="opsCertFingerprint">-</code>
+                · 客户端=<span id="opsCertClientCount">0</span>
+            </p>
+            <p id="opsCertHint" style="margin:0 0 12px;color:#888;font-size:12px;"></p>
+            <div class="toolbar">
+                <button class="layui-btn" id="opsCertRefreshBtn" type="button"><i class="fa fa-refresh"></i> 刷新状态</button>
+                <button class="layui-btn layui-btn-danger" id="opsCertResetBtn" type="button"><i class="fa fa-undo"></i> 重置证书</button>
+            </div>
+        </div>
+
         <div class="section" id="adminIpWhiteSection">
             <div class="section-title"><i class="fa fa-shield"></i>管理 IP 白名单（运维/gen 访问）</div>
             <div class="toolbar">
@@ -1592,6 +1608,19 @@ $(function(){
         });
     }
 
+    function loadOpsCertStatus() {
+        $.get(__CTX + '/wall/api/opscert/status', function(res){
+            $('#opsCertStatusText').text(res.opsCert || '-');
+            $('#opsCertSiteId').text(res.siteId || '-');
+            $('#opsCertFingerprint').text(res.serverFingerprint || '-');
+            $('#opsCertClientCount').text(res.clientCount != null ? res.clientCount : 0);
+            $('#opsCertHint').text(res.hint || '');
+        }).fail(function(){
+            $('#opsCertStatusText').text('加载失败');
+            $('#opsCertHint').text('');
+        });
+    }
+
     function loadAll() {
         $.get(__CTX + '/wall/api/firewallOpen', function(res){
             $('#firewallOpen').prop('checked', res.firewallOpen);
@@ -1601,6 +1630,7 @@ $(function(){
             $('#adminIpEnable').prop('checked', !!res.adminIpEnable);
             syncSwitchText('#adminIpEnable');
         });
+        loadOpsCertStatus();
         $.get(__CTX + '/wall/api/firewallCount', function(res){
             $('#firewallCount').val(res.firewallCount);
         });
@@ -1955,6 +1985,34 @@ $(function(){
         }, function(){
             msg('认领失败（密钥无效或权限不足）', 'error');
         });
+    });
+
+    $('#opsCertRefreshBtn').click(function(){
+        loadOpsCertStatus();
+    });
+
+    $('#opsCertResetBtn').click(function(){
+        if (!window.confirm('重置将清空所有运维客户端证书并轮换服务端密钥，确认继续？')) {
+            return;
+        }
+        var secret = window.prompt('重置运维证书须运维临时安全密码（clearToken）');
+        if (secret == null) {
+            return;
+        }
+        if (!$.trim(secret)) {
+            msg('请输入 clearToken', 'warn');
+            return;
+        }
+        wallPost(__CTX + '/wall/api/opscert/reset', {}, function(res){
+            if (res && res.success) {
+                msg('运维证书已重置，请查看日志 OpsEnroll secret=', 'success');
+                loadOpsCertStatus();
+            } else {
+                msg('重置失败', 'error');
+            }
+        }, function(){
+            msg('重置失败（须超管 + clearToken）', 'error');
+        }, {'x-clear-authentication': $.trim(secret)});
     });
 
     $('#adminWhiteTableBody').on('click', '.js-admin-white-del', function(){

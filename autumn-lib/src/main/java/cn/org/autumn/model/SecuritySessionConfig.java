@@ -3,6 +3,8 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -13,6 +15,8 @@ import java.util.List;
  * <p>
  * Cookie 标志修改后需重启节点；密钥改后旧记住我失效。
  */
+@Getter
+@Setter
 @ConfigParam(paramKey = SecuritySessionConfig.CONFIG_KEY, category = SecuritySessionConfig.config,
         name = "会话与 RememberMe", description = "Cookie Secure/SameSite 与 RememberMe AES 密钥（集群统一）")
 public class SecuritySessionConfig implements Serializable {
@@ -46,45 +50,5 @@ public class SecuritySessionConfig implements Serializable {
             rememberMeCipherKey = rememberMeCipherKey.trim();
         }
         return fixes;
-    }
-
-    public boolean isRememberMeSecure() {
-        return rememberMeSecure;
-    }
-
-    public void setRememberMeSecure(boolean rememberMeSecure) {
-        this.rememberMeSecure = rememberMeSecure;
-    }
-
-    public String getRememberMeSameSite() {
-        return rememberMeSameSite;
-    }
-
-    public void setRememberMeSameSite(String rememberMeSameSite) {
-        this.rememberMeSameSite = rememberMeSameSite;
-    }
-
-    public boolean isSessionSecure() {
-        return sessionSecure;
-    }
-
-    public void setSessionSecure(boolean sessionSecure) {
-        this.sessionSecure = sessionSecure;
-    }
-
-    public String getSessionSameSite() {
-        return sessionSameSite;
-    }
-
-    public void setSessionSameSite(String sessionSameSite) {
-        this.sessionSameSite = sessionSameSite;
-    }
-
-    public String getRememberMeCipherKey() {
-        return rememberMeCipherKey;
-    }
-
-    public void setRememberMeCipherKey(String rememberMeCipherKey) {
-        this.rememberMeCipherKey = rememberMeCipherKey;
     }
 }

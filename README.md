@@ -177,6 +177,8 @@ autumn/
 └── .cursor/skills/     # autumn-framework-2x / 3x
 ```
 
+运维证书 Flutter 客户端已独立：[`autumn-app`](https://git.minclouds.com/henryxm/autumn-app.git)。
+
 ---
 
 ## 环境与构建

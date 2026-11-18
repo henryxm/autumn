@@ -1,7 +1,9 @@
 package cn.org.autumn.modules.wall.controller;
 
 import cn.org.autumn.exception.AException;
+import cn.org.autumn.model.SecurityOpsCertConfig;
 import cn.org.autumn.model.SecurityOpsConfig;
+import cn.org.autumn.modules.ops.service.OpsCertService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
@@ -46,6 +48,9 @@ public class WallController {
 
     @Autowired
     SysConfigService sysConfigService;
+
+    @Autowired
+    OpsCertService opsCertService;
 
     private void requireOps(HttpServletRequest request, String method) {
         adminAccessGuard.requireOpsAdmin(request, getClass(), method);
@@ -473,5 +478,43 @@ public class WallController {
         ipAdminWhiteService.removeByIp(ip);
         adminAccessGuard.auditWithIp(request, "wall.ipadminwhite.remove", "ip=" + ip);
         return Collections.singletonMap("success", true);
+    }
+
+    /**
+     * 运维双边 RSA 入驻态（与 AdminIpBootstrap 密钥分离；明文密钥仅启动日志 OpsEnroll）。
+     */
+    @GetMapping("/opscert/status")
+    public Map<String, Object> getOpsCertStatus(HttpServletRequest request) {
+        requireOps(request, "opscertStatus");
+        SecurityOpsCertConfig cfg = opsCertService.getConfig();
+        Map<String, Object> map = new HashMap<>();
+        map.put("opsCert", opsCertService.opsCertStatus());
+        map.put("enrollAvailable", opsCertService.isEnrollAvailable());
+        map.put("siteId", cfg.getSiteId());
+        map.put("serverFingerprint", cfg.getFingerprint());
+        map.put("clientCount", opsCertService.listClients().stream().filter(c -> c != null && !c.isRevoked()).count());
+        map.put("resetAt", cfg.getResetAt());
+        map.put("hint", opsCertService.isEnrollAvailable()
+                ? "Check server log for OpsEnroll secret= (distinct from AdminIpBootstrap)"
+                : "Enrolled; reset rotates server keys and prints a new OpsEnroll");
+        return map;
+    }
+
+    /**
+     * 重置运维证书：须超管 + clearToken；清空客户端并重新发放 OpsEnroll。
+     */
+    @PostMapping("/opscert/reset")
+    public Map<String, Object> resetOpsCert(HttpServletRequest request) {
+        adminAccessGuard.requireSystemAdmin("opscertReset");
+        assertClearToken(request);
+        SecurityOpsCertConfig cfg = opsCertService.reset();
+        adminAccessGuard.auditWithIp(request, "wall.opscert.reset", "fingerprint=" + cfg.getFingerprint());
+        Map<String, Object> map = new HashMap<>();
+        map.put("success", true);
+        map.put("siteId", cfg.getSiteId());
+        map.put("serverFingerprint", cfg.getFingerprint());
+        map.put("enrollAvailable", true);
+        map.put("hint", "Check server log for OpsEnroll secret=");
+        return map;
     }
 }

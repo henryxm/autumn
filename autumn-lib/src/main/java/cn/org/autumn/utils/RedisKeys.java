@@ -62,4 +62,18 @@ public class RedisKeys {
                 ? "system:shiro:remember-me:cipher-key"
                 : namespace.trim() + ":system:shiro:remember-me:cipher-key";
     }
+
+    /** 运维证书挑战 nonce（短 TTL） */
+    public static String getOpsChallengeKey(String namespace, String nonce) {
+        return getOpsPrefix(namespace) + "challenge:" + (nonce != null ? nonce : "");
+    }
+
+    /** 运维证书会话（短 TTL） */
+    public static String getOpsSessionKey(String namespace, String sessionId) {
+        return getOpsPrefix(namespace) + "session:" + (sessionId != null ? sessionId : "");
+    }
+
+    public static String getOpsPrefix(String namespace) {
+        return StringUtils.isBlank(namespace) ? "autumn:ops:" : namespace.trim() + ":autumn:ops:";
+    }
 }

@@ -3,6 +3,8 @@ package cn.org.autumn.model;
 import cn.org.autumn.annotation.ConfigField;
 import cn.org.autumn.annotation.ConfigParam;
 import cn.org.autumn.config.InputType;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -11,6 +13,8 @@ import java.util.List;
 /**
  * 安全加固 · HTTP 透明代理出站（SysConfig {@link #CONFIG_KEY}）。
  */
+@Getter
+@Setter
 @ConfigParam(paramKey = SecurityHttpProxyConfig.CONFIG_KEY, category = SecurityHttpProxyConfig.config,
         name = "HTTP 代理安全", description = "代理开关、DNS 校验、上游主机白名单（空=拒绝全部）")
 public class SecurityHttpProxyConfig implements Serializable {
@@ -38,29 +42,5 @@ public class SecurityHttpProxyConfig implements Serializable {
 
     public List<String> hostList() {
         return SecurityConfigLists.splitList(allowedHosts);
-    }
-
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public boolean isResolveDns() {
-        return resolveDns;
-    }
-
-    public void setResolveDns(boolean resolveDns) {
-        this.resolveDns = resolveDns;
-    }
-
-    public String getAllowedHosts() {
-        return allowedHosts;
-    }
-
-    public void setAllowedHosts(String allowedHosts) {
-        this.allowedHosts = allowedHosts;
     }
 }
