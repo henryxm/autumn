@@ -314,6 +314,8 @@ var uuid = '${uuid!""?js_string}';
 
 ### 10.2 索引与唯一约束
 
+> **业务仓统一风格与模式目录（SQL→注解、冗余裁剪、命名、PR 清单）**见专篇 **`docs/AI_INDEX_ANNOTATIONS.md`**。本节保留**硬性纪律**与 ASC/DESC 基线；落地示例以专篇为准。
+
 **怎么选写法（速查）**
 
 | 需求 | 写法 |
@@ -322,16 +324,22 @@ var uuid = '${uuid!""?js_string}';
 | 单列要 DESC / 前缀 | `@Index(order = IndexOrder.DESC)` / `@Index(length = n)` |
 | 单列部分索引等 | `@Index(where = "...")` 等（方言不支持则 WARN 跳过） |
 | 组合索引 / 多列 FULLTEXT | 类上 `@Indexes({ @Index(name=..., fields={@IndexField...}) })` |
-| 唯一约束 | 仅 `@Column(isUnique = true)`，**禁止**再 `@Index` |
+| 唯一约束（单列） | 仅字段 **`@Column(isUnique = true)`**，**禁止**再 `@Index`；**以字段注解为准** |
+| 组合唯一（多列） | 类级 `@Index(..., indexType = UNIQUE)` + `@IndexField`（参与列**不得**再单列 `isUnique`） |
 
-- **硬性约束（无例外）**：凡在 **`@Column` 上声明 `isUnique = true` 的字段**，**一律不得**再对该字段声明 **`@Index`**（字段级 **`@Index`**）。**唯一性只保留 `isUnique = true` 这一路即可。** 类级组合索引若含 `isUnique` 列：实现上多列组合**保留**列序并 WARN（建议去掉冗余唯一首列）；单列类级索引仍会剔除。
-- **同类重复唯一声明**：亦不要与 `@Indexes` 等在同一列上重复描述同一约束（细则见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**）。
+- **硬性约束（无例外）——字段 `isUnique` 优先**：凡在 **`@Column` 上声明 `isUnique = true` 的字段**，**一律不得**再对该字段声明 **`@Index`**（字段级）。**单列唯一性只认字段上的 `isUnique = true`**，不以类级 `@Index` / `@Indexes` 再表达同一列的唯一或「唯一键 + 附带过滤」组合。类级**单列**索引若含该列：框架**剔除**并 WARN。类级**组合**若含该列：框架**保留列序**并 WARN（`含已 isUnique 列 … 建议去掉冗余唯一首列`）——业务须按专篇决策表整理：通常**删除**含该列的组合；列表查询另建**不含**唯一列、最左对齐列表谓词的组合。
+- **原因（为何字段为准）**：`isUnique` 已落库为单列 `UNIQUE KEY`；按该列等值查询最多命中 1 行，再拼 `visible`/`audit`/`enable` 等附带列**不能**比 UNIQUE 点查更优，只会双开索引、放大写与启动 diff。整理时以字段注解为真相源，组合侧让位。
+- **C 类误区（禁止当优化）**：列表 SQL 没有 `唯一列=?` 时，**把唯一列调到组合最左不会更快**（最左用不上）；正确做法是最左用列表等值列，组合内**不要**再挂唯一列。详见 **`docs/AI_INDEX_ANNOTATIONS.md` §5.6**。
+- **同类重复唯一声明**：亦不要与 `@Indexes` 等在同一列上重复描述同一约束（细则见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**；统一整理方案见 **`docs/AI_INDEX_ANNOTATIONS.md` §5**）。
 - **单字段索引声明位置（新代码默认）**：**单字段索引一律**写在对应**字段**上的 **`@Index`**。**类级 `@Indexes`** 仅用于**组合索引**（`fields` 含 **≥2** 列）或 FULLTEXT/SPATIAL/部分索引等特殊声明。
-- **组合索引列序（硬性）**：`@IndexField` 数组顺序 = 落库 `SEQ_IN_INDEX` 顺序；框架用有序模型发射 DDL，**禁止**再假设 HashMap 乱序。设计时遵循最左前缀：等值列靠左，范围/排序列靠右。**列序优先于 ASC/DESC**。
-- **列方向 ASC/DESC（长期基线，见下「列方向」专节）**：**默认 ASC**（未写 = ASC）。单列用字段级 **`@Index(order = …)`**；组合用 **`@IndexField(order = …)`**。DESC **仅**按主查询 `ORDER BY` 写在**排序键**上。禁止无 `EXPLAIN` 依据批量改 DESC。
+- **组合索引列序（硬性）**：`@IndexField` 数组顺序 = 落库 `SEQ_IN_INDEX` 顺序；框架用有序模型发射 DDL，**禁止**再假设 HashMap 乱序。设计时遵循最左前缀：等值列靠左，范围/排序列靠右。**列序优先于 ASC/DESC**。**频道/开关等值列**（如 `xsign`/`community`）必须靠左，禁止放在范围列之后。
+- **列方向 ASC/DESC（长期基线，见下「列方向」专节）**：**默认 ASC**（未写 = ASC）。单列用字段级 **`@Index(order = …)`**；组合用 **`@IndexField(order = …)`**。DESC **仅**按主查询 `ORDER BY` 写在**排序键**上。禁止无 `EXPLAIN` 依据批量改 DESC。主查询含稳定 `ORDER BY …, id DESC` 时，索引末尾宜带上 `id`（方向与 ORDER BY 一致）。
+- **冗余裁剪（新代码）**：若类级组合索引的最左前缀已覆盖某字段级 `@Index` 所服务的**同一查询族**，**删除**该字段级 `@Index`（避免双开）；细则与对照表见 **`docs/AI_INDEX_ANNOTATIONS.md` §5**。
+- **命名与注释（推荐）**：索引 `name` 用可读压缩语义（如 `statuslivingat`）；组合索引上方注释写明主查询/方法。见专篇 §6～§7。
 - **扩展能力（可选，带默认值）**：`@Index`：`where` / `include` / `parser` / `invisible` / `expression`，以及字段级快捷 `order` / `length` / `collation`；`@IndexField`：`order` / `length` / `expression` / `collation`。不支持的方言 **WARN 并跳过/降级**。索引列 `collation` 已进模型，各方言 DDL **尚未统一发射**——列排序规则优先用 **`@Column.collation`**。
 - **同步配置**：`autumn.table.index.rebuild-on-order-mismatch`（默认 `true`）——列序/方向不一致时**按索引成对** DROP+ADD（失败 WARN 不阻断启动）；日志关键字 `Index rebuild upgrade`。设 `false` 退回仅列集合比对（运维缓冲，不是放弃列序真相）。
 - **依赖仓兼容**：升级 autumn 后，旧 `@Index`/`@IndexField(field,length)` **无需改实体**即可编译启动；`IndexInfo.getFields()` 仍可用（有序 Map 视图）。历史库方向本就是 ASC，与默认一致，**不会仅因默认 ASC 触发重建**。
+- **Dao**：索引注解**只写 Entity**；`*Dao` / `*DaoSql` 禁止声明索引。
 
 #### 列方向 ASC / DESC（性能、用法与长期方案）
 
@@ -390,6 +398,8 @@ public class DemoEntity { ... }
 // 禁止：字段级再写 @Index(fields={@IndexField(field="本字段",...)}) 重复本列名（用 order/length 快捷即可）
 // 禁止：无 EXPLAIN 依据把等值列或全表索引批量改成 DESC
 ```
+
+更多业务模式（热度多排序键、宽 URL 前缀、组合 UNIQUE、投放位正序、冗余裁剪、PR 清单）→ **`docs/AI_INDEX_ANNOTATIONS.md`**。
 
 ### 10.3 整型、布尔与空值
 
@@ -578,6 +588,7 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
 | `isUnique=true` 与 `@Index` 禁止叠用 | **§10.2**；Boot/MAP 索引收集见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2** |
 | 单字段索引须字段级 `@Index` | **§10.2**；类级 `@Indexes` 仅用于组合索引（≥2 列）；DESC/前缀用 `@Index(order/length)` 快捷 |
 | 组合索引列序与 ASC/DESC | **§10.2**；列序优先；默认 ASC；DESC 仅排序键 + 主 ORDER BY |
+| 业务仓索引统一风格 / 模式目录 | **`docs/AI_INDEX_ANNOTATIONS.md`**（SQL→注解、**§5 isUnique 优先与组合告警**、冗余裁剪、命名、PR 清单） |
 | 双键模型、`UuidBased` / `SnowBased` / **`UserBased`** / `AutoIdService` | **§10.4**、**`docs/AI_DUAL_KEY.md` §3～§4**；SQL 见 **`docs/AI_DATABASE.md` §1.1** |
 | Lombok 实体 / `@Slf4j` | **§2.0**、**`docs/AI_CODE_STYLE.md` §5.1 / §8** |
 | 实体业务必须落对应 Service | **§2.1**、**`docs/AI_SERVICE_COHESION.md`** |
@@ -595,4 +606,4 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
 ## 17. 维护约定
 
 - 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇；**Redis 禁止 KEYS / 推荐 SCAN** 以 **`docs/REDIS_KEYS_AND_SCAN.md`** 为专篇，变更时同步 **`scripts/constraints-scan`**（**H / J 组**）。
-- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。**索引与唯一约束叠用纪律（§10.2）** 变更时同步 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**。**实体双键（§10.4）** 变更时同步 **`docs/AI_DUAL_KEY.md`**、**`docs/AI_DATABASE.md` §1.1** 与 **`autumn-lib`** 中 **`Uuid` / `Snow` / `AutoIdService`** 说明（若工具 API 有变）。
+- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。**索引与唯一约束叠用纪律（§10.2）** 变更时同步 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**；**业务模式与统一风格**同步 **`docs/AI_INDEX_ANNOTATIONS.md`**。**实体双键（§10.4）** 变更时同步 **`docs/AI_DUAL_KEY.md`**、**`docs/AI_DATABASE.md` §1.1** 与 **`autumn-lib`** 中 **`Uuid` / `Snow` / `AutoIdService`** 说明（若工具 API 有变）。

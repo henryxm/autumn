@@ -389,7 +389,8 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 #### 2.10.1 注解职责速览
 
-> **用法权威纪律**见 **`docs/AI_STANDARDS.md` §10.2**（含「怎么选写法」表与 ASC/DESC 专节）。本节为收集与属性速览。
+> **用法权威纪律**见 **`docs/AI_STANDARDS.md` §10.2**（含「怎么选写法」表与 ASC/DESC 专节）。  
+> **业务仓标准写法与模式目录**见 **`docs/AI_INDEX_ANNOTATIONS.md`**。本节为收集与属性速览。
 
 - **`@Table`（类）**：前缀、模块、注释、存储引擎、字符集等；物理表名以 **`@TableName`** 为准（框架合并进 `TableInfo`，**`@Table` 不写 `value`**，见 **`docs/AI_BOOT.md` §3.2**）。
 - **`@Column`（字段）**：列名、类型、长度、是否可空、主键/自增、默认值、**`comment`（建议「短标题：详述」格式，见 2.10.5）**；**`isUnique = true`** 时在建表 SQL 中会额外生成该列的 `UNIQUE KEY`（见 `MysqlSchemaSql.createTable`）。DEFAULT 按 MySQL 规范发射（数值裸写、时间函数裸写、字符串加引号）。**TEXT/BLOB/JSON/GEOMETRY**（及自增列）上的字面量 `defaultValue`（含 `""`）会被 `ColumnDefaultRules` 忽略并 WARN；括号表达式默认值保留。TEXT/BLOB 的 `isUnique` / 索引无前缀时自动补前缀 **191**；JSON/GEOMETRY 的 `isUnique` 跳过并 WARN。
@@ -408,10 +409,10 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 因此：
 
-1. **`@Column(isUnique = true)` 与字段级 `@Index` 不得叠用（团队硬性约束）**  
-   规范见 **`docs/AI_STANDARDS.md` §10.2**：建表时 `isUnique` 已生成 `UNIQUE KEY`。**字段级**仍写 `@Index` 时忽略并 WARN。**类级多列**组合若含 `isUnique` 列：**保留列序**并 WARN（建议去掉冗余唯一首列）；**单列**类级索引仍剔除该列，无剩余列则丢弃整段。
+1. **`@Column(isUnique = true)` 优先；与字段级 `@Index` 不得叠用（团队硬性约束）**  
+   规范见 **`docs/AI_STANDARDS.md` §10.2**；统一整理见 **`docs/AI_INDEX_ANNOTATIONS.md` §5**。建表时字段 `isUnique` 已生成单列 `UNIQUE KEY`，**以字段注解为单列唯一真相源**。**字段级**再写 `@Index`：忽略并 WARN。**类级单列**含该列：剔除并 WARN。**类级多列**组合含该列：**保留列序**并 WARN（`含已 isUnique 列 … 建议去掉冗余唯一首列`）——不阻断启动；业务默认删除「唯一列最左 + 附带过滤」的组合，仅当唯一列**不在最左**且服务其它列表查询时可保留（专篇 §5.4 C）。
 
-2. **字段上已有 `@Index` 时，不要在类级 `@Indexes` / 类级 `@Index` 里再包含同一列的等价索引**  
+2. **字段上已有 `@Index` 时，不要在类级 `@Indexes` / 类级 `@Index` 里再包含同一列的等价索引**；反之，若类级组合最左前缀已覆盖某字段级 `@Index` 的同一查询族，**删除字段级**（见 **`docs/AI_INDEX_ANNOTATIONS.md` §5**）。  
    否则同一列会被注册两次，建表或变更时可能生成两条含义重叠的 `INDEX`，属于重复声明。
 
 3. **单字段索引写在字段上，类级 `@Indexes` 仅用于组合索引（团队默认，新代码）**  

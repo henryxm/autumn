@@ -4,7 +4,7 @@ description: >-
   Autumn 3.0.0 line ONLY: JDK 17+, Spring Boot 3.5.x, MyBatis-Plus 3.x, jakarta.* namespace.
   Use on autumn branch 3.0.0 (artifact 3.0.0) or business apps pinned to that stack.
   NOT for Autumn 2.0.0 / JDK 8 / Spring Boot 2.7 / javax-only — use autumn-framework-2x on master.
-  Enforces docs/AI_STANDARDS.md + docs/AI_DATABASE.md + docs/AI_DUAL_KEY.md: never combine @Column(isUnique=true) with field-level @Index (§10.2); single-field indexes on field @Index only not class-level @Indexes unless explicit (§10.2); @IndexField array order = DB column order (before ASC/DESC); IndexOrder default ASC forever; DESC only on sort keys aligned to primary ORDER BY after EXPLAIN—never bulk-flip; optional where/include/parser/invisible/expression with defaults (dependents zero-change upgrade); autumn.table.index.rebuild-on-order-mismatch default true; dual-key entities (auto Long id for gen CRUD only + biz uuid via UuidBased/SnowBased or UserBased/unique user or no second PK when user suffices; legacy entities default no retrofit unless task explicitly requires upgrade; never use id as association); entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
+  Enforces docs/AI_STANDARDS.md + docs/AI_INDEX_ANNOTATIONS.md + docs/AI_DATABASE.md + docs/AI_DUAL_KEY.md: never combine @Column(isUnique=true) with field-level @Index (§10.2); single-field indexes on field @Index only not class-level @Indexes unless explicit (§10.2); @IndexField array order = DB column order (before ASC/DESC); channel/eq columns leftmost; drop field @Index when composite leftmost covers same query family; IndexOrder default ASC forever; DESC only on sort keys aligned to primary ORDER BY after EXPLAIN—never bulk-flip; optional where/include/parser/invisible/expression with defaults (dependents zero-change upgrade); autumn.table.index.rebuild-on-order-mismatch default true; dual-key entities (auto Long id for gen CRUD only + biz uuid via UuidBased/SnowBased or UserBased/unique user or no second PK when user suffices; legacy entities default no retrofit unless task explicitly requires upgrade; never use id as association); entity-driven schema; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql);
   No hardcoded dialect quotes in Java (RuntimeSql quote/columnInWrapper or WrapperColumns per docs/AI_DATABASE.md §4.0);
   Prefer import over fully qualified class names unless name clash (docs/AI_CODE_STYLE.md §7);
   log.info/debug/warn/error must be one line, no line breaks in the call (docs/AI_CODE_STYLE.md §8);
@@ -213,7 +213,7 @@ description: >-
 
 - 框架扫描 + **`autumn.table.*`** 对齐表结构；**禁止**常规 **`DDL .sql`**。
 - **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**；**表前缀不进 Entity 类名**；`comment` 短标题 **2～8**。示例：`PayUserPinEntity` + `safe_pay_user_pin`；`ScopeDefinitionEntity` + `auth_scope_definition`。
-- **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再字段级 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅组合索引（≥2 列）**（§10.2）；**组合索引列序优先**；**默认 ASC**；**`IndexOrder.DESC` 仅排序键且对齐主 `ORDER BY`**（ASC 上 DESC 查询可用反向扫描；混合序/热点才显式 DESC；禁止无 EXPLAIN 批量改方向）。详见 **`docs/AI_STANDARDS.md` §10.2「列方向」**。
+- **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再字段级 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅组合索引（≥2 列）**（§10.2）；**组合索引列序优先**（等值→范围→排序；频道/开关等值列必须靠左）；**默认 ASC**；**`IndexOrder.DESC` 仅排序键且对齐主 `ORDER BY`**（ASC 上 DESC 查询可用反向扫描；混合序/热点才显式 DESC；禁止无 EXPLAIN 批量改方向）；组合最左前缀已覆盖同族字段级 `@Index` 时**删字段级**。硬性纪律 **`docs/AI_STANDARDS.md` §10.2**；业务统一风格/模式目录/PR 清单 **`docs/AI_INDEX_ANNOTATIONS.md`**。
 - **双键**：第二主键按需 **`uuid`** / **`UserBased`** / **无（§3.4 仅 `user`）**；业务 **`user`** 可存 **`sys_user` 或 `bot_robot` 的 uuid**。**存量实体默认不升级**（**`docs/AI_DUAL_KEY.md` §1.2**），除非任务明确要求。详见 **§1.1、§3**。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
@@ -315,9 +315,11 @@ description: >-
 - 新实体/新字段是否按 **`docs/AI_DUAL_KEY.md`** 选型？触结构变更/新外键/新开放 API 是否已对齐？
 - 按用户唯一表是否 **`UserBased` + 唯一 `user`**？用户维度足够时是否避免冗余 **`uuid`**（**§3.4**）？
 - **`isUnique=true` 的 `@Column` 是否未再叠字段级 `@Index`**（§10.2）？
-- 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**，且 **`@IndexField` 顺序对齐查询最左前缀**（§10.2）？
+- 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**，且 **`@IndexField` 顺序对齐查询最左前缀**（§10.2）？频道等值列是否靠左？
 - 组合索引若含 **`IndexOrder.DESC`**：是否只在**排序键**上、是否对齐**主查询 ORDER BY**、是否有 **EXPLAIN** 依据（禁止等值列/全表批量 DESC）？
 - 字段级单列需要 DESC/前缀时是否用 **`@Index(order=…)` / `@Index(length=…)`** 快捷，而非再写 `fields={@IndexField(field=本字段)}`？（写法表见 **`docs/AI_STANDARDS.md` §10.2**）
+- 实体索引是否对照 **`docs/AI_INDEX_ANNOTATIONS.md`**（模式目录、**§5 isUnique 优先/组合告警**、冗余裁剪、命名注释、§10 PR 清单）？
+- 单列唯一是否**只**字段 `isUnique`？组合是否仍以唯一列为最左（应删，§5 A/D）？
 - 机器人：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？bot 包是否仍为 **`jakarta.*` / MP3 annotation**？管理 API 与 `message/push` 鉴权是否分离？
 - **`@FieldEncrypt`**：Service 是否 `EncryptModuleService`？`baseMapper` → `afterRead`？`searchable` + hash 列？**`@Cache`** 是否按 §7（明文键 + hash 通道）？
 - **授权/OAuth/OPC**：是否先读 **`AI_AUTH_LOGIN_MODES.md`**？改 scope/authorize 文案是否读 **`AI_AUTH_SCOPE.md`**？未混 `client_id`/`app_id`？绑定写 **独立表**？回调用 **`establishSession`** 而非 **`login(upstream)`**？经典 OAuth 是否走 **`WebOauthBindService`**（非 upstream uuid 联邦）？
