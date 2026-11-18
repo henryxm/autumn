@@ -3,8 +3,14 @@ package cn.org.autumn.boot;
 import cn.org.autumn.config.JvmRestartHandler;
 import cn.org.autumn.install.InstallJvmRestartCleanupCoordinator;
 import cn.org.autumn.install.InstallRestartCoordinator;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.context.metrics.buffering.BufferingApplicationStartup;
+import org.springframework.boot.context.metrics.buffering.StartupTimeline;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 
@@ -13,6 +19,8 @@ import org.springframework.core.env.Environment;
  * 循环处理安装向导触发的进程内重启（等待 {@link InstallRestartCoordinator}、JVM 清理、再次 run）。
  */
 public final class AutumnSpringApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(AutumnSpringApplication.class);
 
     private AutumnSpringApplication() {
     }
@@ -26,7 +34,7 @@ public final class AutumnSpringApplication {
      * @return 最终存活的上下文；若等待重启过程中线程被中断则返回 {@code null}
      */
     public static ConfigurableApplicationContext run(Class<?> primarySource, String[] args) {
-        ConfigurableApplicationContext context = SpringApplication.run(primarySource, args);
+        ConfigurableApplicationContext context = runOnce(primarySource, args);
         Environment env = context.getEnvironment();
         while (Boolean.parseBoolean(env.getProperty("autumn.install.mode", "false"))) {
             try {
@@ -39,9 +47,71 @@ public final class AutumnSpringApplication {
             List<JvmRestartHandler> restartCleaners = jvmCleanup.snapshotOrderedCleaners(context);
             SpringApplication.exit(context, () -> 0);
             jvmCleanup.invokeAllAfterContextClosed(restartCleaners);
-            context = SpringApplication.run(primarySource, args);
+            context = runOnce(primarySource, args);
             env = context.getEnvironment();
         }
         return context;
+    }
+
+    private static ConfigurableApplicationContext runOnce(Class<?> primarySource, String[] args) {
+        SpringApplication app = new SpringApplication(primarySource);
+        BufferingApplicationStartup startup = new BufferingApplicationStartup(4096);
+        app.setApplicationStartup(startup);
+        ConfigurableApplicationContext context = app.run(args);
+        logStartupSteps(context.getEnvironment(), startup);
+        return context;
+    }
+
+    /**
+     * 输出 Spring {@code spring.beans.instantiate} 等步骤中 wall-time 最长的若干条（默认 Top 15，阈值 100ms）。
+     */
+    private static void logStartupSteps(Environment env, BufferingApplicationStartup startup) {
+        if (!Boolean.parseBoolean(env.getProperty("autumn.startup.steps.enabled", "true"))) {
+            return;
+        }
+        long thresholdMs = 100L;
+        try {
+            thresholdMs = Long.parseLong(env.getProperty("autumn.startup.steps.threshold-ms", "100").trim());
+        } catch (NumberFormatException ignored) {
+        }
+        int top = 15;
+        try {
+            top = Integer.parseInt(env.getProperty("autumn.startup.steps.top", "15").trim());
+        } catch (NumberFormatException ignored) {
+        }
+        List<StartupTimeline.TimelineEvent> events = new ArrayList<>(startup.getBufferedTimeline().getEvents());
+        events.sort(Comparator.comparingLong((StartupTimeline.TimelineEvent e) ->
+                e.getDuration() == null ? 0L : e.getDuration().toMillis()).reversed());
+        StringBuilder sb = new StringBuilder(512);
+        int shown = 0;
+        for (StartupTimeline.TimelineEvent event : events) {
+            long ms = event.getDuration() == null ? 0L : event.getDuration().toMillis();
+            if (ms < thresholdMs || shown >= top) {
+                continue;
+            }
+            if (shown > 0) {
+                sb.append("; ");
+            }
+            String name = event.getStartupStep().getName();
+            String beanTag = null;
+            for (org.springframework.core.metrics.StartupStep.Tag tag : event.getStartupStep().getTags()) {
+                if ("beanName".equals(tag.getKey())) {
+                    beanTag = tag.getValue();
+                    break;
+                }
+            }
+            if (beanTag != null && !beanTag.isBlank()) {
+                sb.append(name).append('[').append(beanTag).append(']');
+            } else {
+                sb.append(name);
+            }
+            sb.append('=').append(ms).append("ms");
+            shown++;
+        }
+        if (shown == 0) {
+            log.info("Startup steps: none above thresholdMs={} (events={})", thresholdMs, events.size());
+        } else {
+            log.info("Startup steps top{}(>= {}ms): {}", shown, thresholdMs, sb);
+        }
     }
 }

@@ -114,6 +114,31 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
         return "SHOW INDEX FROM " + tableName;
     }
 
+    @Override
+    public String listSchemaColumnMetas() {
+        return "select * from information_schema.columns where table_schema = (select database()) order by table_name, ordinal_position";
+    }
+
+    @Override
+    public String listSchemaIndexRows() {
+        // 别名对齐 SHOW INDEX → IndexInfo（keyName / table / nonUnique 等）
+        return "select TABLE_NAME as `table`, NON_UNIQUE as nonUnique, INDEX_NAME as keyName, "
+                + "SEQ_IN_INDEX as seqInIndex, COLUMN_NAME as columnName, COLLATION as collation, "
+                + "CARDINALITY as cardinality, SUB_PART as subPart, PACKED as packed, "
+                + "INDEX_TYPE as indexType, COMMENT as comment, INDEX_COMMENT as indexComment "
+                + "from information_schema.STATISTICS where TABLE_SCHEMA = (select database()) "
+                + "order by TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX";
+    }
+
+    @Override
+    public String listSchemaTableCharsets() {
+        return "select T.TABLE_NAME as tableName, C.CHARACTER_SET_NAME as characterSetName "
+                + "from information_schema.TABLES T "
+                + "left join information_schema.COLLATION_CHARACTER_SET_APPLICABILITY C "
+                + "on T.TABLE_COLLATION = C.COLLATION_NAME "
+                + "where T.TABLE_SCHEMA = (select database())";
+    }
+
     protected static String stripIndexUsingClauses(String fragment) {
         if (StringUtils.isBlank(fragment)) {
             return fragment;
@@ -289,27 +314,30 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
         StringBuilder stringBuilder = new StringBuilder();
         Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
+            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
+                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.MYSQL, ii.getValue());
+            if (indexInfo == null) {
+                continue;
+            }
             stringBuilder.append("ALTER TABLE `" + ii.getKey().getName() + "` ADD ");
-            IndexInfo indexInfo = ii.getValue();
             if (!IndexTypeEnum.NORMAL.toString().equals(indexInfo.getIndexType())) {
                 stringBuilder.append(indexInfo.getIndexType() + " ");
             }
             stringBuilder.append("INDEX ");
             stringBuilder.append("`").append(indexInfo.getName()).append("` (");
-            Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<String, Integer> kv = iterator.next();
-                if (kv.getValue() > 0) {
-                    stringBuilder.append("`").append(kv.getKey()).append("`(").append(kv.getValue()).append(")");
-                } else {
-                    stringBuilder.append("`").append(kv.getKey()).append("`");
-                }
-                if (iterator.hasNext()) {
-                    stringBuilder.append(",");
-                }
-            }
+            cn.org.autumn.table.data.index.IndexDdlFragments.appendMysqlColumns(stringBuilder, indexInfo);
             stringBuilder.append(")");
             stringBuilder.append(" USING ").append(indexInfo.getIndexMethod().toUpperCase());
+            if (org.apache.commons.lang3.StringUtils.isNotBlank(indexInfo.getParser())
+                    && IndexTypeEnum.FULLTEXT.toString().equals(indexInfo.getIndexType())) {
+                stringBuilder.append(" WITH PARSER `").append(indexInfo.getParser()).append("`");
+            }
+            if (indexInfo.isInvisible()) {
+                stringBuilder.append(" INVISIBLE");
+            }
+            if (org.apache.commons.lang3.StringUtils.isNotBlank(indexInfo.getComment())) {
+                stringBuilder.append(" COMMENT '").append(indexInfo.getComment().replace("'", "''")).append("'");
+            }
             stringBuilder.append(";");
         }
         return stringBuilder.toString();
@@ -355,10 +383,10 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
                 stringBuilder.append(", PRIMARY KEY (").append(primaryKey).append(")");
                 stringBuilder.append(" USING BTREE");
             }
-            if (tableInfo.getUniqueKeyInfos().size() > 0) {
+            if (!tableInfo.getUniqueKeyInfos().isEmpty()) {
                 stringBuilder.append(", ").append(tableInfo.buildUniqueSql());
             }
-            if (tableInfo.getIndexInfos().size() > 0) {
+            if (!tableInfo.getIndexInfos().isEmpty()) {
                 stringBuilder.append(", ").append(tableInfo.buildIndexSql());
             }
 

@@ -34,6 +34,27 @@ public interface RelationalSchemaSql {
 
     String showIndex(Map<String, String> map);
 
+    /**
+     * 当前库全部列元数据（启动批量预载）。不支持时返回空串，调用方勿执行。
+     */
+    default String listSchemaColumnMetas() {
+        return "";
+    }
+
+    /**
+     * 当前库全部索引行（对齐 SHOW INDEX 字段别名）。不支持时返回空串。
+     */
+    default String listSchemaIndexRows() {
+        return "";
+    }
+
+    /**
+     * 当前库全部表名与字符集。不支持时返回空串。
+     */
+    default String listSchemaTableCharsets() {
+        return "";
+    }
+
     String addIndex(Map<String, Map<TableInfo, IndexInfo>> map);
 
     String addColumns(Map<String, Map<TableInfo, ColumnInfo>> map);

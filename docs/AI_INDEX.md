@@ -15,7 +15,7 @@
 - **`docs/REDIS_TTL_GUIDE.md`**：**Redis TTL、`Redisson` 与 `RedisExpireUtil`**（何时宜用、常见问题、API 对照、推荐处理顺序与可选扫描脚本）
 - **`docs/REDIS_KEYS_AND_SCAN.md`**：**禁止 `KEYS`、推荐 `SCAN`**（大键空间运维、`redis.html` 事故、批量删键/列表分页推荐写法、**constraints-scan J 组**）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
-- `docs/AI_STANDARDS.md`：**约束性开发规范**（**§2.0 Lombok + `@Slf4j`**、**§2.1 实体业务落 Service**、**§3～§4 内外 API**、**§11.0 生成可替换、禁特有逻辑进模板产物（空壳除外）**、**§13 禁外部直连 Dao**、**PageAware / gen 超管**）
+- `docs/AI_STANDARDS.md`：**约束性开发规范**（**§2.0 Lombok + `@Slf4j`**、**§2.1 实体业务落 Service**、**§3～§4 内外 API**、**§10.2 索引怎么选写法 / ASC·DESC**、**§11.0 生成可替换、禁特有逻辑进模板产物（空壳除外）**、**§13 禁外部直连 Dao**、**PageAware / gen 超管**）
 - **`docs/AI_DUAL_KEY.md`**：**双主键落地**（`UuidBased` / `SnowBased` / **`UserBased`**、**§3.4 无第二主键仅 `user`**、`AutoIdService`、`Uuid` / `Snow`）
 - `docs/AI_CODE_STYLE.md`：**Java 版式**（方法/调用；**§5.1 Lombok 实体与 `@Slf4j`**；**import 优先** §7；**日志单行** §8）
 - `docs/AI_SERVICE_COHESION.md`：**实体 Service 内聚（硬）**（业务唯一落点、Controller 薄、约 1000 行再拆、少工具类）

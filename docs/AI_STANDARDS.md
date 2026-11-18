@@ -314,24 +314,81 @@ var uuid = '${uuid!""?js_string}';
 
 ### 10.2 索引与唯一约束
 
-- **硬性约束（无例外）**：凡在 **`@Column` 上声明 `isUnique = true` 的字段**，**一律不得**再对该字段声明 **`@Index`**（字段级 **`@Index`**，以及类级 **`@Index` / `@Indexes`** 中含该列的 **`@IndexField`**），以免与框架已生成的唯一索引语义重叠、产生 DDL 冲突与迁移比对噪音。**唯一性只保留 `isUnique = true` 这一路即可。**（框架侧可能会忽略冲突声明并 WARN，但仍属违规写法，合并前 Review 必须拒绝。）
+**怎么选写法（速查）**
+
+| 需求 | 写法 |
+|------|------|
+| 单列普通索引 | 字段上 `@Index`（默认本列 + ASC） |
+| 单列要 DESC / 前缀 | `@Index(order = IndexOrder.DESC)` / `@Index(length = n)` |
+| 单列部分索引等 | `@Index(where = "...")` 等（方言不支持则 WARN 跳过） |
+| 组合索引 / 多列 FULLTEXT | 类上 `@Indexes({ @Index(name=..., fields={@IndexField...}) })` |
+| 唯一约束 | 仅 `@Column(isUnique = true)`，**禁止**再 `@Index` |
+
+- **硬性约束（无例外）**：凡在 **`@Column` 上声明 `isUnique = true` 的字段**，**一律不得**再对该字段声明 **`@Index`**（字段级 **`@Index`**）。**唯一性只保留 `isUnique = true` 这一路即可。** 类级组合索引若含 `isUnique` 列：实现上多列组合**保留**列序并 WARN（建议去掉冗余唯一首列）；单列类级索引仍会剔除。
 - **同类重复唯一声明**：亦不要与 `@Indexes` 等在同一列上重复描述同一约束（细则见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**）。
-- **单字段索引声明位置（新代码默认）**：框架虽支持在**类上**用 **`@Indexes({ @Index(...) })`** / 类级 **`@Index`** 的 **`fields` 仅含一列** 声明索引，但**除非任务或设计明确指明**，**禁止**用类级 **`@Index` / `@Indexes`** 定义**单字段**索引。**单字段索引一律**写在对应**字段**上的 **`@Index`**。**类级 `@Indexes`** 仅用于**组合索引**（`fields` 含 **≥2** 列）或**同实体一次声明多组**组合/特殊索引。存量已用类级单列索引的**默认保持**（与 **`docs/AI_DUAL_KEY.md` §1.2** 存量纪律一致），新实体与新索引须遵守本条。
+- **单字段索引声明位置（新代码默认）**：**单字段索引一律**写在对应**字段**上的 **`@Index`**。**类级 `@Indexes`** 仅用于**组合索引**（`fields` 含 **≥2** 列）或 FULLTEXT/SPATIAL/部分索引等特殊声明。
+- **组合索引列序（硬性）**：`@IndexField` 数组顺序 = 落库 `SEQ_IN_INDEX` 顺序；框架用有序模型发射 DDL，**禁止**再假设 HashMap 乱序。设计时遵循最左前缀：等值列靠左，范围/排序列靠右。**列序优先于 ASC/DESC**。
+- **列方向 ASC/DESC（长期基线，见下「列方向」专节）**：**默认 ASC**（未写 = ASC）。单列用字段级 **`@Index(order = …)`**；组合用 **`@IndexField(order = …)`**。DESC **仅**按主查询 `ORDER BY` 写在**排序键**上。禁止无 `EXPLAIN` 依据批量改 DESC。
+- **扩展能力（可选，带默认值）**：`@Index`：`where` / `include` / `parser` / `invisible` / `expression`，以及字段级快捷 `order` / `length` / `collation`；`@IndexField`：`order` / `length` / `expression` / `collation`。不支持的方言 **WARN 并跳过/降级**。索引列 `collation` 已进模型，各方言 DDL **尚未统一发射**——列排序规则优先用 **`@Column.collation`**。
+- **同步配置**：`autumn.table.index.rebuild-on-order-mismatch`（默认 `true`）——列序/方向不一致时**按索引成对** DROP+ADD（失败 WARN 不阻断启动）；日志关键字 `Index rebuild upgrade`。设 `false` 退回仅列集合比对（运维缓冲，不是放弃列序真相）。
+- **依赖仓兼容**：升级 autumn 后，旧 `@Index`/`@IndexField(field,length)` **无需改实体**即可编译启动；`IndexInfo.getFields()` 仍可用（有序 Map 视图）。历史库方向本就是 ASC，与默认一致，**不会仅因默认 ASC 触发重建**。
+
+#### 列方向 ASC / DESC（性能、用法与长期方案）
+
+以 **MySQL 8 + InnoDB** 为主路径（5.7 上索引定义里的 DESC 常被忽略存储，长期以 8.0+ 真实 DESC 为准）。
+
+**性能边界**
+
+| 场景 | 行为 | 建议 |
+|------|------|------|
+| `(col ASC)` + `ORDER BY col DESC` | 可用 **Backward index scan**，通常仍走索引、不必 filesort | 常见「最新在前」可接受；反向扫描大约慢 ~10%–15%（热点页争用时更大） |
+| 组合全 ASC + 后缀整段 `ORDER BY … DESC`（前缀等值） | 常可反向扫描 | 多数列表够用 |
+| `ORDER BY a DESC, b ASC` 等**混合方向**，索引全 ASC | MySQL 8 易 **filesort** | 建与 ORDER BY **同构**的方向（如 `(a DESC, b ASC)`） |
+| 等值列 `user` / `status` / `deleted` | 方向几乎无收益 | **保持 ASC** |
+
+**真正需要写 `IndexOrder.DESC` 时**：① 高频大范围倒序，希望 Forward scan；② 混合升降序要避免 filesort；③ `EXPLAIN` 已确认 filesort / 错索引且 QPS、数据量大。
+
+**建模规则（硬性纪律）**
+
+1. **默认 ASC 是永久语义基线**（不是权宜兼容）；未写 `order` = ASC。
+2. **先列序、后方向**：等值/IN 在左；范围与排序键在右；DESC 只写在排序键上。
+3. **方向对齐「主查询」ORDER BY**：一个索引服务一族主 SQL；正序/倒序/混合冲突时加第二索引，**不要**改框架默认。
+4. **用 EXPLAIN 决策**：改 DESC 前后对比 `Backward index scan` → Forward，或 filesort 消失；**禁止**「凡倒序列表就全库改 DESC」。
+
+**长期落地三阶段**
+
+1. **语义基线**：默认 ASC；升级优先纠正组合索引**列序**（日志 `reason=ORDER`）；**不**批量加 DESC。
+2. **热点定向 DESC**：盘点大表高频 `ORDER BY … DESC` / 混合序；按主查询改注解并接受单索引 DROP+ADD；大表低峰或短暂关同步开关后处理。
+3. **纪律固化**：新索引 Review 须能指出主查询；DESC 仅出现在排序键。
 
 ```java
-// 推荐：单字段索引在字段上
+// 推荐：单字段索引在字段上（默认本列 + ASC）
 @Column(length = 32, comment = "用户:所属用户uuid")
 @Index
 private String user;
 
-// 推荐：组合索引在类上
-@Indexes(@Index(name = "user_target", fields = {
-    @IndexField(field = "user"), @IndexField(field = "target")
+// 推荐：字段级单列需要 DESC / 前缀时，用 @Index 快捷属性（不必再写 fields）
+@Column(comment = "开播时间:列表倒序")
+@Index(order = IndexOrder.DESC)
+private Date livingAt;
+
+// 可选：部分索引等（方言支持时）仍挂在字段级 @Index 上
+// @Index(where = "deleted = 0")
+// private String user;
+
+// 推荐：组合索引——等值 ASC，排序键按主查询 ORDER BY 显式 DESC（必须用 @IndexField）
+// 主查询: WHERE status=? ORDER BY living_at DESC, id DESC
+@Indexes(@Index(name = "living_hot", fields = {
+    @IndexField(field = "status"),
+    @IndexField(field = "livingAt", order = IndexOrder.DESC),
+    @IndexField(field = "id", order = IndexOrder.DESC)
 }))
 public class DemoEntity { ... }
 
 // 禁止（新代码）：类级 @Indexes 仅含单列，除非明确要求
 // @Indexes(@Index(fields = { @IndexField(field = "user") }))
+// 禁止：字段级再写 @Index(fields={@IndexField(field="本字段",...)}) 重复本列名（用 order/length 快捷即可）
+// 禁止：无 EXPLAIN 依据把等值列或全表索引批量改成 DESC
 ```
 
 ### 10.3 整型、布尔与空值
@@ -519,7 +576,8 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
 | 升级扫描与迁移 | `docs/AI_UPGRADE.md` |
 | ModuleService、缓存、队列、LoopJob、生成矩阵 | `docs/AI_MAP.md` |
 | `isUnique=true` 与 `@Index` 禁止叠用 | **§10.2**；Boot/MAP 索引收集见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2** |
-| 单字段索引须字段级 `@Index` | **§10.2**；类级 `@Indexes` 仅用于组合索引（≥2 列） |
+| 单字段索引须字段级 `@Index` | **§10.2**；类级 `@Indexes` 仅用于组合索引（≥2 列）；DESC/前缀用 `@Index(order/length)` 快捷 |
+| 组合索引列序与 ASC/DESC | **§10.2**；列序优先；默认 ASC；DESC 仅排序键 + 主 ORDER BY |
 | 双键模型、`UuidBased` / `SnowBased` / **`UserBased`** / `AutoIdService` | **§10.4**、**`docs/AI_DUAL_KEY.md` §3～§4**；SQL 见 **`docs/AI_DATABASE.md` §1.1** |
 | Lombok 实体 / `@Slf4j` | **§2.0**、**`docs/AI_CODE_STYLE.md` §5.1 / §8** |
 | 实体业务必须落对应 Service | **§2.1**、**`docs/AI_SERVICE_COHESION.md`** |

@@ -6,6 +6,7 @@ import cn.org.autumn.datasources.DynamicDataSource;
 import cn.org.autumn.service.BaseCacheService;
 import cn.org.autumn.site.ConfigFactory;
 import cn.org.autumn.site.DomainFactory;
+import cn.org.autumn.site.Factory;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.LoginFactory;
@@ -34,6 +35,7 @@ public final class JvmRestartStaticStateReset {
         SpringContextUtils.clearForJvmProcessRestart();
         RuntimeSqlDialectRegistry.resetForJvmRestart();
         RelationalSchemaSqlRegistry.setFallback(MysqlSchemaSql.INSTANCE);
+        Factory.clearOrderedCacheForJvmRestart();
         PathFactory.clearOrderedHandlerCacheForJvmRestart();
         ConfigFactory.clearOrderedHandlerCacheForJvmRestart();
         HostFactory.clearOrderedHandlerCacheForJvmRestart();

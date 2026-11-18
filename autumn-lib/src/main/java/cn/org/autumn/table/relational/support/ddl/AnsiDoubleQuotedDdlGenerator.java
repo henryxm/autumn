@@ -105,12 +105,15 @@ public final class AnsiDoubleQuotedDdlGenerator {
             sb.append(")");
             all.append(sb);
             if (tableInfo.getIndexInfos() != null) {
-                for (IndexInfo idx : tableInfo.getIndexInfos()) {
-                    idx.resolve();
-                    if (IndexTypeEnum.FULLTEXT.name().equals(idx.getIndexType())) {
-                        continue;
-                    }
-                    if (StringUtils.isBlank(idx.getName())) {
+                cn.org.autumn.table.data.index.IndexDialectCapability.Family family =
+                        dialect == AnsiDialect.SQLITE
+                                ? cn.org.autumn.table.data.index.IndexDialectCapability.Family.SQLITE
+                                : (dialect == AnsiDialect.H2
+                                ? cn.org.autumn.table.data.index.IndexDialectCapability.Family.H2
+                                : cn.org.autumn.table.data.index.IndexDialectCapability.Family.ANSI);
+                for (IndexInfo raw : tableInfo.getIndexInfos()) {
+                    IndexInfo idx = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(family, raw);
+                    if (idx == null || StringUtils.isBlank(idx.getName())) {
                         continue;
                     }
                     all.append("; CREATE ");
@@ -123,7 +126,7 @@ public final class AnsiDoubleQuotedDdlGenerator {
                         all.append("INDEX ");
                     }
                     all.append(qi(relationalSchemaScopedIndexName(tname, idx.getName()))).append(" ON ").append(qi(tname)).append(" (");
-                    appendIndexFields(all, idx.getFields());
+                    appendIndexColumns(all, idx);
                     all.append(")");
                 }
             }
@@ -336,9 +339,14 @@ public final class AnsiDoubleQuotedDdlGenerator {
         }
         for (Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
             TableInfo table = ii.getKey();
-            IndexInfo indexInfo = ii.getValue();
-            indexInfo.resolve();
-            if (IndexTypeEnum.FULLTEXT.name().equals(indexInfo.getIndexType())) {
+            cn.org.autumn.table.data.index.IndexDialectCapability.Family family =
+                    dialect == AnsiDialect.SQLITE
+                            ? cn.org.autumn.table.data.index.IndexDialectCapability.Family.SQLITE
+                            : (dialect == AnsiDialect.H2
+                            ? cn.org.autumn.table.data.index.IndexDialectCapability.Family.H2
+                            : cn.org.autumn.table.data.index.IndexDialectCapability.Family.ANSI);
+            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(family, ii.getValue());
+            if (indexInfo == null) {
                 continue;
             }
             if (StringUtils.isBlank(indexInfo.getName())) {
@@ -355,9 +363,35 @@ public final class AnsiDoubleQuotedDdlGenerator {
             }
             sb.append(qi(relationalSchemaScopedIndexName(table.getName(), indexInfo.getName())))
                     .append(" ON ").append(qi(table.getName())).append(" (");
-            appendIndexFields(sb, indexInfo.getFields());
-            sb.append(");");
+            appendIndexColumns(sb, indexInfo);
+            sb.append(")");
+            if (org.apache.commons.lang3.StringUtils.isNotBlank(indexInfo.getWherePredicate())
+                    && (dialect == AnsiDialect.SQLITE || dialect == AnsiDialect.H2)) {
+                sb.append(" WHERE ").append(indexInfo.getWherePredicate());
+            }
+            sb.append(";");
         }
         return sb.toString();
+    }
+
+    /** 有序列 + ASC/DESC；忽略 MySQL 前缀。 */
+    private static void appendIndexColumns(StringBuilder sb, IndexInfo indexInfo) {
+        java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> specs = indexInfo.getColumnSpecs();
+        if (specs != null && !specs.isEmpty()) {
+            for (int i = 0; i < specs.size(); i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                cn.org.autumn.table.data.index.IndexColumnSpec spec = specs.get(i);
+                if (spec.isExpression()) {
+                    sb.append("(").append(spec.getExpression()).append(")");
+                } else {
+                    sb.append(qi(spec.getColumn()));
+                }
+                sb.append(" ").append(spec.getOrder().sql());
+            }
+            return;
+        }
+        appendIndexFields(sb, indexInfo.getFields());
     }
 }

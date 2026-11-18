@@ -748,7 +748,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
 
     public SysUserEntity getByUuid(String uuid) {
         SysUserEntity sysUserEntity = baseMapper.getByUuid(uuid);
-        if (null == sysUserEntity && null != userHandlers && userHandlers.size() > 0) {
+        if (null == sysUserEntity && null != userHandlers && !userHandlers.isEmpty()) {
             try {
                 for (UserHandler handler : userHandlers) {
                     if (sysConfigService.isSame(handler))

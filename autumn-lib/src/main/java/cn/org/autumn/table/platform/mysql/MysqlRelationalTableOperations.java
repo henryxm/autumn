@@ -6,9 +6,15 @@ import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.relational.model.ColumnMeta;
+import cn.org.autumn.table.relational.model.SchemaSyncMetadata;
+import cn.org.autumn.table.relational.model.TableCharsetMeta;
 import cn.org.autumn.table.relational.model.TableMeta;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +23,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class MysqlRelationalTableOperations implements RelationalTableOperations {
+
+    private static final Logger log = LoggerFactory.getLogger(MysqlRelationalTableOperations.class);
 
     @Autowired
     private TableDao tableDao;
@@ -64,6 +72,32 @@ public class MysqlRelationalTableOperations implements RelationalTableOperations
     @Override
     public List<IndexInfo> getTableIndex(String tableName) {
         return tableDao.getTableIndex(tableName);
+    }
+
+    @Override
+    public SchemaSyncMetadata loadSchemaSyncMetadata() {
+        try {
+            List<TableCharsetMeta> charsets = tableDao.listSchemaTableCharsets();
+            List<ColumnMeta> columns = tableDao.listSchemaColumnMetas();
+            List<IndexInfo> indexRows = tableDao.listSchemaIndexRows();
+            if (charsets == null) {
+                charsets = Collections.emptyList();
+            }
+            if (columns == null) {
+                columns = Collections.emptyList();
+            }
+            if (indexRows == null) {
+                indexRows = Collections.emptyList();
+            }
+            return SchemaSyncMetadata.from(columns, indexRows, charsets);
+        } catch (Throwable e) {
+            String msg = e.getMessage();
+            if (StringUtils.isBlank(msg)) {
+                msg = e.getClass().getSimpleName();
+            }
+            log.warn("Schema sync preload failed, fallback per-table: {}", msg.replace('\r', ' ').replace('\n', ' '));
+            return null;
+        }
     }
 
     @Override

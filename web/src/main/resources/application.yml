@@ -102,6 +102,16 @@ autumn:
     auto: update
     init: true
     pack: cn.org.autumn.modules
+  # 启动性能诊断（默认开启）：Bean 自身耗时 Top-N + Spring StartupStep Top-N
+  startup:
+    bean-timing:
+      enabled: true
+      threshold-ms: 50
+      top: 25
+    steps:
+      enabled: true
+      threshold-ms: 100
+      top: 15
 
 # mybatis-plus 3.x 配置
 mybatis-plus:

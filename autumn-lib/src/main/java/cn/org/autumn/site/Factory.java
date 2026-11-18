@@ -11,9 +11,11 @@ import org.springframework.util.ClassUtils;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author mac
@@ -25,6 +27,17 @@ public class Factory {
      * 排序缺省值
      */
     public static final int DEFAULT_ORDER = Integer.MAX_VALUE / 1000;
+
+    /**
+     * {@link #getOrdered} 结果缓存（同上下文同接口同方法只扫一次 getBeansOfType）。
+     * 安装向导 JVM 内重启时须 {@link #clearOrderedCacheForJvmRestart()}。
+     */
+    @SuppressWarnings("rawtypes")
+    private static final ConcurrentHashMap<String, Map> ORDERED_CACHE = new ConcurrentHashMap<>();
+
+    public static void clearOrderedCacheForJvmRestart() {
+        ORDERED_CACHE.clear();
+    }
 
     /**
      * 查找所有实现了T类型的接口的Bean，并对Bean方法注解中指定的方法上的的Order进行排序
@@ -44,9 +57,15 @@ public class Factory {
      * 与 {@link #getOrdered(Class, String, Class[])} 相同，但使用指定的 {@link ApplicationContext}
      * （用于上下文即将关闭、不能依赖 {@link SpringContextUtils} 的场景）。
      */
+    @SuppressWarnings("unchecked")
     public static <T> Map<Integer, List<T>> getOrdered(ApplicationContext applicationContext, Class<T> t, String name, Class<?>... parameterTypes) {
         if (null == applicationContext) {
             return null;
+        }
+        String cacheKey = orderedCacheKey(applicationContext, t, name, parameterTypes);
+        Map<Integer, List<T>> cached = ORDERED_CACHE.get(cacheKey);
+        if (cached != null) {
+            return cached;
         }
         Map<String, T> map = applicationContext.getBeansOfType(t);
         Map<Integer, List<T>> ordered = new TreeMap<>((o1, o2) -> {
@@ -103,7 +122,18 @@ public class Factory {
             }
             list.add(init);
         }
-        return ordered;
+        Map<Integer, List<T>> previous = ORDERED_CACHE.putIfAbsent(cacheKey, ordered);
+        return previous != null ? previous : ordered;
+    }
+
+    private static String orderedCacheKey(ApplicationContext ctx, Class<?> t, String name, Class<?>... parameterTypes) {
+        StringBuilder sb = new StringBuilder(96);
+        sb.append(System.identityHashCode(ctx)).append('|').append(t.getName()).append('|');
+        sb.append(name == null ? "" : name).append('|');
+        if (parameterTypes != null && parameterTypes.length > 0) {
+            sb.append(Arrays.toString(parameterTypes));
+        }
+        return sb.toString();
     }
 
     /**

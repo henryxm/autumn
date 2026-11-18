@@ -362,7 +362,13 @@ public abstract class AbstractJdbcVendorRelationalTableOperations implements Rel
                 continue;
             }
             short ord = rs.getShort("ORDINAL_POSITION");
-            acc.computeIfAbsent(idxName, k -> new IndexMerge(k, nonUnique)).addColumn(ord, col);
+            String ascOrDesc = null;
+            try {
+                ascOrDesc = rs.getString("ASC_OR_DESC");
+            } catch (SQLException ignored) {
+                // 部分驱动无此列
+            }
+            acc.computeIfAbsent(idxName, k -> new IndexMerge(k, nonUnique)).addColumn(ord, col, ascOrDesc);
         }
     }
 
@@ -370,14 +376,16 @@ public abstract class AbstractJdbcVendorRelationalTableOperations implements Rel
         private final String name;
         private final boolean nonUnique;
         private final TreeMap<Short, String> columns = new TreeMap<>();
+        private final TreeMap<Short, String> orders = new TreeMap<>();
 
         IndexMerge(String name, boolean nonUnique) {
             this.name = name;
             this.nonUnique = nonUnique;
         }
 
-        void addColumn(short ordinal, String col) {
+        void addColumn(short ordinal, String col, String ascOrDesc) {
             columns.put(ordinal, col);
+            orders.put(ordinal, ascOrDesc);
         }
 
         boolean isUniqueIndexMatchingPk(Set<String> pkCols) {
@@ -404,11 +412,12 @@ public abstract class AbstractJdbcVendorRelationalTableOperations implements Rel
             i.setName(name);
             i.setKeyName(name);
             i.setNonUnique(nonUnique ? "1" : "0");
-            Map<String, Integer> fields = new LinkedHashMap<>();
-            for (String col : columns.values()) {
-                fields.put(col, 0);
+            // JDBC 元数据通常不区分 method；与注解默认 BTREE 对齐，避免 resolve 前后比对漂移
+            i.setIndexMethod(cn.org.autumn.table.annotation.IndexMethodEnum.BTREE.name());
+            for (Map.Entry<Short, String> e : columns.entrySet()) {
+                String asc = orders.get(e.getKey());
+                i.appendColumn(e.getValue(), 0, cn.org.autumn.table.annotation.IndexOrder.fromCollation(asc));
             }
-            i.setFields(fields);
             return i;
         }
     }

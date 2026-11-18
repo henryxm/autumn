@@ -59,7 +59,7 @@ public class MappingFactory extends Factory {
             return "404";
         if (null == map)
             map = getOrdered(MappingFactory.Mapping.class, "can", HttpServletRequest.class, String.class);
-        if (null != map && map.size() > 0) {
+        if (null != map && !map.isEmpty()) {
             for (Map.Entry<Integer, List<MappingFactory.Mapping>> k : map.entrySet()) {
                 List<MappingFactory.Mapping> list = k.getValue();
                 for (MappingFactory.Mapping mapping : list) {

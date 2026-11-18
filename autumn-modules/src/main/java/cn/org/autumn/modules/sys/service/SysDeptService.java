@@ -117,7 +117,7 @@ public class SysDeptService extends ServiceImpl<SysDeptDao, SysDeptEntity> imple
     private void getDeptTreeList(List<String> subKeys, List<String> deptKeys) {
         for (String deptKey : subKeys) {
             List<String> list = getByParentKey(deptKey);
-            if (list.size() > 0) {
+            if (!list.isEmpty()) {
                 getDeptTreeList(list, deptKeys);
             }
             deptKeys.add(deptKey);

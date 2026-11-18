@@ -111,10 +111,10 @@ public class UserRealm extends AuthorizingRealm {
             }
             permsSet.addAll(Arrays.asList(perms.trim().split(",")));
         }
-        if (null != permissionHandlers && permissionHandlers.size() > 0) {
+        if (null != permissionHandlers && !permissionHandlers.isEmpty()) {
             for (PermissionHandler permissionHandler : permissionHandlers) {
                 Set<String> permissions = permissionHandler.getPermissions(uuid);
-                if (null != permissions && permissions.size() > 0)
+                if (null != permissions && !permissions.isEmpty())
                     permsSet.addAll(permissions);
             }
         }

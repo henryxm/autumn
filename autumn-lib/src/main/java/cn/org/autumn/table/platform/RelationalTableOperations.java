@@ -4,6 +4,7 @@ import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.relational.model.ColumnMeta;
+import cn.org.autumn.table.relational.model.SchemaSyncMetadata;
 import cn.org.autumn.table.relational.model.TableMeta;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,13 @@ public interface RelationalTableOperations {
     List<UniqueKeyInfo> getTableKeys(String tableName);
 
     List<IndexInfo> getTableIndex(String tableName);
+
+    /**
+     * 一次性预载当前库表/列/索引/字符集；不支持时返回 {@code null}（调用方回退逐表查询）。
+     */
+    default SchemaSyncMetadata loadSchemaSyncMetadata() {
+        return null;
+    }
 
     Integer getTableCount();
 

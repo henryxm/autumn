@@ -51,7 +51,7 @@ public class SysMenuController extends SysAbstractController {
             }
         }
 
-        if (null != sysMenuEntity.getList() && sysMenuEntity.getList().size() > 0) {
+        if (null != sysMenuEntity.getList() && !sysMenuEntity.getList().isEmpty()) {
             try {
                 for (SysMenuEntity sub : (List<SysMenuEntity>) sysMenuEntity.getList()) {
                     r(sub, language, spms);
@@ -72,7 +72,7 @@ public class SysMenuController extends SysAbstractController {
         Locale locale = LanguageInterceptor.getLocale(request);
         Map<String, String> language = languageService.getLanguage(locale);
         Map<String, SuperPositionModelEntity> spms = superPositionModelService.getSpmListForResourceID();
-        if (null != language && language.size() > 0) {
+        if (null != language && !language.isEmpty()) {
             for (SysMenuEntity sysMenuEntity : menuList) {
                 r(sysMenuEntity, language, spms);
             }
@@ -115,7 +115,7 @@ public class SysMenuController extends SysAbstractController {
         Locale locale = LanguageInterceptor.getLocale(request);
         Map<String, String> language = languageService.getLanguage(locale);
         Map<String, SuperPositionModelEntity> spms = superPositionModelService.getSpmListForResourceID();
-        if (null != language && language.size() > 0) {
+        if (null != language && !language.isEmpty()) {
             for (SysMenuEntity sysMenuEntity : menuList) {
                 r(sysMenuEntity, language, spms);
             }
@@ -158,7 +158,7 @@ public class SysMenuController extends SysAbstractController {
 
         //判断是否有子菜单或按钮
         List<SysMenuEntity> menuList = sysMenuService.getByParentKey(menuKey);
-        if (menuList.size() > 0) {
+        if (!menuList.isEmpty()) {
             return R.error("请先删除子菜单或按钮");
         }
 

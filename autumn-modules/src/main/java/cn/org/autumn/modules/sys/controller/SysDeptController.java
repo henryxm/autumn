@@ -116,7 +116,7 @@ public class SysDeptController extends SysAbstractController {
     public R delete(String deptKey) {
         //判断是否有子部门
         List<String> deptList = sysDeptService.getByParentKey(deptKey);
-        if (deptList.size() > 0) {
+        if (!deptList.isEmpty()) {
             return R.error("请先删除子部门");
         }
         SysDeptEntity dept = sysDeptService.getByDeptKey(deptKey);

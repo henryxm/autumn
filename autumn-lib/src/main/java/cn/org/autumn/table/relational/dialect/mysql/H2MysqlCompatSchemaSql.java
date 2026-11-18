@@ -28,20 +28,41 @@ public final class H2MysqlCompatSchemaSql extends MysqlSchemaSql {
         StringBuilder stringBuilder = new StringBuilder();
         Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
+            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
+                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.H2, ii.getValue());
+            if (indexInfo == null) {
+                continue;
+            }
             stringBuilder.append("ALTER TABLE `" + ii.getKey().getName() + "` ADD ");
-            IndexInfo indexInfo = ii.getValue();
             if (!IndexTypeEnum.NORMAL.toString().equals(indexInfo.getIndexType())) {
                 stringBuilder.append(indexInfo.getIndexType() + " ");
             }
             stringBuilder.append("INDEX ");
             String idxName = "ix_" + h2IndexTablePrefix(ii.getKey().getName()) + "_" + indexInfo.getName();
             stringBuilder.append("`").append(idxName).append("` (");
-            Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<String, Integer> kv = iterator.next();
-                stringBuilder.append("`").append(kv.getKey()).append("`");
-                if (iterator.hasNext()) {
-                    stringBuilder.append(",");
+            // H2：保留列序与 ASC/DESC，忽略 MySQL 前缀长度
+            java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> specs = indexInfo.getColumnSpecs();
+            if (specs != null && !specs.isEmpty()) {
+                for (int i = 0; i < specs.size(); i++) {
+                    if (i > 0) {
+                        stringBuilder.append(",");
+                    }
+                    cn.org.autumn.table.data.index.IndexColumnSpec spec = specs.get(i);
+                    if (spec.isExpression()) {
+                        stringBuilder.append("(").append(spec.getExpression()).append(")");
+                    } else {
+                        stringBuilder.append("`").append(spec.getColumn()).append("`");
+                    }
+                    stringBuilder.append(" ").append(spec.getOrder().sql());
+                }
+            } else {
+                Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Map.Entry<String, Integer> kv = iterator.next();
+                    stringBuilder.append("`").append(kv.getKey()).append("` ASC");
+                    if (iterator.hasNext()) {
+                        stringBuilder.append(",");
+                    }
                 }
             }
             stringBuilder.append(")");
@@ -81,13 +102,13 @@ public final class H2MysqlCompatSchemaSql extends MysqlSchemaSql {
             if (!StringUtils.isBlank(primaryKey)) {
                 stringBuilder.append(", PRIMARY KEY (").append(primaryKey).append(")");
             }
-            if (tableInfo.getUniqueKeyInfos().size() > 0) {
+            if (!tableInfo.getUniqueKeyInfos().isEmpty()) {
                 String uniq = tableInfo.buildUniqueSql();
                 uniq = flattenH2SecondaryIndexNames(stripMysqlIndexPrefixLengths(stripIndexUsingClauses(uniq)),
                         tableInfo.getName());
                 stringBuilder.append(", ").append(uniq);
             }
-            if (tableInfo.getIndexInfos().size() > 0) {
+            if (!tableInfo.getIndexInfos().isEmpty()) {
                 String idx = tableInfo.buildIndexSql();
                 idx = flattenH2SecondaryIndexNames(stripMysqlIndexPrefixLengths(stripIndexUsingClauses(idx)),
                         tableInfo.getName());

@@ -11,7 +11,7 @@ public class RefreshFactory extends Factory {
     public void refresh() {
         List<RefreshHandler> handlers = getOrderList(RefreshHandler.class);
         RefreshHandler handler = null;
-        if (null != handlers && handlers.size() > 0)
+        if (null != handlers && !handlers.isEmpty())
             handler = handlers.get(0);
         if (null == handler || handler.isRefresh())
             invoke(RefreshFactory.Refresh.class, "refresh");

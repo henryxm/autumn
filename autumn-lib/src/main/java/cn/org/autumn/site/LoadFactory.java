@@ -21,7 +21,7 @@ public class LoadFactory extends Factory {
     public void load() {
         List<LoadHandler> loadHandlers = getOrderList(LoadHandler.class);
         LoadHandler loadHandler = null;
-        if (null != loadHandlers && loadHandlers.size() > 0)
+        if (null != loadHandlers && !loadHandlers.isEmpty())
             loadHandler = loadHandlers.get(0);
         if (null == loadHandler || loadHandler.isBefore())
             invoke(Before.class, "before");

@@ -6,6 +6,7 @@ import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.data.UniqueKeyInfo;
 import cn.org.autumn.table.relational.model.ColumnMeta;
+import cn.org.autumn.table.relational.model.TableCharsetMeta;
 import cn.org.autumn.table.relational.model.TableMeta;
 import cn.org.autumn.table.relational.provider.QuerySql;
 import java.util.List;
@@ -84,6 +85,21 @@ public interface TableDao {
     @SelectProvider(type = QuerySql.class, method = showIndex)
     @ResultType(List.class)
     List<IndexInfo> getTableIndex(@Param(paramName) String tableName);
+
+    /** 当前库全部列元数据（启动批量预载）。 */
+    @SelectProvider(type = QuerySql.class, method = listSchemaColumnMetas)
+    @ResultType(List.class)
+    List<ColumnMeta> listSchemaColumnMetas();
+
+    /** 当前库全部索引行（对齐 SHOW INDEX 字段）。 */
+    @SelectProvider(type = QuerySql.class, method = listSchemaIndexRows)
+    @ResultType(List.class)
+    List<IndexInfo> listSchemaIndexRows();
+
+    /** 当前库全部表名与字符集。 */
+    @SelectProvider(type = QuerySql.class, method = listSchemaTableCharsets)
+    @ResultType(List.class)
+    List<TableCharsetMeta> listSchemaTableCharsets();
 
     @SelectProvider(type = QuerySql.class, method = getTableCount)
     @ResultType(Integer.class)

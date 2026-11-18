@@ -1,6 +1,6 @@
 package cn.org.autumn.table.data;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class UniqueKeyInfo {
@@ -21,7 +21,7 @@ public class UniqueKeyInfo {
     String indexComment;
 
     public UniqueKeyInfo() {
-        fields = new HashMap<>();
+        fields = new LinkedHashMap<>();
     }
 
     /**
@@ -45,7 +45,13 @@ public class UniqueKeyInfo {
     }
 
     public void setFields(Map<String, Integer> fields) {
-        this.fields = fields;
+        if (fields == null) {
+            this.fields = new LinkedHashMap<>();
+        } else if (fields instanceof LinkedHashMap) {
+            this.fields = fields;
+        } else {
+            this.fields = new LinkedHashMap<>(fields);
+        }
     }
 
     public String getIndexType() {

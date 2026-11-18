@@ -14,6 +14,7 @@ import cn.org.autumn.utils.Query;
 import cn.org.autumn.utils.SpringContextUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.quartz.CronTrigger;
 import org.quartz.Scheduler;
@@ -27,6 +28,7 @@ import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysMenuService.getSystemMenuKey;
 
+@Slf4j
 @DependsOn("springContextUtils")
 @Service
 public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJobEntity> implements InitFactory.Must, LoopJob.TenMinute {
@@ -35,39 +37,58 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
     private Scheduler scheduler;
 
     private void scanInit() {
-        if (null != SpringContextUtils.applicationContext) {
-            String[] beans = SpringContextUtils.applicationContext.getBeanDefinitionNames();
-            for (String beanName : beans) {
-                Class<?> beanType = SpringContextUtils.applicationContext.getType(beanName);
-                Method[] methods = beanType.getMethods();
-                for (Method method : methods) {
-                    TaskAware taskAware = method.getAnnotation(TaskAware.class);
-                    if (null != taskAware) {
-                        ScheduleJobEntity scheduleJobEntity = new ScheduleJobEntity();
-                        scheduleJobEntity.setBeanName(beanName);
-                        scheduleJobEntity.setMethodName(method.getName());
-                        QueryWrapper<ScheduleJobEntity> qw = new QueryWrapper<>();
-                        qw.eq(columnInWrapper("bean_name"), scheduleJobEntity.getBeanName())
-                                .eq(columnInWrapper("method_name"), scheduleJobEntity.getMethodName());
-                        ScheduleJobEntity entity = baseMapper.selectOne(qw);
-                        if (null == entity) {
-                            scheduleJobEntity.setStatus(taskAware.status());
-                            scheduleJobEntity.setCronExpression(taskAware.cronExpression());
-                            scheduleJobEntity.setParams(taskAware.params());
-                            scheduleJobEntity.setRemark(taskAware.remark());
-                            scheduleJobEntity.setCreateTime(new Date());
-                            scheduleJobEntity.setMode(taskAware.mode());
-                            baseMapper.insert(scheduleJobEntity);
-                        } else {
-                            if (StringUtils.isEmpty(entity.getMode())) {
-                                entity.setMode(taskAware.mode());
-                                baseMapper.updateById(entity);
-                            }
-                        }
+        if (null == SpringContextUtils.applicationContext) {
+            return;
+        }
+        long t0 = System.currentTimeMillis();
+        int scanned = 0;
+        int hits = 0;
+        String[] beans = SpringContextUtils.applicationContext.getBeanDefinitionNames();
+        for (String beanName : beans) {
+            Class<?> beanType = SpringContextUtils.applicationContext.getType(beanName);
+            if (beanType == null) {
+                continue;
+            }
+            Class<?> userClass = org.springframework.util.ClassUtils.getUserClass(beanType);
+            // 仅扫业务包，跳过 Spring/第三方 Bean 的反射遍历
+            if (!userClass.getName().startsWith("cn.org.autumn.")) {
+                continue;
+            }
+            scanned++;
+            for (Method method : userClass.getMethods()) {
+                if (method.getDeclaringClass() == Object.class) {
+                    continue;
+                }
+                TaskAware taskAware = method.getAnnotation(TaskAware.class);
+                if (null == taskAware) {
+                    continue;
+                }
+                hits++;
+                ScheduleJobEntity scheduleJobEntity = new ScheduleJobEntity();
+                scheduleJobEntity.setBeanName(beanName);
+                scheduleJobEntity.setMethodName(method.getName());
+                QueryWrapper<ScheduleJobEntity> qw = new QueryWrapper<>();
+                qw.eq(columnInWrapper("bean_name"), scheduleJobEntity.getBeanName())
+                        .eq(columnInWrapper("method_name"), scheduleJobEntity.getMethodName());
+                ScheduleJobEntity entity = baseMapper.selectOne(qw);
+                if (null == entity) {
+                    scheduleJobEntity.setStatus(taskAware.status());
+                    scheduleJobEntity.setCronExpression(taskAware.cronExpression());
+                    scheduleJobEntity.setParams(taskAware.params());
+                    scheduleJobEntity.setRemark(taskAware.remark());
+                    scheduleJobEntity.setCreateTime(new Date());
+                    scheduleJobEntity.setMode(taskAware.mode());
+                    baseMapper.insert(scheduleJobEntity);
+                } else {
+                    if (StringUtils.isEmpty(entity.getMode())) {
+                        entity.setMode(taskAware.mode());
+                        baseMapper.updateById(entity);
                     }
                 }
             }
         }
+        log.info("ScheduleJob TaskAware scan: beans={} autumnBeans={} hits={} elapsedMs={}",
+                beans.length, scanned, hits, System.currentTimeMillis() - t0);
     }
 
     public void init() {

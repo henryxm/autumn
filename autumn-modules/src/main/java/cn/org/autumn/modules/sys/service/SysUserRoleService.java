@@ -135,7 +135,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
         //先删除用户与角色关系
         this.removeByMap(new MapUtils().put("user_id", userId));
 
-        if (roleIdList == null || roleIdList.size() == 0) {
+        if (roleIdList == null || roleIdList.isEmpty()) {
             return;
         }
 
@@ -164,14 +164,14 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
     @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdate(String userUuid, List<String> roleKeys) {
         //情况角色关系
-        if (roleKeys == null || roleKeys.size() == 0) {
+        if (roleKeys == null || roleKeys.isEmpty()) {
             this.removeByMap(new MapUtils().put("user_uuid", userUuid));
             return;
         }
         List<String> existed = getRoleKeys(userUuid);
         List<String> needDeleted = new ArrayList<>();
         List<String> needAdded = new ArrayList<>();
-        if (null != existed && existed.size() > 0) {
+        if (null != existed && !existed.isEmpty()) {
             for (String e : existed) {
                 if (roleKeys.contains(e)) {
                     continue;
@@ -187,7 +187,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
             needAdded = roleKeys;
         }
 
-        if (needDeleted.size() > 0) {
+        if (!needDeleted.isEmpty()) {
             String[] d = new String[needDeleted.size()];
             d = needDeleted.toArray(d);
             deleteBatch(d);
@@ -232,7 +232,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
     public boolean isSystemAdministrator(SysUserEntity sysUserEntity) {
         if (null != sysUserEntity) {
             List<String> roleKeys = baseMapper.getRoleKeys(sysUserEntity.getUuid());
-            if (null != roleKeys && roleKeys.size() > 0) {
+            if (null != roleKeys && !roleKeys.isEmpty()) {
                 return roleKeys.contains(SysRoleService.Role_System_Administrator);
             }
         }
@@ -242,7 +242,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
     public boolean isSystemAdministrator(String uuid) {
         if (StringUtils.isNotBlank(uuid)) {
             List<String> roleKeys = baseMapper.getRoleKeys(uuid);
-            if (null != roleKeys && roleKeys.size() > 0) {
+            if (null != roleKeys && !roleKeys.isEmpty()) {
                 return roleKeys.contains(SysRoleService.Role_System_Administrator);
             }
         }
@@ -252,7 +252,7 @@ public class SysUserRoleService extends ServiceImpl<SysUserRoleDao, SysUserRoleE
     private void syncAdminUuid() {
         if (Config.isDev())
             return;
-        if (null != userHandlers && userHandlers.size() > 0) {
+        if (null != userHandlers && !userHandlers.isEmpty()) {
             for (UserHandler userHandler : userHandlers) {
                 if (sysConfigService.isSame(userHandler))
                     continue;

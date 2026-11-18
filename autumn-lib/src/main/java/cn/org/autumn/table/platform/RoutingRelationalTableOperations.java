@@ -11,6 +11,7 @@ import cn.org.autumn.table.platform.jdbc.OracleJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.jdbc.SqlServerJdbcRelationalTableOperations;
 import cn.org.autumn.table.platform.mysql.MysqlRelationalTableOperations;
 import cn.org.autumn.table.relational.model.ColumnMeta;
+import cn.org.autumn.table.relational.model.SchemaSyncMetadata;
 import cn.org.autumn.table.relational.model.TableMeta;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +113,11 @@ public class RoutingRelationalTableOperations implements RelationalTableOperatio
     @Override
     public List<IndexInfo> getTableIndex(String tableName) {
         return delegate().getTableIndex(tableName);
+    }
+
+    @Override
+    public SchemaSyncMetadata loadSchemaSyncMetadata() {
+        return delegate().loadSchemaSyncMetadata();
     }
 
     @Override

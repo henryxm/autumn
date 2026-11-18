@@ -1,13 +1,19 @@
 package cn.org.autumn.table.data;
 
 import cn.org.autumn.table.annotation.*;
+import cn.org.autumn.table.data.index.IndexColumnSpec;
+import cn.org.autumn.table.data.index.IndexTableSettings;
 import cn.org.autumn.table.utils.HumpConvert;
+import org.apache.commons.lang3.StringUtils;
+
 import java.lang.reflect.Field;
 import java.util.*;
 
 public class IndexInfo {
     String name;
+    /** 有序：列名 → 前缀长度（兼容视图，与 {@link #columnSpecs} 同步）。 */
     Map<String, Integer> fields;
+    List<IndexColumnSpec> columnSpecs;
     String indexType;
     String indexMethod;
     String comment;
@@ -21,22 +27,82 @@ public class IndexInfo {
     String subPart;
     String packed;
     String indexComment;
+    String wherePredicate = "";
+    List<String> includeColumns = new ArrayList<>();
+    String parser = "";
+    boolean invisible;
 
     public IndexInfo() {
-        fields = new HashMap<>();
+        fields = new LinkedHashMap<>();
+        columnSpecs = new ArrayList<>();
     }
 
     public void resolve() {
-        if ("0".equals(nonUnique)) {
+        // SHOW INDEX 的 Index_type 常为 BTREE/HASH（方法），勿在判唯一前丢失
+        if ((indexMethod == null || indexMethod.isEmpty()) && indexType != null) {
+            if ("BTREE".equalsIgnoreCase(indexType) || "HASH".equalsIgnoreCase(indexType)) {
+                indexMethod = indexType.toUpperCase(Locale.ROOT);
+            }
+        }
+        if (isUniqueNonUniqueFlag(nonUnique)) {
+            indexType = IndexTypeEnum.UNIQUE.name();
+        } else if (isExplicitNonUniqueFlag(nonUnique)) {
+            // 库侧明确非唯一；保留 FULLTEXT/SPATIAL
+            if (!"FULLTEXT".equalsIgnoreCase(indexType) && !"SPATIAL".equalsIgnoreCase(indexType)) {
+                indexType = IndexTypeEnum.NORMAL.name();
+            }
+        } else if ("FULLTEXT".equalsIgnoreCase(indexType)) {
+            indexType = IndexTypeEnum.FULLTEXT.name();
+        } else if ("SPATIAL".equalsIgnoreCase(indexType)) {
+            indexType = IndexTypeEnum.SPATIAL.name();
+        } else if (IndexTypeEnum.UNIQUE.name().equalsIgnoreCase(indexType)) {
+            // 注解侧已是 UNIQUE，且 Non_unique 未读到：禁止降级成 NORMAL（否则 ADD 丢 UNIQUE，每启重建）
             indexType = IndexTypeEnum.UNIQUE.name();
         } else {
-            if ("FULLTEXT".equalsIgnoreCase(indexType)) {
-                indexType = IndexTypeEnum.FULLTEXT.name();
-            } else
-                indexType = IndexTypeEnum.NORMAL.name();
+            indexType = IndexTypeEnum.NORMAL.name();
         }
-        if (null == indexMethod) {
+        if (indexMethod == null || indexMethod.isEmpty()) {
             indexMethod = IndexMethodEnum.BTREE.name();
+        }
+    }
+
+    /** Non_unique 明确表示「非唯一」（1/true）。 */
+    static boolean isExplicitNonUniqueFlag(String nonUnique) {
+        if (nonUnique == null) {
+            return false;
+        }
+        String v = nonUnique.trim();
+        if (v.isEmpty()) {
+            return false;
+        }
+        if ("1".equals(v) || "true".equalsIgnoreCase(v) || "y".equalsIgnoreCase(v) || "yes".equalsIgnoreCase(v)) {
+            return true;
+        }
+        try {
+            return Integer.parseInt(v) != 0;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    /**
+     * SHOW INDEX / JDBC 的 Non_unique 可能是 {@code 0}/{@code 1}、布尔或 true/false 字符串。
+     */
+    public static boolean isUniqueNonUniqueFlag(String nonUnique) {
+        if (nonUnique == null) {
+            return false;
+        }
+        String v = nonUnique.trim();
+        if (v.isEmpty()) {
+            return false;
+        }
+        if ("0".equals(v) || "false".equalsIgnoreCase(v) || "n".equalsIgnoreCase(v) || "no".equalsIgnoreCase(v)) {
+            return true;
+        }
+        try {
+            return Integer.parseInt(v) == 0;
+        } catch (NumberFormatException ignored) {
+            return false;
         }
     }
 
@@ -60,6 +126,30 @@ public class IndexInfo {
         return indexInfo;
     }
 
+    /**
+     * 浅拷贝定义侧字段（供方言发射降级，避免原地修改实体收集结果）。
+     */
+    public static IndexInfo copyOf(IndexInfo src) {
+        if (src == null) {
+            return null;
+        }
+        IndexInfo i = new IndexInfo();
+        i.name = src.name;
+        i.keyName = src.keyName;
+        i.indexType = src.indexType;
+        i.indexMethod = src.indexMethod;
+        i.comment = src.comment;
+        i.indexComment = src.indexComment;
+        i.table = src.table;
+        i.nonUnique = src.nonUnique;
+        i.wherePredicate = src.getWherePredicate();
+        i.parser = src.getParser();
+        i.invisible = src.invisible;
+        i.includeColumns = new ArrayList<>(src.getIncludeColumns());
+        i.setColumnSpecs(src.getColumnSpecs());
+        return i;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -73,10 +163,6 @@ public class IndexInfo {
                 && indexNamesEqualIgnoreCase(this.getName(), that.getName());
     }
 
-    /**
-     * Derby / DB2 / PostgreSQL / SQLite 等：索引名在 schema（或库）内全局唯一；注解默认名为列名（如 {@code tag}）会在多表冲突。
-     * DDL 使用 {@code 表名_逻辑名} 落库后，JDBC 读回物理名，与注解 {@link #getName()} 需用本方法比对。
-     */
     public static boolean relationalSchemaScopedIndexNamesMatch(String tableName, String a, String b) {
         if (tableName == null) {
             tableName = "";
@@ -94,33 +180,177 @@ public class IndexInfo {
         return a.equalsIgnoreCase(prefix + b) || b.equalsIgnoreCase(prefix + a);
     }
 
-    /** 与 {@link #equals} 相同的列集合与索引类型/方法约束，不比较名称。 */
+    /**
+     * 列与类型/方法是否一致。默认<strong>有序</strong>（含 ASC/DESC；前缀见 {@link #columnSpecEqualForSync}）；
+     * {@code autumn.table.index.rebuild-on-order-mismatch=false} 时退回仅列集合比对。
+     * <p>
+     * where / include / parser / invisible：读回常为空，任一侧默认则跳过该维，避免误重建。
+     * 已与库一致时返回 true（禁止无意义 DROP+ADD）。
+     */
     public boolean sameIndexColumnsAndKind(IndexInfo that) {
         if (that == null) {
             return false;
         }
-        Map<String, Integer> fThis = this.getFields();
-        Map<String, Integer> fThat = that.getFields();
-        if (fThis == null) {
-            fThis = Collections.emptyMap();
-        }
-        if (fThat == null) {
-            fThat = Collections.emptyMap();
-        }
-        if (fThis.size() != fThat.size()) {
+        if (!indexTypesCompatible(this, that) || !indexMethodsCompatible(this, that)) {
             return false;
         }
-        Set<String> normThat = new HashSet<>();
-        for (Map.Entry<String, Integer> k : fThat.entrySet()) {
-            normThat.add(normalizeIndexFieldKey(k.getKey()));
+        if (!softStringEqual(this.wherePredicate, that.wherePredicate)) {
+            return false;
         }
-        for (String s : fThis.keySet()) {
-            if (!normThat.contains(normalizeIndexFieldKey(s))) {
+        if (!softStringEqual(this.parser, that.parser)) {
+            return false;
+        }
+        if (this.invisible != that.invisible && that.invisible) {
+            return false;
+        }
+        if (!softIncludeEqual(this.includeColumns, that.includeColumns)) {
+            return false;
+        }
+        if (IndexTableSettings.rebuildOnOrderMismatch()) {
+            return orderedColumnsEqual(this.getColumnSpecs(), that.getColumnSpecs());
+        }
+        return columnSetEqual(this.getColumnSpecs(), that.getColumnSpecs());
+    }
+
+    /** 空方法与 BTREE 等价。 */
+    public static boolean indexMethodsCompatible(IndexInfo a, IndexInfo b) {
+        return normalizeIndexMethod(a == null ? null : a.getIndexMethod())
+                .equalsIgnoreCase(normalizeIndexMethod(b == null ? null : b.getIndexMethod()));
+    }
+
+    static String normalizeIndexMethod(String method) {
+        if (method == null || method.trim().isEmpty()) {
+            return IndexMethodEnum.BTREE.name();
+        }
+        return method.trim();
+    }
+
+    /** 归一化后的类型严格相等（优先 Non_unique，其次 indexType）。 */
+    public static boolean indexTypesCompatible(IndexInfo a, IndexInfo b) {
+        return effectiveIndexType(a).equalsIgnoreCase(effectiveIndexType(b));
+    }
+
+    /**
+     * 优先 {@code Non_unique}；否则用已解析的 indexType（SHOW 的 BTREE/HASH 视为 NORMAL）。
+     */
+    public static String effectiveIndexType(IndexInfo info) {
+        if (info == null) {
+            return IndexTypeEnum.NORMAL.name();
+        }
+        if (isUniqueNonUniqueFlag(info.getNonUnique())) {
+            return IndexTypeEnum.UNIQUE.name();
+        }
+        if (isExplicitNonUniqueFlag(info.getNonUnique())) {
+            String t = info.getIndexType();
+            if ("FULLTEXT".equalsIgnoreCase(t) || "SPATIAL".equalsIgnoreCase(t)) {
+                return t.toUpperCase(Locale.ROOT);
+            }
+            return IndexTypeEnum.NORMAL.name();
+        }
+        String t = info.getIndexType();
+        if (t == null || t.trim().isEmpty() || "BTREE".equalsIgnoreCase(t) || "HASH".equalsIgnoreCase(t)) {
+            return IndexTypeEnum.NORMAL.name();
+        }
+        if ("FULLTEXT".equalsIgnoreCase(t)) {
+            return IndexTypeEnum.FULLTEXT.name();
+        }
+        if ("SPATIAL".equalsIgnoreCase(t)) {
+            return IndexTypeEnum.SPATIAL.name();
+        }
+        if (IndexTypeEnum.UNIQUE.name().equalsIgnoreCase(t)) {
+            return IndexTypeEnum.UNIQUE.name();
+        }
+        if (IndexTypeEnum.NORMAL.name().equalsIgnoreCase(t)) {
+            return IndexTypeEnum.NORMAL.name();
+        }
+        return t.trim();
+    }
+
+    private static boolean orderedColumnsEqual(List<IndexColumnSpec> a, List<IndexColumnSpec> b) {
+        if (a == null) {
+            a = Collections.emptyList();
+        }
+        if (b == null) {
+            b = Collections.emptyList();
+        }
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (int i = 0; i < a.size(); i++) {
+            if (!columnSpecEqualForSync(a.get(i), b.get(i))) {
                 return false;
             }
         }
-        return Objects.equals(this.getIndexType(), that.getIndexType())
-                && Objects.equals(this.getIndexMethod(), that.getIndexMethod());
+        return true;
+    }
+
+    /**
+     * 列名 + 方向严格；前缀一侧为 0（整列 / SHOW Sub_part 为空）时与另一侧兼容，
+     * 避免 varchar 整列索引与注解 length 反复 DROP+ADD。
+     */
+    private static boolean columnSpecEqualForSync(IndexColumnSpec a, IndexColumnSpec b) {
+        if (a == null || b == null) {
+            return a == b;
+        }
+        if (!Objects.equals(a.identityKey(), b.identityKey())) {
+            return false;
+        }
+        if (a.getOrder() != b.getOrder()) {
+            return false;
+        }
+        int pa = a.getPrefixLength();
+        int pb = b.getPrefixLength();
+        return pa == pb || pa == 0 || pb == 0;
+    }
+
+    private static boolean columnSetEqual(List<IndexColumnSpec> a, List<IndexColumnSpec> b) {
+        if (a == null) {
+            a = Collections.emptyList();
+        }
+        if (b == null) {
+            b = Collections.emptyList();
+        }
+        if (a.size() != b.size()) {
+            return false;
+        }
+        Set<String> keys = new HashSet<>();
+        for (IndexColumnSpec s : b) {
+            keys.add(s.identityKey());
+        }
+        for (IndexColumnSpec s : a) {
+            if (!keys.contains(s.identityKey())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 两侧均非空才严格比较 INCLUDE。 */
+    private static boolean softIncludeEqual(List<String> a, List<String> b) {
+        boolean aEmpty = a == null || a.isEmpty();
+        boolean bEmpty = b == null || b.isEmpty();
+        if (aEmpty || bEmpty) {
+            return true;
+        }
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (int i = 0; i < a.size(); i++) {
+            if (!normalizeIndexFieldKey(a.get(i)).equals(normalizeIndexFieldKey(b.get(i)))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 任一侧为空则视为未读回/未声明，不触发重建。 */
+    private static boolean softStringEqual(String a, String b) {
+        String aa = a == null ? "" : a.trim();
+        String bb = b == null ? "" : b.trim();
+        if (aa.isEmpty() || bb.isEmpty()) {
+            return true;
+        }
+        return aa.equals(bb);
     }
 
     public boolean matchesForRelationalSchemaScopedIndex(String tableName, IndexInfo that) {
@@ -143,7 +373,12 @@ public class IndexInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getFields(), getIndexType(), getIndexMethod(), getComment());
+        // 与 equals / sameIndexColumnsAndKind 对齐（不含 comment；扩展属性读回不稳定故不入 hash）
+        return Objects.hash(
+                getName() == null ? null : getName().toLowerCase(Locale.ROOT),
+                getColumnSpecs(),
+                getIndexType() == null ? null : getIndexType().toLowerCase(Locale.ROOT),
+                getIndexMethod() == null ? null : getIndexMethod().toLowerCase(Locale.ROOT));
     }
 
     public IndexInfo(Index indexKey) {
@@ -151,49 +386,147 @@ public class IndexInfo {
         this.indexMethod = indexKey.indexMethod().toString();
         this.indexType = indexKey.indexType().toString();
         this.comment = indexKey.comment();
-        fields = new HashMap<>();
+        this.wherePredicate = indexKey.where() == null ? "" : indexKey.where();
+        this.parser = indexKey.parser() == null ? "" : indexKey.parser();
+        this.invisible = indexKey.invisible();
+        this.includeColumns = new ArrayList<>();
+        if (indexKey.include() != null) {
+            for (String inc : indexKey.include()) {
+                if (StringUtils.isNotBlank(inc)) {
+                    includeColumns.add(HumpConvert.HumpToUnderline(inc.trim()));
+                }
+            }
+        }
+        fields = new LinkedHashMap<>();
+        columnSpecs = new ArrayList<>();
         if (indexKey.fields().length > 0) {
             for (IndexField indexKeyField : indexKey.fields()) {
-                String n = HumpConvert.HumpToUnderline(indexKeyField.field());
-                fields.put(n, indexKeyField.length());
+                addFromIndexField(indexKeyField);
             }
+        } else if (StringUtils.isNotBlank(indexKey.expression())) {
+            IndexOrder exprOrder = indexKey.order() == null ? IndexOrder.ASC : indexKey.order();
+            addColumnSpec(IndexColumnSpec.ofExpression(indexKey.expression().trim(), exprOrder));
         }
     }
 
     public IndexInfo(Index index, Field field) {
-        fields = new HashMap<>();
+        fields = new LinkedHashMap<>();
+        columnSpecs = new ArrayList<>();
         this.name = index.name();
-        if (name.isEmpty() && null != field) {
-            name = HumpConvert.HumpToUnderline(field.getName());
-            Column column = field.getAnnotation(Column.class);
-            int rawLen = column != null ? column.length() : 0;
-            fields.put(name, IndexPrefixRules.effectivePrefixLength(field, column, rawLen));
+        this.wherePredicate = index.where() == null ? "" : index.where();
+        this.parser = index.parser() == null ? "" : index.parser();
+        this.invisible = index.invisible();
+        this.includeColumns = new ArrayList<>();
+        if (index.include() != null) {
+            for (String inc : index.include()) {
+                if (StringUtils.isNotBlank(inc)) {
+                    includeColumns.add(HumpConvert.HumpToUnderline(inc.trim()));
+                }
+            }
         }
         this.indexMethod = index.indexMethod().toString();
         this.indexType = index.indexType().toString();
         this.comment = index.comment();
+        IndexOrder fieldOrder = index.order() == null ? IndexOrder.ASC : index.order();
         if (index.fields().length > 0) {
+            // 显式 fields 优先（少见）；不自动再叠本字段
             for (IndexField indexKeyField : index.fields()) {
-                String n = HumpConvert.HumpToUnderline(indexKeyField.field());
-                fields.put(n, indexKeyField.length());
+                addFromIndexField(indexKeyField);
             }
+        } else if (StringUtils.isNotBlank(index.expression())) {
+            addColumnSpec(IndexColumnSpec.ofExpression(index.expression().trim(), fieldOrder));
+            if (StringUtils.isBlank(this.name) && field != null) {
+                this.name = HumpConvert.HumpToUnderline(field.getName());
+            }
+        } else if (field != null) {
+            // 字段级单列快捷：默认索引本字段；前缀仅 @Index(length>0) 显式请求，勿把 Column.length 当索引前缀
+            String col = HumpConvert.HumpToUnderline(field.getName());
+            if (StringUtils.isBlank(this.name)) {
+                this.name = col;
+            }
+            Column column = field.getAnnotation(Column.class);
+            int requested = Math.max(0, index.length());
+            String coll = index.collation() == null ? "" : index.collation().trim();
+            addColumnSpec(IndexColumnSpec.ofColumn(col,
+                    IndexPrefixRules.effectivePrefixLength(field, column, requested), fieldOrder, coll));
         }
     }
 
     public IndexInfo(Column columnAnn, Field field) {
-        fields = new HashMap<>();
+        fields = new LinkedHashMap<>();
+        columnSpecs = new ArrayList<>();
         this.indexMethod = "BTREE";
         this.indexType = "UNIQUE";
         this.comment = columnAnn.comment();
         this.name = HumpConvert.HumpToUnderline(field.getName());
-        fields.put(name, IndexPrefixRules.effectivePrefixLength(field, columnAnn, columnAnn.length()));
+        addColumnSpec(IndexColumnSpec.ofColumn(name,
+                IndexPrefixRules.effectivePrefixLength(field, columnAnn, columnAnn.length()), IndexOrder.ASC));
+    }
+
+    private void addFromIndexField(IndexField indexKeyField) {
+        IndexOrder order = indexKeyField.order() == null ? IndexOrder.ASC : indexKeyField.order();
+        if (StringUtils.isNotBlank(indexKeyField.expression())) {
+            addColumnSpec(IndexColumnSpec.ofExpression(indexKeyField.expression().trim(), order));
+            return;
+        }
+        String n = HumpConvert.HumpToUnderline(indexKeyField.field());
+        String coll = indexKeyField.collation() == null ? "" : indexKeyField.collation().trim();
+        addColumnSpec(IndexColumnSpec.ofColumn(n, indexKeyField.length(), order, coll));
+    }
+
+    public void addColumnSpec(IndexColumnSpec spec) {
+        if (spec == null) {
+            return;
+        }
+        if (columnSpecs == null) {
+            columnSpecs = new ArrayList<>();
+        }
+        if (fields == null) {
+            fields = new LinkedHashMap<>();
+        }
+        columnSpecs.add(spec);
+        if (!spec.isExpression() && StringUtils.isNotBlank(spec.getColumn())) {
+            fields.put(spec.getColumn(), spec.getPrefixLength());
+        }
     }
 
     /**
-     * 类级 {@link Index}（无字段上下文）中显式的 {@link cn.org.autumn.table.annotation.IndexField#length()} 可能误用于数值列，此处按实体字段类型与 {@link Column#type()} 收敛。
+     * 追加一列（读回 SHOW INDEX / JDBC 合并用），保持插入顺序。
      */
+    public void appendColumn(String columnName, int prefixLength, IndexOrder order) {
+        if (StringUtils.isBlank(columnName)) {
+            return;
+        }
+        addColumnSpec(IndexColumnSpec.ofColumn(columnName, prefixLength, order == null ? IndexOrder.ASC : order));
+    }
+
     public void applyPrefixLengthPolicy(Class<?> entityClass) {
         IndexPrefixRules.applyPrefixLengthPolicy(fields, entityClass);
+        if (columnSpecs == null || columnSpecs.isEmpty()) {
+            rebuildSpecsFromFields();
+            return;
+        }
+        List<IndexColumnSpec> updated = new ArrayList<>();
+        for (IndexColumnSpec spec : columnSpecs) {
+            if (spec.isExpression()) {
+                updated.add(spec);
+                continue;
+            }
+            Integer len = fields.get(spec.getColumn());
+            int fixed = len == null ? spec.getPrefixLength() : len;
+            updated.add(spec.withPrefixLength(fixed));
+        }
+        columnSpecs = updated;
+    }
+
+    private void rebuildSpecsFromFields() {
+        columnSpecs = new ArrayList<>();
+        if (fields == null) {
+            return;
+        }
+        for (Map.Entry<String, Integer> e : fields.entrySet()) {
+            columnSpecs.add(IndexColumnSpec.ofColumn(e.getKey(), e.getValue() == null ? 0 : e.getValue()));
+        }
     }
 
     public String getName() {
@@ -206,11 +539,38 @@ public class IndexInfo {
     }
 
     public Map<String, Integer> getFields() {
+        if (fields == null) {
+            fields = new LinkedHashMap<>();
+        }
         return fields;
     }
 
     public void setFields(Map<String, Integer> fields) {
-        this.fields = fields;
+        if (fields == null) {
+            this.fields = new LinkedHashMap<>();
+        } else if (fields instanceof LinkedHashMap) {
+            this.fields = fields;
+        } else {
+            this.fields = new LinkedHashMap<>(fields);
+        }
+        rebuildSpecsFromFields();
+    }
+
+    public List<IndexColumnSpec> getColumnSpecs() {
+        if (columnSpecs == null || columnSpecs.isEmpty()) {
+            rebuildSpecsFromFields();
+        }
+        return columnSpecs == null ? Collections.emptyList() : columnSpecs;
+    }
+
+    public void setColumnSpecs(List<IndexColumnSpec> columnSpecs) {
+        this.columnSpecs = columnSpecs == null ? new ArrayList<>() : new ArrayList<>(columnSpecs);
+        this.fields = new LinkedHashMap<>();
+        for (IndexColumnSpec spec : this.columnSpecs) {
+            if (!spec.isExpression() && StringUtils.isNotBlank(spec.getColumn())) {
+                fields.put(spec.getColumn(), spec.getPrefixLength());
+            }
+        }
     }
 
     public String getIndexType() {
@@ -253,7 +613,29 @@ public class IndexInfo {
     }
 
     public void setNonUnique(String nonUnique) {
-        this.nonUnique = nonUnique;
+        if (nonUnique == null) {
+            this.nonUnique = null;
+            return;
+        }
+        String v = nonUnique.trim();
+        this.nonUnique = v.isEmpty() ? null : v;
+    }
+
+    /** MySQL Connector/J 对 Non_unique 常返回 Integer/Boolean。 */
+    public void setNonUnique(Boolean nonUnique) {
+        if (nonUnique == null) {
+            this.nonUnique = null;
+        } else {
+            this.nonUnique = nonUnique ? "1" : "0";
+        }
+    }
+
+    public void setNonUnique(Number nonUnique) {
+        if (nonUnique == null) {
+            this.nonUnique = null;
+        } else {
+            this.nonUnique = String.valueOf(nonUnique.intValue());
+        }
     }
 
     public String getKeyName() {
@@ -316,6 +698,14 @@ public class IndexInfo {
         this.subPart = subPart;
     }
 
+    public void setSubPart(Number subPart) {
+        if (subPart == null) {
+            this.subPart = null;
+        } else {
+            this.subPart = String.valueOf(subPart.intValue());
+        }
+    }
+
     public String getPacked() {
         return packed;
     }
@@ -331,5 +721,37 @@ public class IndexInfo {
     public void setIndexComment(String indexComment) {
         this.comment = indexComment;
         this.indexComment = indexComment;
+    }
+
+    public String getWherePredicate() {
+        return wherePredicate == null ? "" : wherePredicate;
+    }
+
+    public void setWherePredicate(String wherePredicate) {
+        this.wherePredicate = wherePredicate == null ? "" : wherePredicate;
+    }
+
+    public List<String> getIncludeColumns() {
+        return includeColumns == null ? Collections.emptyList() : includeColumns;
+    }
+
+    public void setIncludeColumns(List<String> includeColumns) {
+        this.includeColumns = includeColumns == null ? new ArrayList<>() : new ArrayList<>(includeColumns);
+    }
+
+    public String getParser() {
+        return parser == null ? "" : parser;
+    }
+
+    public void setParser(String parser) {
+        this.parser = parser == null ? "" : parser;
+    }
+
+    public boolean isInvisible() {
+        return invisible;
+    }
+
+    public void setInvisible(boolean invisible) {
+        this.invisible = invisible;
     }
 }

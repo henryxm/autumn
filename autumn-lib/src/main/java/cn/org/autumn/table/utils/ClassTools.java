@@ -110,8 +110,9 @@ public class ClassTools{
 										// 去掉后面的".class" 获取真正的类名
 										String className = name.substring(packageName.length() + 1, name.length() - 6);
 										try{
-											// 添加到classes
-											classes.add(Class.forName(packageName + '.' + className));
+											// loadClass 避免 Class.forName 触发 static 初始化（与 file 协议路径一致）
+											classes.add(Thread.currentThread().getContextClassLoader()
+													.loadClass(packageName + '.' + className));
 										}catch (ClassNotFoundException e){
 											// log
 											// .error("添加用户自定义视图类错误 找不到此类的.class文件");

@@ -314,22 +314,38 @@ public class PostgresRelationalSchemaSql implements RelationalSchemaSql {
                 }
             }
             if (tableInfo.getIndexInfos() != null) {
-                for (IndexInfo idx : tableInfo.getIndexInfos()) {
-                    idx.resolve();
-                    if (IndexTypeEnum.FULLTEXT.name().equals(idx.getIndexType())) {
-                        continue;
-                    }
-                    if (StringUtils.isBlank(idx.getName())) {
+                for (IndexInfo raw : tableInfo.getIndexInfos()) {
+                    IndexInfo idx = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
+                            cn.org.autumn.table.data.index.IndexDialectCapability.Family.POSTGRES, raw);
+                    if (idx == null || StringUtils.isBlank(idx.getName())) {
                         continue;
                     }
                     sb.append("; CREATE ");
                     if (IndexTypeEnum.UNIQUE.name().equals(idx.getIndexType())) {
                         sb.append("UNIQUE ");
                     }
+                    String method = idx.getIndexMethod() == null ? "btree" : idx.getIndexMethod().toLowerCase();
+                    if (!("gin".equals(method) || "gist".equals(method) || "brin".equals(method)
+                            || "spgist".equals(method) || "hash".equals(method))) {
+                        method = "btree";
+                    }
                     sb.append("INDEX IF NOT EXISTS ").append(qi(idx.getName()))
-                            .append(" ON ").append(qi(tname)).append(" USING btree (");
-                    appendIndexFields(sb, idx.getFields());
+                            .append(" ON ").append(qi(tname)).append(" USING ").append(method).append(" (");
+                    appendIndexColumnsOrdered(sb, idx);
                     sb.append(")");
+                    if (idx.getIncludeColumns() != null && !idx.getIncludeColumns().isEmpty()) {
+                        sb.append(" INCLUDE (");
+                        for (int i = 0; i < idx.getIncludeColumns().size(); i++) {
+                            if (i > 0) {
+                                sb.append(", ");
+                            }
+                            sb.append(qi(idx.getIncludeColumns().get(i)));
+                        }
+                        sb.append(")");
+                    }
+                    if (org.apache.commons.lang3.StringUtils.isNotBlank(idx.getWherePredicate())) {
+                        sb.append(" WHERE ").append(idx.getWherePredicate());
+                    }
                 }
             }
             all.append(sb).append(";");
@@ -428,23 +444,64 @@ public class PostgresRelationalSchemaSql implements RelationalSchemaSql {
         Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
             TableInfo table = ii.getKey();
-            IndexInfo indexInfo = ii.getValue();
-            indexInfo.resolve();
-            if (IndexTypeEnum.FULLTEXT.name().equals(indexInfo.getIndexType())) {
+            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
+                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.POSTGRES, ii.getValue());
+            if (indexInfo == null) {
                 continue;
             }
             if (StringUtils.isBlank(indexInfo.getName())) {
                 continue;
+            }
+            String method = indexInfo.getIndexMethod() == null ? "btree" : indexInfo.getIndexMethod().toLowerCase();
+            if ("gin".equals(method) || "gist".equals(method) || "brin".equals(method)
+                    || "spgist".equals(method) || "hash".equals(method)) {
+                // allowed
+            } else {
+                method = "btree";
             }
             sb.append("CREATE ");
             if (IndexTypeEnum.UNIQUE.name().equals(indexInfo.getIndexType())) {
                 sb.append("UNIQUE ");
             }
             sb.append("INDEX IF NOT EXISTS ").append(qi(indexInfo.getName()))
-                    .append(" ON ").append(qi(table.getName())).append(" USING btree (");
-            appendIndexFields(sb, indexInfo.getFields());
-            sb.append(");");
+                    .append(" ON ").append(qi(table.getName())).append(" USING ").append(method).append(" (");
+            appendIndexColumnsOrdered(sb, indexInfo);
+            sb.append(")");
+            if (indexInfo.getIncludeColumns() != null && !indexInfo.getIncludeColumns().isEmpty()) {
+                sb.append(" INCLUDE (");
+                for (int i = 0; i < indexInfo.getIncludeColumns().size(); i++) {
+                    if (i > 0) {
+                        sb.append(", ");
+                    }
+                    sb.append(qi(indexInfo.getIncludeColumns().get(i)));
+                }
+                sb.append(")");
+            }
+            if (org.apache.commons.lang3.StringUtils.isNotBlank(indexInfo.getWherePredicate())) {
+                sb.append(" WHERE ").append(indexInfo.getWherePredicate());
+            }
+            sb.append(";");
         }
         return sb.toString();
+    }
+
+    private void appendIndexColumnsOrdered(StringBuilder sb, IndexInfo indexInfo) {
+        java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> specs = indexInfo.getColumnSpecs();
+        if (specs != null && !specs.isEmpty()) {
+            for (int i = 0; i < specs.size(); i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                cn.org.autumn.table.data.index.IndexColumnSpec spec = specs.get(i);
+                if (spec.isExpression()) {
+                    sb.append("(").append(spec.getExpression()).append(")");
+                } else {
+                    sb.append(qi(spec.getColumn()));
+                }
+                sb.append(" ").append(spec.getOrder().sql());
+            }
+            return;
+        }
+        appendIndexFields(sb, indexInfo.getFields());
     }
 }

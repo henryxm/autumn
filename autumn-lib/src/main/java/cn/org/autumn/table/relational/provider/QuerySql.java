@@ -32,6 +32,9 @@ public class QuerySql {
     public static final String getTableCount = "getTableCount";
     public static final String showKeys = "showKeys";
     public static final String showIndex = "showIndex";
+    public static final String listSchemaColumnMetas = "listSchemaColumnMetas";
+    public static final String listSchemaIndexRows = "listSchemaIndexRows";
+    public static final String listSchemaTableCharsets = "listSchemaTableCharsets";
     public static final String getTableMetasWithMap = "getTableMetasWithMap";
 
     private static RelationalSchemaSql sql() {
@@ -84,6 +87,18 @@ public class QuerySql {
 
     public String showIndex(Map<String, String> map) {
         return sql().showIndex(map);
+    }
+
+    public String listSchemaColumnMetas() {
+        return sql().listSchemaColumnMetas();
+    }
+
+    public String listSchemaIndexRows() {
+        return sql().listSchemaIndexRows();
+    }
+
+    public String listSchemaTableCharsets() {
+        return sql().listSchemaTableCharsets();
     }
 
     public String addIndex(Map<String, Map<TableInfo, IndexInfo>> map) {

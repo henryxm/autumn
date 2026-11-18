@@ -90,12 +90,10 @@ public final class OracleJdbcDdlGenerator {
             sb.append(")");
             all.append(sb);
             if (tableInfo.getIndexInfos() != null) {
-                for (IndexInfo idx : tableInfo.getIndexInfos()) {
-                    idx.resolve();
-                    if (IndexTypeEnum.FULLTEXT.name().equals(idx.getIndexType())) {
-                        continue;
-                    }
-                    if (StringUtils.isBlank(idx.getName())) {
+                for (IndexInfo raw : tableInfo.getIndexInfos()) {
+                    IndexInfo idx = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
+                            cn.org.autumn.table.data.index.IndexDialectCapability.Family.ORACLE, raw);
+                    if (idx == null || StringUtils.isBlank(idx.getName())) {
                         continue;
                     }
                     all.append("; CREATE ");
@@ -103,7 +101,7 @@ public final class OracleJdbcDdlGenerator {
                         all.append("UNIQUE ");
                     }
                     all.append("INDEX ").append(qi(idx.getName())).append(" ON ").append(qi(tname)).append(" (");
-                    appendIndexFields(all, idx.getFields());
+                    appendIndexColumnsOrdered(all, idx);
                     all.append(")");
                 }
             }
@@ -194,9 +192,9 @@ public final class OracleJdbcDdlGenerator {
             return "";
         }
         for (Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
-            IndexInfo indexInfo = ii.getValue();
-            indexInfo.resolve();
-            if (IndexTypeEnum.FULLTEXT.name().equals(indexInfo.getIndexType())) {
+            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
+                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.ORACLE, ii.getValue());
+            if (indexInfo == null) {
                 continue;
             }
             if (StringUtils.isBlank(indexInfo.getName())) {
@@ -208,9 +206,29 @@ public final class OracleJdbcDdlGenerator {
             }
             sb.append("INDEX ").append(qi(indexInfo.getName())).append(" ON ")
                     .append(qi(ii.getKey().getName())).append(" (");
-            appendIndexFields(sb, indexInfo.getFields());
+            appendIndexColumnsOrdered(sb, indexInfo);
             sb.append(");");
         }
         return sb.toString();
+    }
+
+    private static void appendIndexColumnsOrdered(StringBuilder sb, IndexInfo indexInfo) {
+        java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> specs = indexInfo.getColumnSpecs();
+        if (specs != null && !specs.isEmpty()) {
+            for (int i = 0; i < specs.size(); i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                cn.org.autumn.table.data.index.IndexColumnSpec spec = specs.get(i);
+                if (spec.isExpression()) {
+                    sb.append("(").append(spec.getExpression()).append(")");
+                } else {
+                    sb.append(qi(spec.getColumn()));
+                }
+                sb.append(" ").append(spec.getOrder().sql());
+            }
+            return;
+        }
+        appendIndexFields(sb, indexInfo.getFields());
     }
 }

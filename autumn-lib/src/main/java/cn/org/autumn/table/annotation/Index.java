@@ -3,8 +3,18 @@ package cn.org.autumn.table.annotation;
 import java.lang.annotation.*;
 
 /**
- * 表索引声明。若某列已在对应字段上使用 {@link Column#isUnique()}，则以 {@code isUnique} 为准：
- * 字段级 {@code @Index} 会被忽略；类级 {@code fields} 中含该列时会在 {@link cn.org.autumn.table.data.TableInfo} 中剔除并打告警。
+ * 表索引声明（注解驱动建表 / 同步）。
+ * <p>
+ * <b>怎么选写法</b>
+ * <ul>
+ *   <li><b>单列</b>：标在字段上 {@code @Index}（默认索引本字段、ASC）。需要方向/前缀用
+ *       {@code @Index(order = IndexOrder.DESC)} / {@code @Index(length = n)}，不必再写 {@code fields}。</li>
+ *   <li><b>组合 / FULLTEXT 等</b>：类上 {@link Indexes} + {@code @Index(fields = { @IndexField... })}，
+ *       数组顺序即落库列序；每列方向用 {@link IndexField#order()}。</li>
+ *   <li>已 {@link Column#isUnique()} 的字段禁止再标字段级 {@code @Index}（见 docs/AI_STANDARDS.md §10.2）。</li>
+ * </ul>
+ * 字段级 {@code order}/{@code length}/{@code collation} 仅当标在字段上且 {@link #fields()} 为空时作用于本列；
+ * 类级请用 {@link IndexField}。
  */
 @Target({ElementType.FIELD, ElementType.METHOD, ElementType.ANNOTATION_TYPE, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -12,8 +22,12 @@ import java.lang.annotation.*;
 @Inherited
 public @interface Index {
 
+    /** 索引名；字段级默认可空（用本字段下划线名）。 */
     String name() default "";
 
+    /**
+     * 组合索引列定义（有序）。单列字段级快捷时保持默认空数组。
+     */
     IndexField[] fields() default {};
 
     IndexTypeEnum indexType() default IndexTypeEnum.NORMAL;
@@ -21,4 +35,43 @@ public @interface Index {
     IndexMethodEnum indexMethod() default IndexMethodEnum.BTREE;
 
     String comment() default "";
+
+    /**
+     * 部分索引条件（PG / SQL Server / SQLite 等）；MySQL 等不支持时 WARN 并忽略。
+     */
+    String where() default "";
+
+    /**
+     * 覆盖列 / INCLUDE（PG、SQL Server）；不支持时 WARN 并忽略。
+     */
+    String[] include() default {};
+
+    /** FULLTEXT parser 名，如 ngram。 */
+    String parser() default "";
+
+    /** MySQL 8+ INVISIBLE；不支持时忽略。 */
+    boolean invisible() default false;
+
+    /**
+     * 单表达式快捷（{@link #fields()} 为空时），如 {@code lower(email)}；可与 {@link #order()} 联用。
+     */
+    String expression() default "";
+
+    /**
+     * 字段级单列快捷：本列方向。仅当标在字段上且 {@link #fields()} 为空时生效；默认 ASC。
+     * 类级 {@code @Index}/{@code @Indexes} 请用 {@link IndexField#order()}。
+     */
+    IndexOrder order() default IndexOrder.ASC;
+
+    /**
+     * 字段级单列快捷：索引前缀长度。0 表示按 {@link Column#length()} / {@code IndexPrefixRules} 收敛；
+     * 仅当标在字段上且 {@link #fields()} 为空时生效。
+     */
+    int length() default 0;
+
+    /**
+     * 字段级单列快捷：列级 collation（模型已收集；各方言 DDL 发射未统一，优先用 {@link Column#collation()}）。
+     * 仅字段级且 {@link #fields()} 为空时生效。
+     */
+    String collation() default "";
 }

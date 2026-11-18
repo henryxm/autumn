@@ -1161,75 +1161,81 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         if (StringUtils.isBlank(serverTag) && StringUtils.isNotBlank(envBean.getNodeTag()))
             serverTag = envBean.getNodeTag();
         log.info("Server start with tag: {}", serverTag);
-        List<OneSecond> oneSeconds = getOrderList(OneSecond.class, "onOneSecond");
-        for (OneSecond oneSecond : oneSeconds) {
-            onOneSecond(oneSecond);
-        }
+        // 一次 getBeansOfType(Job)，再按周期接口分流注册，避免 14 次全上下文扫描
+        long t0 = System.currentTimeMillis();
+        Map<String, Job> allJobs = cn.org.autumn.utils.SpringContextUtils.getApplicationContext() != null
+                ? cn.org.autumn.utils.SpringContextUtils.getApplicationContext().getBeansOfType(Job.class)
+                : Collections.emptyMap();
+        registerCategoryJobs(allJobs, OneSecond.class, "onOneSecond", LoopJob::onOneSecond);
+        registerCategoryJobs(allJobs, ThreeSecond.class, "onThreeSecond", LoopJob::onThreeSecond);
+        registerCategoryJobs(allJobs, FiveSecond.class, "onFiveSecond", LoopJob::onFiveSecond);
+        registerCategoryJobs(allJobs, TenSecond.class, "onTenSecond", LoopJob::onTenSecond);
+        registerCategoryJobs(allJobs, ThirtySecond.class, "onThirtySecond", LoopJob::onThirtySecond);
+        registerCategoryJobs(allJobs, OneMinute.class, "onOneMinute", LoopJob::onOneMinute);
+        registerCategoryJobs(allJobs, FiveMinute.class, "onFiveMinute", LoopJob::onFiveMinute);
+        registerCategoryJobs(allJobs, TenMinute.class, "onTenMinute", LoopJob::onTenMinute);
+        registerCategoryJobs(allJobs, ThirtyMinute.class, "onThirtyMinute", LoopJob::onThirtyMinute);
+        registerCategoryJobs(allJobs, OneHour.class, "onOneHour", LoopJob::onOneHour);
+        registerCategoryJobs(allJobs, TenHour.class, "onTenHour", LoopJob::onTenHour);
+        registerCategoryJobs(allJobs, ThirtyHour.class, "onThirtyHour", LoopJob::onThirtyHour);
+        registerCategoryJobs(allJobs, OneDay.class, "onOneDay", LoopJob::onOneDay);
+        registerCategoryJobs(allJobs, OneWeek.class, "onOneWeek", LoopJob::onOneWeek);
+        log.info("LoopJob register: jobBeans={} elapsedMs={}", allJobs.size(), System.currentTimeMillis() - t0);
+    }
 
-        List<ThreeSecond> threeSeconds = getOrderList(ThreeSecond.class, "onThreeSecond");
-        for (ThreeSecond threeSecond : threeSeconds) {
-            onThreeSecond(threeSecond);
+    /**
+     * 从已物化的 {@link Job} 全集中筛出指定周期接口，按 {@link Order} 排序后注册。
+     */
+    private static <T extends Job> void registerCategoryJobs(Map<String, Job> allJobs,
+                                                             Class<T> type,
+                                                             String methodName,
+                                                             java.util.function.Consumer<T> registrar) {
+        if (allJobs == null || allJobs.isEmpty()) {
+            return;
         }
+        List<T> matched = new ArrayList<>();
+        for (Job job : allJobs.values()) {
+            if (type.isInstance(job)) {
+                matched.add(type.cast(job));
+            }
+        }
+        if (matched.isEmpty()) {
+            return;
+        }
+        matched.sort(Comparator.comparingInt(j -> resolveJobOrder(j, type, methodName)));
+        for (T job : matched) {
+            registrar.accept(job);
+        }
+    }
 
-        List<FiveSecond> fiveSeconds = getOrderList(FiveSecond.class, "onFiveSecond");
-        for (FiveSecond fiveSecond : fiveSeconds) {
-            onFiveSecond(fiveSecond);
+    private static int resolveJobOrder(Job job, Class<?> type, String methodName) {
+        Order order = null;
+        Class<?> clazz = org.springframework.aop.support.AopUtils.getTargetClass(job);
+        try {
+            while (clazz != null && order == null && !Object.class.equals(clazz)) {
+                try {
+                    Method m = clazz.getMethod(methodName);
+                    order = m.getAnnotation(Order.class);
+                } catch (NoSuchMethodException ignored) {
+                }
+                if (order == null) {
+                    order = clazz.getAnnotation(Order.class);
+                }
+                clazz = clazz.getSuperclass();
+            }
+        } catch (Exception ignored) {
         }
-
-        List<TenSecond> tenSeconds = getOrderList(TenSecond.class, "onTenSecond");
-        for (TenSecond tenSecond : tenSeconds) {
-            onTenSecond(tenSecond);
+        if (order == null) {
+            try {
+                Method m = type.getMethod(methodName);
+                order = m.getAnnotation(Order.class);
+            } catch (Exception ignored) {
+            }
         }
-
-        List<ThirtySecond> thirtySeconds = getOrderList(ThirtySecond.class, "onThirtySecond");
-        for (ThirtySecond thirtySecond : thirtySeconds) {
-            onThirtySecond(thirtySecond);
+        if (order == null) {
+            order = type.getAnnotation(Order.class);
         }
-
-        List<OneMinute> oneMinutes = getOrderList(OneMinute.class, "onOneMinute");
-        for (OneMinute oneMinute : oneMinutes) {
-            onOneMinute(oneMinute);
-        }
-
-        List<FiveMinute> fiveMinutes = getOrderList(FiveMinute.class, "onFiveMinute");
-        for (FiveMinute fiveMinute : fiveMinutes) {
-            onFiveMinute(fiveMinute);
-        }
-
-        List<TenMinute> tenMinutes = getOrderList(TenMinute.class, "onTenMinute");
-        for (TenMinute tenMinute : tenMinutes) {
-            onTenMinute(tenMinute);
-        }
-
-        List<ThirtyMinute> thirtyMinutes = getOrderList(ThirtyMinute.class, "onThirtyMinute");
-        for (ThirtyMinute thirtyMinute : thirtyMinutes) {
-            onThirtyMinute(thirtyMinute);
-        }
-
-        List<OneHour> oneHours = getOrderList(OneHour.class, "onOneHour");
-        for (OneHour oneHour : oneHours) {
-            onOneHour(oneHour);
-        }
-
-        List<TenHour> tenHours = getOrderList(TenHour.class, "onTenHour");
-        for (TenHour tenHour : tenHours) {
-            onTenHour(tenHour);
-        }
-
-        List<ThirtyHour> thirtyHours = getOrderList(ThirtyHour.class, "onThirtyHour");
-        for (ThirtyHour thirtyHour : thirtyHours) {
-            onThirtyHour(thirtyHour);
-        }
-
-        List<OneDay> oneDays = getOrderList(OneDay.class, "onOneDay");
-        for (OneDay oneDay : oneDays) {
-            onOneDay(oneDay);
-        }
-
-        List<OneWeek> oneWeeks = getOrderList(OneWeek.class, "onOneWeek");
-        for (OneWeek oneWeek : oneWeeks) {
-            onOneWeek(oneWeek);
-        }
+        return order != null ? order.value() : Integer.MAX_VALUE / 100;
     }
 
     public interface Job {

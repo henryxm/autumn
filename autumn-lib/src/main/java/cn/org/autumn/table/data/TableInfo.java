@@ -198,6 +198,12 @@ public class TableInfo {
         for (UniqueKeyInfo uk : uniqueKeyInfos) {
             uk.applyPrefixLengthPolicy(clazz);
         }
+        try {
+            cn.org.autumn.table.data.index.IndexAnnotationValidator.validateAll(indexInfos);
+        } catch (IllegalArgumentException ex) {
+            log.error("实体 [{}] 索引注解校验失败: {}", clazz.getName(), ex.getMessage());
+            throw ex;
+        }
         this.name = name;
         CharacterSet cs = table.charset();
         if (cs == CharacterSet.INHERIT) {
@@ -242,29 +248,36 @@ public class TableInfo {
 
     public String buildIndexSql() {
         StringBuilder stringBuilder = new StringBuilder();
-        if (null != indexInfos && indexInfos.size() > 0) {
+        if (null != indexInfos && !indexInfos.isEmpty()) {
             Iterator<IndexInfo> indexKeyInfoIterator = indexInfos.iterator();
+            boolean first = true;
             while (indexKeyInfoIterator.hasNext()) {
-                IndexInfo indexInfo = indexKeyInfoIterator.next();
+                IndexInfo raw = indexKeyInfoIterator.next();
+                IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
+                        cn.org.autumn.table.data.index.IndexDialectCapability.Family.MYSQL, raw);
+                if (indexInfo == null) {
+                    continue;
+                }
+                if (!first) {
+                    stringBuilder.append(", ");
+                }
+                first = false;
                 if (!IndexTypeEnum.NORMAL.toString().equals(indexInfo.getIndexType()))
                     stringBuilder.append(indexInfo.getIndexType()).append(" ");
                 stringBuilder.append("INDEX ");
                 stringBuilder.append("`").append(indexInfo.getName()).append("` (");
-                Iterator<Map.Entry<String, Integer>> iterator = indexInfo.getFields().entrySet().iterator();
-                while (iterator.hasNext()) {
-                    Map.Entry<String, Integer> kv = iterator.next();
-                    if (kv.getValue() > 0)
-                        stringBuilder.append("`").append(kv.getKey()).append("`(").append(kv.getValue()).append(")");
-                    else
-                        stringBuilder.append("`").append(kv.getKey()).append("`");
-                    if (iterator.hasNext()) {
-                        stringBuilder.append(",");
-                    }
-                }
+                cn.org.autumn.table.data.index.IndexDdlFragments.appendMysqlColumns(stringBuilder, indexInfo);
                 stringBuilder.append(")");
                 stringBuilder.append(" USING ").append(indexInfo.getIndexMethod().toUpperCase());
-                if (indexKeyInfoIterator.hasNext()) {
-                    stringBuilder.append(", ");
+                if (StringUtils.isNotBlank(indexInfo.getParser())
+                        && IndexTypeEnum.FULLTEXT.toString().equals(indexInfo.getIndexType())) {
+                    stringBuilder.append(" WITH PARSER `").append(indexInfo.getParser()).append("`");
+                }
+                if (indexInfo.isInvisible()) {
+                    stringBuilder.append(" INVISIBLE");
+                }
+                if (StringUtils.isNotBlank(indexInfo.getComment())) {
+                    stringBuilder.append(" COMMENT '").append(indexInfo.getComment().replace("'", "''")).append("'");
                 }
             }
         }
@@ -415,7 +428,13 @@ public class TableInfo {
             }
             int originalFieldCount = f.size();
             if (originalFieldCount > 1) {
-                // 复合索引不与字段上的 isUnique 冲突，按原定义保留。
+                // 复合索引保留列序；含 isUnique 列时仅 WARN（建议去掉冗余唯一首列）。
+                for (String colKey : f.keySet()) {
+                    if (columnMarkedIsUnique(colKey, isUniqueColumnNames)) {
+                        log.warn("实体 [{}] 组合索引 [{}] 含已 isUnique 列 [{}]，已保留声明顺序；建议去掉冗余唯一首列以免语义重叠。",
+                                clazz.getName(), ii.getName(), colKey);
+                    }
+                }
                 continue;
             }
             List<String> toRemove = new ArrayList<>();
@@ -424,11 +443,24 @@ public class TableInfo {
                     toRemove.add(colKey);
                 }
             }
+            if (toRemove.isEmpty()) {
+                continue;
+            }
             for (String colKey : toRemove) {
                 f.remove(colKey);
                 log.warn("实体 [{}] 索引 [{}] 中的列 [{}] 已由 @Column(isUnique=true) 表达唯一约束，已从该索引定义中移除（isUnique 优先）；" + "请从类上 @Index/@Indexes 的 fields 中删除该列以免误导。", clazz.getName(), ii.getName(), colKey);
             }
-            if (f.isEmpty()) {
+            // 同步 columnSpecs，避免 fields 与 specs 漂移
+            if (ii.getColumnSpecs() != null && !ii.getColumnSpecs().isEmpty()) {
+                java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> kept = new ArrayList<>();
+                for (cn.org.autumn.table.data.index.IndexColumnSpec spec : ii.getColumnSpecs()) {
+                    if (spec.isExpression() || !columnMarkedIsUnique(spec.getColumn(), isUniqueColumnNames)) {
+                        kept.add(spec);
+                    }
+                }
+                ii.setColumnSpecs(kept);
+            }
+            if (ii.getFields().isEmpty() && (ii.getColumnSpecs() == null || ii.getColumnSpecs().isEmpty())) {
                 it.remove();
                 log.warn("实体 [{}] 索引 [{}] 在移除 isUnique 列后无剩余列，整段索引已忽略；请删除或修正类上的 @Index/@Indexes。", clazz.getName(), ii.getName());
             }

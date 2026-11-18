@@ -62,7 +62,7 @@ public class InitFactory extends Factory {
      * @return
      */
     public boolean canBefore() {
-        if (null != getInitHandlers() && getInitHandlers().size() > 0) {
+        if (null != getInitHandlers() && !getInitHandlers().isEmpty()) {
             for (InitHandler initHandler : getInitHandlers()) {
                 if (!initHandler.canBefore())
                     return false;
@@ -72,7 +72,7 @@ public class InitFactory extends Factory {
     }
 
     public boolean canInit() {
-        if (null != getInitHandlers() && getInitHandlers().size() > 0) {
+        if (null != getInitHandlers() && !getInitHandlers().isEmpty()) {
             for (InitHandler initHandler : getInitHandlers()) {
                 if (!initHandler.canInit())
                     return false;
@@ -82,7 +82,7 @@ public class InitFactory extends Factory {
     }
 
     public boolean canAfter() {
-        if (null != getInitHandlers() && getInitHandlers().size() > 0) {
+        if (null != getInitHandlers() && !getInitHandlers().isEmpty()) {
             for (InitHandler initHandler : getInitHandlers()) {
                 if (!initHandler.canAfter())
                     return false;
@@ -92,7 +92,7 @@ public class InitFactory extends Factory {
     }
 
     public boolean canPost() {
-        if (null != getInitHandlers() && getInitHandlers().size() > 0) {
+        if (null != getInitHandlers() && !getInitHandlers().isEmpty()) {
             for (InitHandler initHandler : getInitHandlers()) {
                 if (!initHandler.canPost())
                     return false;

@@ -9,6 +9,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import cn.org.autumn.table.platform.RelationalTableOperations;
 import cn.org.autumn.table.data.*;
 import cn.org.autumn.table.relational.model.ColumnMeta;
+import cn.org.autumn.table.relational.model.SchemaSyncMetadata;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
@@ -68,20 +69,49 @@ public class MysqlTableService {
     @Value("${autumn.table.sync-charset:true}")
     private boolean syncTableCharset;
 
+    /**
+     * 索引列序/方向不一致时是否 DROP+ADD 重建。默认 true；false 时退回仅列集合比对（兼容逃生舱）。
+     */
+    @Value("${autumn.table.index.rebuild-on-order-mismatch:true}")
+    private boolean rebuildIndexOnOrderMismatch;
+
+    /** 单次 createMysqlTable 内的批量元数据快照；无则回退逐表查询。 */
+    private final ThreadLocal<SchemaSyncMetadata> schemaSyncMeta = new ThreadLocal<>();
+
+    @jakarta.annotation.PostConstruct
+    public void applyIndexTableSettings() {
+        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_REBUILD_ON_ORDER_MISMATCH,
+                Boolean.toString(rebuildIndexOnOrderMismatch));
+    }
+
+    /** 实体扫描结果缓存（pack 启动后不变；安装 JVM 重启会重建本 Bean）。 */
+    private volatile Set<Class<?>> cachedEntityClasses;
+
     public Set<String> getPacks() {
         return new CopyOnWriteArraySet<>(Arrays.asList(pack.split(",|:|;|-| ")));
     }
 
     public Set<Class<?>> getClasses() {
-        Set<Class<?>> classes = new CopyOnWriteArraySet<>();
-        Set<String> packs = getPacks();
-        //添加系统代码的默认包名，防止配置错误
-        packs.add(defaultPackage);
-        for (String pkg : packs) {
-            if (!pkg.isEmpty())
-                classes.addAll(ClassTools.getClasses(pkg));
+        Set<Class<?>> local = cachedEntityClasses;
+        if (local != null) {
+            return local;
         }
-        return classes;
+        synchronized (this) {
+            if (cachedEntityClasses != null) {
+                return cachedEntityClasses;
+            }
+            Set<Class<?>> classes = new LinkedHashSet<>();
+            Set<String> packs = getPacks();
+            //添加系统代码的默认包名，防止配置错误
+            packs.add(defaultPackage);
+            for (String pkg : packs) {
+                if (!pkg.isEmpty()) {
+                    classes.addAll(ClassTools.getClasses(pkg));
+                }
+            }
+            cachedEntityClasses = Collections.unmodifiableSet(classes);
+            return cachedEntityClasses;
+        }
     }
 
     public void create() {
@@ -115,39 +145,88 @@ public class MysqlTableService {
             return;
         }
 
-        // 获取Mysql的类型，以及类型需要设置几个长度
-        Map<String, Object> mySqlTypeAndLengthMap = mySqlTypeAndLengthMap();
+        long t0 = System.currentTimeMillis();
+        SchemaSyncMetadata preload = tableDao.loadSchemaSyncMetadata();
+        schemaSyncMeta.set(preload);
+        long t1 = System.currentTimeMillis();
+        if (preload != null) {
+            log.info("Schema sync preload: tables={} columns={} indexRows={} elapsedMs={}", preload.tableCount(), preload.columnCount(), preload.indexRowCount(), t1 - t0);
+        } else {
+            log.info("Schema sync preload: unavailable, per-table meta queries, elapsedMs={}", t1 - t0);
+        }
 
-        // 用于存需要创建的表名+结构
-        Map<TableInfo, List<Object>> newTableMap = new HashMap<TableInfo, List<Object>>();
+        try {
+            // 获取Mysql的类型，以及类型需要设置几个长度
+            Map<String, Object> mySqlTypeAndLengthMap = mySqlTypeAndLengthMap();
 
-        // 用于存需要更新字段类型等的表名+结构
-        Map<TableInfo, List<Object>> modifyTableMap = new HashMap<TableInfo, List<Object>>();
+            // 用于存需要创建的表名+结构
+            Map<TableInfo, List<Object>> newTableMap = new HashMap<>();
 
-        // 用于存需要增加字段的表名+结构
-        Map<TableInfo, List<Object>> addTableMap = new HashMap<TableInfo, List<Object>>();
+            // 用于存需要更新字段类型等的表名+结构
+            Map<TableInfo, List<Object>> modifyTableMap = new HashMap<>();
 
-        // 用于存需要删除字段的表名+结构
-        Map<TableInfo, List<Object>> removeTableMap = new HashMap<TableInfo, List<Object>>();
+            // 用于存需要增加字段的表名+结构
+            Map<TableInfo, List<Object>> addTableMap = new HashMap<>();
 
-        // 用于存需要删除主键的表名+结构
-        Map<TableInfo, List<Object>> dropKeyTableMap = new HashMap<TableInfo, List<Object>>();
+            // 用于存需要删除字段的表名+结构
+            Map<TableInfo, List<Object>> removeTableMap = new HashMap<>();
 
-        // 用于存需要删除唯一约束的表名+结构
-        Map<TableInfo, List<Object>> dropUniqueTableMap = new HashMap<TableInfo, List<Object>>();
+            // 用于存需要删除主键的表名+结构
+            Map<TableInfo, List<Object>> dropKeyTableMap = new HashMap<>();
 
-        // 用于存需要删除唯一约束的表名+结构
-        Map<TableInfo, List<Object>> addIndexTableMap = new HashMap<TableInfo, List<Object>>();
-        Map<TableInfo, List<Object>> removeIndexTableMap = new HashMap<TableInfo, List<Object>>();
-        // 待 CONVERT TO 的表：须在删索引之后执行，避免 utf8→utf8mb4 时超长索引（3072）导致失败
-        List<TableInfo> charsetSyncTables = new ArrayList<TableInfo>();
-        // 构建出全部表的增删改的map
-        allTableMapConstruct(type, mySqlTypeAndLengthMap, classes, newTableMap, modifyTableMap, addTableMap, removeTableMap,
-                dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, charsetSyncTables);
+            // 用于存需要删除唯一约束的表名+结构
+            Map<TableInfo, List<Object>> dropUniqueTableMap = new HashMap<>();
 
-        // 根据传入的map，分别去创建或修改表结构（先删多余索引，再改列，再 CONVERT）
-        createOrModifyTableConstruct(newTableMap, modifyTableMap, addTableMap, removeTableMap, dropKeyTableMap,
-                dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, charsetSyncTables);
+            // 用于存需要删除唯一约束的表名+结构
+            Map<TableInfo, List<Object>> addIndexTableMap = new HashMap<>();
+            Map<TableInfo, List<Object>> removeIndexTableMap = new HashMap<>();
+            // 同名索引重建（列序/定义）：逐条 DROP+ADD，与纯新增/删除分离
+            List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks = new ArrayList<>();
+            // 待 CONVERT TO 的表：须在删索引之后执行，避免 utf8→utf8mb4 时超长索引（3072）导致失败
+            List<TableInfo> charsetSyncTables = new ArrayList<TableInfo>();
+            // 构建出全部表的增删改的map
+            allTableMapConstruct(type, mySqlTypeAndLengthMap, classes, newTableMap, modifyTableMap, addTableMap, removeTableMap, dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, rebuildIndexTasks, charsetSyncTables);
+            long t2 = System.currentTimeMillis();
+
+            // 根据传入的map，分别去创建或修改表结构（先删多余索引，再改列，再 CONVERT）
+            createOrModifyTableConstruct(newTableMap, modifyTableMap, addTableMap, removeTableMap, dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, rebuildIndexTasks, charsetSyncTables);
+            long t3 = System.currentTimeMillis();
+            log.info("Schema sync done: entities={} newTables={} rebuildIndexes={} diffMs={} ddlMs={} totalMs={}", classes.size(), newTableMap.size(), rebuildIndexTasks.size(), t2 - t1, t3 - t2, t3 - t0);
+        } finally {
+            schemaSyncMeta.remove();
+        }
+    }
+
+    private boolean tableExists(String tableName) {
+        SchemaSyncMetadata meta = schemaSyncMeta.get();
+        if (meta != null) {
+            return meta.hasTable(tableName);
+        }
+        return tableDao.hasTable(tableName);
+    }
+
+    private List<ColumnMeta> columnMetas(String tableName) {
+        SchemaSyncMetadata meta = schemaSyncMeta.get();
+        if (meta != null) {
+            return meta.getColumns(tableName);
+        }
+        return tableDao.getColumnMetas(tableName);
+    }
+
+    private List<IndexInfo> indexRows(String tableName) {
+        SchemaSyncMetadata meta = schemaSyncMeta.get();
+        if (meta != null) {
+            return meta.getIndexRows(tableName);
+        }
+        return tableDao.getTableIndex(tableName);
+    }
+
+    private String tableCharacterSetName(String tableName) {
+        SchemaSyncMetadata meta = schemaSyncMeta.get();
+        if (meta != null) {
+            return meta.getCharacterSetName(tableName);
+        }
+        return tableDao.getTableCharacterSetName(tableName);
     }
 
     /**
@@ -173,6 +252,7 @@ public class MysqlTableService {
                                       Map<TableInfo, List<Object>> dropUniqueTableMap,
                                       Map<TableInfo, List<Object>> addIndexTableMap,
                                       Map<TableInfo, List<Object>> removeIndexTableMap,
+                                      List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks,
                                       List<TableInfo> charsetSyncTables) {
         for (Class<?> clazz : classes) {
             try {
@@ -204,9 +284,13 @@ public class MysqlTableService {
                 // 如果配置文件配置的是create，表示将所有的表删掉重新创建
                 if (create.equals(type)) {
                     tableDao.dropTable(tableInfo.getName());
+                    SchemaSyncMetadata meta = schemaSyncMeta.get();
+                    if (meta != null) {
+                        meta.removeTable(tableInfo.getName());
+                    }
                 }
 
-                Boolean exist = tableDao.hasTable(tableInfo.getName());
+                boolean exist = tableExists(tableInfo.getName());
 
                 // 不存在时
                 if (!exist) {
@@ -216,7 +300,7 @@ public class MysqlTableService {
                         // 延后到删索引之后再 CONVERT，见 createOrModifyTableConstruct
                         charsetSyncTables.add(tableInfo);
                     }
-                    List<ColumnMeta> tableColumnList = tableDao.getColumnMetas(tableInfo.getName());
+                    List<ColumnMeta> tableColumnList = columnMetas(tableInfo.getName());
                     warnOnLargeInformationSchemaLengths(tableInfo.getName(), tableColumnList);
                     List<String> columnNames = ClassTools.getPropertyValueList(tableColumnList,
                             ColumnMeta.COLUMN_NAME_KEY);
@@ -225,7 +309,8 @@ public class MysqlTableService {
                     // 2. 找出删除的字段
                     // 3. 找出更新的字段
                     buildAddAndRemoveAndModifyFields(mySqlTypeAndLengthMap, modifyTableMap, addTableMap, removeTableMap,
-                            dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, tableInfo, newFieldList, removeFieldList, addFieldList,
+                            dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, rebuildIndexTasks,
+                            tableInfo, newFieldList, removeFieldList, addFieldList,
                             modifyFieldList, dropKeyFieldList, dropUniqueFieldList, addIndexList, removeIndexList, tableColumnList, columnNames);
                 }
             } catch (Throwable e) {
@@ -264,7 +349,7 @@ public class MysqlTableService {
             collationArg = c;
         }
         try {
-            String dbCharset = tableDao.getTableCharacterSetName(tableInfo.getName());
+            String dbCharset = tableCharacterSetName(tableInfo.getName());
             if (StringUtils.isBlank(dbCharset)) {
                 log.debug("无法解析表 [{}] 的字符集，跳过字符集同步", tableInfo.getName());
                 return;
@@ -306,6 +391,7 @@ public class MysqlTableService {
                                                   Map<TableInfo, List<Object>> dropUniqueTableMap,
                                                   Map<TableInfo, List<Object>> addIndexTableMap,
                                                   Map<TableInfo, List<Object>> removeIndexTableMap,
+                                                  List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks,
                                                   TableInfo tableInfo,
                                                   List<Object> newFieldList,
                                                   List<Object> removeFieldList,
@@ -334,62 +420,84 @@ public class MysqlTableService {
         // 3. 找出更新的字段
         buildModifyFields(mySqlTypeAndLengthMap, modifyTableMap, dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, tableInfo,
                 modifyFieldList, dropKeyFieldList, dropUniqueFieldList, addIndexList, tableColumnList, fieldMap);
-        buildModifyIndex(tableInfo, addIndexTableMap, addIndexList, removeIndexTableMap, removeIndexList);
+        buildModifyIndex(tableInfo, addIndexTableMap, addIndexList, removeIndexTableMap, removeIndexList, rebuildIndexTasks);
     }
 
+    /** 合并 SHOW INDEX 多行列，resolve 类型/方法后供 diff。 */
     private Collection<IndexInfo> filter(List<IndexInfo> indexInfoList) {
-        Map<String, IndexInfo> stringIndexInfoHashMap = new HashMap<>();
-        for (IndexInfo indexInfo : indexInfoList) {
-            indexInfo.resolve();
-            String keyName = indexInfo.getKeyName();
-            if ("PRIMARY".equalsIgnoreCase(keyName))
+        Map<String, IndexInfo> byName = new LinkedHashMap<>();
+        for (IndexInfo row : indexInfoList) {
+            String keyName = StringUtils.isNotBlank(row.getKeyName()) ? row.getKeyName() : row.getName();
+            if (StringUtils.isBlank(keyName) || "PRIMARY".equalsIgnoreCase(keyName)) {
                 continue;
-            if (stringIndexInfoHashMap.containsKey(keyName)) {
-                IndexInfo i = stringIndexInfoHashMap.get(keyName);
-                if (i.getFields() == null)
-                    i.setFields(new HashMap<>());
-                i.getFields().put(indexInfo.getColumnName(), 0);
+            }
+            cn.org.autumn.table.annotation.IndexOrder order =
+                    cn.org.autumn.table.annotation.IndexOrder.fromCollation(row.getCollation());
+            int prefix = row.getSubPartInt();
+            String col = row.getColumnName();
+            if (byName.containsKey(keyName)) {
+                IndexInfo merged = byName.get(keyName);
+                merged.appendColumn(col, prefix, order);
+                if (IndexInfo.isUniqueNonUniqueFlag(row.getNonUnique())) {
+                    merged.setNonUnique("0");
+                    merged.resolve();
+                }
             } else {
-                if (indexInfo.getFields() == null)
-                    indexInfo.setFields(new HashMap<>());
-                indexInfo.getFields().put(indexInfo.getColumnName(), 0);
-                stringIndexInfoHashMap.put(keyName, indexInfo);
+                IndexInfo fresh = new IndexInfo();
+                fresh.setKeyName(keyName);
+                fresh.setName(keyName);
+                fresh.setIndexType(row.getIndexType());
+                fresh.setIndexMethod(row.getIndexMethod());
+                fresh.setNonUnique(row.getNonUnique());
+                fresh.setComment(row.getComment());
+                fresh.setTable(row.getTable());
+                fresh.appendColumn(col, prefix, order);
+                fresh.resolve();
+                byName.put(keyName, fresh);
             }
         }
-        return stringIndexInfoHashMap.values();
+        return byName.values();
     }
 
     private void buildModifyIndex(TableInfo table,
                                   Map<TableInfo, List<Object>> addIndexTableMap,
                                   List<Object> addIndexList,
                                   Map<TableInfo, List<Object>> removeIndexTableMap,
-                                  List<Object> removeIndexList) {
+                                  List<Object> removeIndexList,
+                                  List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks) {
         List<IndexInfo> indexInfos = table.getIndexInfosCombine();
-        List<IndexInfo> indexInfoList = tableDao.getTableIndex(table.getName());
-        Collection<IndexInfo> nn = filter(indexInfoList);
-        for (IndexInfo indexInfo : indexInfos) {
-            boolean has = false;
-            for (IndexInfo indexInfo1 : nn) {
-                has = indexInfo.matchesForRelationalSchemaScopedIndex(table.getName(), indexInfo1);
-                if (has)
-                    break;
+        Collection<IndexInfo> dbIndexes = filter(indexRows(table.getName()));
+        Set<IndexInfo> pairedDb = new HashSet<IndexInfo>();
+        for (IndexInfo entityIdx : indexInfos) {
+            IndexInfo dbIdx = cn.org.autumn.table.data.index.IndexDiffEngine.findByName(table.getName(), dbIndexes, entityIdx);
+            if (dbIdx == null) {
+                addIndexList.add(entityIdx);
+                continue;
             }
-            if (!has) {
-                addIndexList.add(indexInfo);
+            pairedDb.add(dbIdx);
+            if (entityIdx.sameIndexColumnsAndKind(dbIdx)) {
+                continue;
+            }
+            // 同名不一致：成对 DROP+ADD（列序或定义），不并入全局 remove/add
+            cn.org.autumn.table.data.index.IndexRebuildTask.Reason reason =
+                    cn.org.autumn.table.data.index.IndexDiffEngine.classifyRebuild(entityIdx, dbIdx);
+            if (rebuildIndexTasks != null) {
+                rebuildIndexTasks.add(new cn.org.autumn.table.data.index.IndexRebuildTask(table, dbIdx, entityIdx, reason));
+            } else {
+                removeIndexList.add(dbIdx);
+                addIndexList.add(entityIdx);
             }
         }
         addIndexTableMap.put(table, addIndexList);
 
-        for (IndexInfo indexInfo : nn) {
-            boolean has = false;
-            for (IndexInfo indexInfo1 : indexInfos) {
-                has = indexInfo1.matchesForRelationalSchemaScopedIndex(table.getName(), indexInfo);
-                if (has)
-                    break;
+        for (IndexInfo dbIdx : dbIndexes) {
+            if (pairedDb.contains(dbIdx)) {
+                continue;
             }
-            if (!has) {
-                removeIndexList.add(indexInfo);
+            if (cn.org.autumn.table.data.index.IndexDiffEngine.nameMatchesAny(table.getName(), dbIdx, indexInfos)) {
+                continue;
             }
+            removeIndexList.add(dbIdx);
         }
         removeIndexTableMap.put(table, removeIndexList);
     }
@@ -608,15 +716,15 @@ public class MysqlTableService {
             }
         }
 
-        if (modifyFieldList.size() > 0) {
+        if (!modifyFieldList.isEmpty()) {
             modifyTableMap.put(table, modifyFieldList);
         }
 
-        if (dropKeyFieldList.size() > 0) {
+        if (!dropKeyFieldList.isEmpty()) {
             dropKeyTableMap.put(table, dropKeyFieldList);
         }
 
-        if (dropUniqueFieldList.size() > 0) {
+        if (!dropUniqueFieldList.isEmpty()) {
             dropUniqueTableMap.put(table, dropUniqueFieldList);
         }
 
@@ -642,7 +750,7 @@ public class MysqlTableService {
                 removeFieldList.add(fieldNm);
             }
         }
-        if (removeFieldList.size() > 0) {
+        if (!removeFieldList.isEmpty()) {
             removeTableMap.put(table, removeFieldList);
         }
     }
@@ -669,7 +777,7 @@ public class MysqlTableService {
                 addFieldList.add(obj);
             }
         }
-        if (addFieldList.size() > 0) {
+        if (!addFieldList.isEmpty()) {
             addTableMap.put(table, addFieldList);
         }
     }
@@ -769,8 +877,7 @@ public class MysqlTableService {
         boolean matched = false;
         if (enumConstants != null) {
             for (Object enumConstant : enumConstants) {
-                if (enumConstant instanceof Enum<?>) {
-                    Enum<?> e = (Enum<?>) enumConstant;
+                if (enumConstant instanceof Enum<?> e) {
                     if (e.name().equals(normalized)) {
                         matched = true;
                         break;
@@ -895,6 +1002,7 @@ public class MysqlTableService {
                                               Map<TableInfo, List<Object>> dropUniqueTableMap,
                                               Map<TableInfo, List<Object>> addIndexTableMap,
                                               Map<TableInfo, List<Object>> removeIndexTableMap,
+                                              List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks,
                                               List<TableInfo> charsetSyncTables) {
         // 1. 创建表
         createTableByMap(newTableMap);
@@ -910,13 +1018,67 @@ public class MysqlTableService {
         addFieldsByMap(addTableMap);
         // 7. 删除实体中已不存在的字段（保持在 ADD 之后：改名时若先 DROP 再 ADD 失败会丢旧列数据）
         removeFieldsByMap(removeTableMap);
-        // 8. 新增索引
+        // 8. 同名索引重建（列序/定义）：逐条 DROP+ADD，失败不阻断启动
+        rebuildIndexes(rebuildIndexTasks);
+        // 9. 新增索引
         addIndexByMap(addIndexTableMap);
-        // 9. 表级字符集与实体对齐（CONVERT TO）
+        // 10. 表级字符集与实体对齐（CONVERT TO）
         if (charsetSyncTables != null) {
             for (TableInfo tableInfo : charsetSyncTables) {
                 syncTableCharsetIfNeeded(tableInfo);
             }
+        }
+    }
+
+    /**
+     * 执行同名索引重建：每条独立 DROP+ADD。无任务则静默返回（幂等：二次启动不应再重建）。
+     * 成功时最多一条 INFO 汇总；明细为 debug；失败仍 WARN。
+     */
+    private void rebuildIndexes(List<cn.org.autumn.table.data.index.IndexRebuildTask> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return;
+        }
+        int orderCount = 0;
+        for (cn.org.autumn.table.data.index.IndexRebuildTask t : tasks) {
+            if (t.getReason() == cn.org.autumn.table.data.index.IndexRebuildTask.Reason.ORDER) {
+                orderCount++;
+            }
+        }
+        log.debug("Index rebuild upgrade begin: count={} orderFixes={}", tasks.size(), orderCount);
+        int ok = 0;
+        int fail = 0;
+        for (cn.org.autumn.table.data.index.IndexRebuildTask task : tasks) {
+            String tableName = task.getTableName();
+            String indexName = task.getIndexName();
+            String fromCols = cn.org.autumn.table.data.index.IndexDiffEngine.formatColumns(task.getDbIndex());
+            String toCols = cn.org.autumn.table.data.index.IndexDiffEngine.formatColumns(task.getEntityIndex());
+            log.debug("Index rebuild start: reason={} table={} index={} from=[{}] to=[{}]",
+                    task.getReason(), tableName, indexName, fromCols, toCols);
+            long t0 = System.currentTimeMillis();
+            Map<TableInfo, Object> dropMap = new HashMap<>();
+            dropMap.put(task.getTable(), task.getDbIndex());
+            try {
+                tableDao.dropIndex(dropMap);
+            } catch (Throwable e) {
+                fail++;
+                log.warn("Index rebuild failed: table={} index={} phase=DROP error={}", tableName, indexName, ddlError(e));
+                continue;
+            }
+            Map<TableInfo, Object> addMap = new HashMap<>();
+            addMap.put(task.getTable(), task.getEntityIndex());
+            try {
+                tableDao.addIndex(addMap);
+                ok++;
+                log.debug("Index rebuild ok: table={} index={} elapsedMs={}", tableName, indexName,
+                        System.currentTimeMillis() - t0);
+            } catch (Throwable e) {
+                fail++;
+                log.warn("Index rebuild failed: table={} index={} phase=ADD error={} (index dropped; retry next startup)",
+                        tableName, indexName, ddlError(e));
+            }
+        }
+        if (ok > 0 || fail > 0) {
+            log.info("Index rebuild upgrade: ok={} failed={} orderFixes={}", ok, fail, orderCount);
         }
     }
 
@@ -927,10 +1089,10 @@ public class MysqlTableService {
      */
     private void modifyFieldsByMap(Map<TableInfo, List<Object>> modifyTableMap) {
         // 做修改字段操作
-        if (modifyTableMap.size() > 0) {
+        if (!modifyTableMap.isEmpty()) {
             for (Entry<TableInfo, List<Object>> entry : modifyTableMap.entrySet()) {
                 for (Object obj : entry.getValue()) {
-                    Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
+                    Map<TableInfo, Object> map = new HashMap<>();
                     map.put(entry.getKey(), obj);
                     try {
                         tableDao.modifyColumn(map);
@@ -949,10 +1111,10 @@ public class MysqlTableService {
      */
     private void removeFieldsByMap(Map<TableInfo, List<Object>> removeTableMap) {
         // 做删除字段操作
-        if (removeTableMap.size() > 0) {
+        if (!removeTableMap.isEmpty()) {
             for (Entry<TableInfo, List<Object>> entry : removeTableMap.entrySet()) {
                 for (Object obj : entry.getValue()) {
-                    Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
+                    Map<TableInfo, Object> map = new HashMap<>();
                     map.put(entry.getKey(), obj);
                     try {
                         tableDao.dropColumn(map);
@@ -970,10 +1132,10 @@ public class MysqlTableService {
      * @param addTableMap 用于存需要增加字段的表名+结构
      */
     private void addFieldsByMap(Map<TableInfo, List<Object>> addTableMap) {
-        if (addTableMap.size() > 0) {
+        if (!addTableMap.isEmpty()) {
             for (Entry<TableInfo, List<Object>> entry : addTableMap.entrySet()) {
                 for (Object obj : entry.getValue()) {
-                    Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
+                    Map<TableInfo, Object> map = new HashMap<>();
                     map.put(entry.getKey(), obj);
                     try {
                         tableDao.addColumns(map);
@@ -993,10 +1155,10 @@ public class MysqlTableService {
      */
     private void dropFieldsKeyByMap(Map<TableInfo, List<Object>> dropKeyTableMap) {
         // 先去做删除主键的操作，这步操作必须在增加和修改字段之前！
-        if (dropKeyTableMap.size() > 0) {
+        if (!dropKeyTableMap.isEmpty()) {
             for (Entry<TableInfo, List<Object>> entry : dropKeyTableMap.entrySet()) {
                 for (Object obj : entry.getValue()) {
-                    Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
+                    Map<TableInfo, Object> map = new HashMap<>();
                     map.put(entry.getKey(), obj);
                     try {
                         tableDao.dropPrimaryKey(map);
@@ -1015,10 +1177,10 @@ public class MysqlTableService {
      */
     private void dropFieldsUniqueByMap(Map<TableInfo, List<Object>> dropUniqueTableMap) {
         // 先去做删除唯一约束的操作，这步操作必须在增加和修改字段之前！
-        if (dropUniqueTableMap.size() > 0) {
+        if (!dropUniqueTableMap.isEmpty()) {
             for (Entry<TableInfo, List<Object>> entry : dropUniqueTableMap.entrySet()) {
                 for (Object obj : entry.getValue()) {
-                    Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
+                    Map<TableInfo, Object> map = new HashMap<>();
                     map.put(entry.getKey(), obj);
                     try {
                         tableDao.dropIndex(map);
@@ -1041,33 +1203,35 @@ public class MysqlTableService {
      * @param addIndexTableMap 用于存需要删除唯一约束的表名+结构
      */
     private void addIndexByMap(Map<TableInfo, List<Object>> addIndexTableMap) {
-        // 先去做删除唯一约束的操作，这步操作必须在增加和修改字段之前！
-        if (addIndexTableMap.size() > 0) {
+        if (!addIndexTableMap.isEmpty()) {
             for (Entry<TableInfo, List<Object>> entry : addIndexTableMap.entrySet()) {
                 for (Object obj : entry.getValue()) {
-                    Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
+                    Map<TableInfo, Object> map = new HashMap<>();
                     map.put(entry.getKey(), obj);
+                    String idxName = obj instanceof IndexInfo ? ((IndexInfo) obj).getName() : String.valueOf(obj);
                     try {
                         tableDao.addIndex(map);
+                        log.debug("Index add ok: table={} index={}", entry.getKey().getName(), idxName);
                     } catch (Throwable e) {
-                        log.debug("Add Index:{}", e.getMessage());
+                        log.warn("Index add failed: table={} index={} error={}", entry.getKey().getName(), idxName, ddlError(e));
                     }
                 }
             }
         }
     }
 
-    private void removeIndexByMap(Map<TableInfo, List<Object>> addIndexTableMap) {
-        // 先去做删除唯一约束的操作，这步操作必须在增加和修改字段之前！
-        if (addIndexTableMap.size() > 0) {
-            for (Entry<TableInfo, List<Object>> entry : addIndexTableMap.entrySet()) {
+    private void removeIndexByMap(Map<TableInfo, List<Object>> removeIndexTableMap) {
+        if (!removeIndexTableMap.isEmpty()) {
+            for (Entry<TableInfo, List<Object>> entry : removeIndexTableMap.entrySet()) {
                 for (Object obj : entry.getValue()) {
-                    Map<TableInfo, Object> map = new HashMap<TableInfo, Object>();
+                    Map<TableInfo, Object> map = new HashMap<>();
                     map.put(entry.getKey(), obj);
+                    String idxName = obj instanceof IndexInfo ? ((IndexInfo) obj).getName() : String.valueOf(obj);
                     try {
                         tableDao.dropIndex(map);
+                        log.debug("Index drop ok: table={} index={}", entry.getKey().getName(), idxName);
                     } catch (Throwable e) {
-                        log.debug("Drop Index:{}", e.getMessage());
+                        log.warn("Index drop failed: table={} index={} error={}", entry.getKey().getName(), idxName, ddlError(e));
                     }
                 }
             }
@@ -1080,9 +1244,9 @@ public class MysqlTableService {
      * @param newTableMap 用于存需要创建的表名+结构
      */
     private void createTableByMap(Map<TableInfo, List<Object>> newTableMap) {
-        if (newTableMap.size() > 0) {
+        if (!newTableMap.isEmpty()) {
             for (Entry<TableInfo, List<Object>> entry : newTableMap.entrySet()) {
-                Map<TableInfo, List<Object>> map = new HashMap<TableInfo, List<Object>>();
+                Map<TableInfo, List<Object>> map = new HashMap<>();
                 map.put(entry.getKey(), entry.getValue());
                 try {
                     tableDao.createTable(map);
@@ -1099,7 +1263,7 @@ public class MysqlTableService {
      */
     public Map<String, Object> mySqlTypeAndLengthMap() {
         Field[] fields = DataType.class.getDeclaredFields();
-        Map<String, Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new HashMap<>();
         for (Field field : fields) {
             LengthCount lengthCount = field.getAnnotation(LengthCount.class);
             if (null != lengthCount)

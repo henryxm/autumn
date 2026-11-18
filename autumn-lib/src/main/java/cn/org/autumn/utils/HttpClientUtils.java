@@ -69,7 +69,7 @@ public class HttpClientUtils {
             }
             URI uri = builder.build();
             HttpGet httpGet = new HttpGet(uri);
-            if (null != header && header.size() > 0) {
+            if (null != header && !header.isEmpty()) {
                 for (Map.Entry<String, String> kv : header.entrySet()) {
                     httpGet.setHeader(kv.getKey(), kv.getValue());
                 }
@@ -133,7 +133,7 @@ public class HttpClientUtils {
                 UrlEncodedFormEntity entity = new UrlEncodedFormEntity(paramList);
                 httpPost.setEntity(entity);
             }
-            if (null != header && header.size() > 0) {
+            if (null != header && !header.isEmpty()) {
                 for (Map.Entry<String, String> kv : header.entrySet()) {
                     httpPost.setHeader(kv.getKey(), kv.getValue());
                 }
@@ -204,7 +204,7 @@ public class HttpClientUtils {
             if (null != config) {
                 httpPost.setConfig(config);
             }
-            if (null != header && header.size() > 0) {
+            if (null != header && !header.isEmpty()) {
                 for (Map.Entry<String, String> kv : header.entrySet()) {
                     httpPost.setHeader(kv.getKey(), kv.getValue());
                 }

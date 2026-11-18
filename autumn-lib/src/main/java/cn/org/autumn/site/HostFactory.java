@@ -25,7 +25,7 @@ public class HostFactory extends Factory {
     public boolean isAllowed(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         if (null == map)
             map = getOrdered(Host.class, "isAllowed", HttpServletRequest.class, HttpServletResponse.class);
-        if (null != map && map.size() > 0) {
+        if (null != map && !map.isEmpty()) {
             for (Map.Entry<Integer, List<Host>> k : map.entrySet()) {
                 List<Host> list = k.getValue();
                 for (Host host1 : list) {

@@ -389,11 +389,13 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 #### 2.10.1 注解职责速览
 
+> **用法权威纪律**见 **`docs/AI_STANDARDS.md` §10.2**（含「怎么选写法」表与 ASC/DESC 专节）。本节为收集与属性速览。
+
 - **`@Table`（类）**：前缀、模块、注释、存储引擎、字符集等；物理表名以 **`@TableName`** 为准（框架合并进 `TableInfo`，**`@Table` 不写 `value`**，见 **`docs/AI_BOOT.md` §3.2**）。
 - **`@Column`（字段）**：列名、类型、长度、是否可空、主键/自增、默认值、**`comment`（建议「短标题：详述」格式，见 2.10.5）**；**`isUnique = true`** 时在建表 SQL 中会额外生成该列的 `UNIQUE KEY`（见 `MysqlSchemaSql.createTable`）。DEFAULT 按 MySQL 规范发射（数值裸写、时间函数裸写、字符串加引号）。**TEXT/BLOB/JSON/GEOMETRY**（及自增列）上的字面量 `defaultValue`（含 `""`）会被 `ColumnDefaultRules` 忽略并 WARN；括号表达式默认值保留。TEXT/BLOB 的 `isUnique` / 索引无前缀时自动补前缀 **191**；JSON/GEOMETRY 的 `isUnique` 跳过并 WARN。
-- **`@Index`（类 / 字段 / 方法 / 注解类型）**：声明二级索引或唯一索引、全文/空间索引等；属性包括 `name`、`fields`（`@IndexField` 数组）、`indexType`（`IndexTypeEnum`）、`indexMethod`（`IndexMethodEnum`）、`comment`。
+- **`@Index`（类 / 字段）**：`name`、`fields`、`indexType`、`indexMethod`、`comment`；`where` / `include` / `parser` / `invisible` / `expression`。**字段级单列**（`fields` 空）：自动索引本字段；快捷 `order` / `length` / `collation`。
 - **`@Indexes`（类）**：打包多个 `@Index`，用于组合索引或一次声明多组索引。
-- **`@IndexField`**：`field` 为 Java 属性名（框架内会转为下划线列名），`length` 为索引前缀长度；**`length = 0` 表示不对列加前缀长度**（整列参与索引）。
+- **`@IndexField`**：仅用于 `@Index.fields`；`field`、`length`、`order`、`expression`、`collation`。**数组顺序即落库列序**。单列勿用此类重复本字段名。
 
 #### 2.10.2 框架如何收集索引（避免重复声明）
 
@@ -406,8 +408,8 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 因此：
 
-1. **`@Column(isUnique = true)` 与 `@Index` 不得叠用（团队硬性约束，无例外）**  
-   规范见 **`docs/AI_STANDARDS.md` §10.2**：凡 `isUnique = true` 的字段**不得**再标 `@Index`。实现行为（排障参考）：建表时 `isUnique` 已在列定义处生成 `UNIQUE KEY`。**字段级**仍写 `@Index` 时，`TableInfo` 会**忽略**该 `@Index` 并打 **WARN**。**类级** `@Index` / `@Indexes` 的 `fields` 若包含已 `isUnique` 的列，会从该索引定义中**剔除**该列（`isUnique` 优先）并 **WARN**；剔除后若索引无剩余列则整段索引忽略并 **WARN**。
+1. **`@Column(isUnique = true)` 与字段级 `@Index` 不得叠用（团队硬性约束）**  
+   规范见 **`docs/AI_STANDARDS.md` §10.2**：建表时 `isUnique` 已生成 `UNIQUE KEY`。**字段级**仍写 `@Index` 时忽略并 WARN。**类级多列**组合若含 `isUnique` 列：**保留列序**并 WARN（建议去掉冗余唯一首列）；**单列**类级索引仍剔除该列，无剩余列则丢弃整段。
 
 2. **字段上已有 `@Index` 时，不要在类级 `@Indexes` / 类级 `@Index` 里再包含同一列的等价索引**  
    否则同一列会被注册两次，建表或变更时可能生成两条含义重叠的 `INDEX`，属于重复声明。
@@ -426,13 +428,17 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - 无 `Column.type` 时，按 Java 类型保守处理：`String` / `byte[]` 可保留前缀长度，其余类型前缀为 0。
 - 类级 `@IndexField` 上误写的非零 `length` 也会按实体字段与 `Column` 收敛。
 
-**仍建议**：需要前缀索引时显式在 `@IndexField` 中写 `length`；字符串列用 `@Column.length` 参与字段级 `@Index` 时，确保 `type` 为字符串类，避免歧义。不要给 TEXT/BLOB/JSON 写 `defaultValue`。
+**仍建议**：单列前缀用字段级 **`@Index(length = n)`**；组合索引前缀在 **`@IndexField(length = n)`**。字符串列参与索引时确保 `@Column.type` 为字符串类，避免歧义。不要给 TEXT/BLOB/JSON 写 `defaultValue`。
 
-#### 2.10.4 `IndexTypeEnum` / `IndexMethodEnum` 提示
+#### 2.10.4 `IndexTypeEnum` / `IndexMethodEnum` / 列序与方言
 
-- **`FULLTEXT`**：仅适用于 MySQL 全文索引支持的字符型列；不要对数值/日期列使用。
-- **`SPATIAL`**：空间索引需列类型与 MySQL 空间类型语义一致（本框架不替你校验业务是否匹配）。
-- **`HASH`**：与存储引擎及 MySQL 版本能力相关；默认 **`BTREE`** 为最常见选择。
+- **`FULLTEXT` / `SPATIAL`**：主要用于 MySQL 族；其它方言由 `IndexDialectCapability` WARN 跳过。
+- **`IndexMethodEnum`**：`BTREE`/`HASH` 保留；追加 `GIN`/`GIST`/`BRIN`/`SPGIST`/`RTREE`（按方言发射）。
+- **列序与 ASC/DESC**：`IndexInfo` 内部有序；DDL 与 diff 默认顺序敏感。配置 `autumn.table.index.rebuild-on-order-mismatch`（默认 true）。错序/同名定义变更走**成对重建**（日志 `Index rebuild upgrade`），与纯增删索引分离。
+- **ASC/DESC 长期规则（摘要）**：默认 **ASC**（永久基线）；ASC 索引上 `ORDER BY DESC` 可用反向扫描（常略慢）；混合升降序或热点倒序才显式 `IndexOrder.DESC`（只写在排序键）。**列序优先于方向**。完整性能表、建模规则与三阶段落地见 **`docs/AI_STANDARDS.md` §10.2「列方向 ASC / DESC」**。
+- **部分索引 / INCLUDE / INVISIBLE / parser / expression**：见 `@Index` / `@IndexField`；不支持方言降级 WARN（`IndexDialectCapability.forEmit` 用副本，不改实体收集结果）。
+- **diff 扩展属性**：where/include/parser/invisible 在 SHOW/JDBC **未读回**（一侧为空）时不参与比对，避免历史库无限重建；两侧均有值时才严格比较。
+- **兼容**：业务仓旧注解零改；历史库方向本为 ASC，与默认一致；`IndexInfo.getFields()` 仍为有序 Map 视图。
 
 #### 2.10.5 `@Column.comment` / `@Table.comment` 与「短标题：详述」约定（多语言 / 生成列表表头）
 

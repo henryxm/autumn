@@ -67,7 +67,9 @@ public class TableInit {
         }
         DatabaseType t = databaseHolder.getType();
         if (t.supportsAnnotationTableSync()) {
+            long t0 = System.currentTimeMillis();
             mysqlTableService.create();
+            log.info("TableInit finished: database={} elapsedMs={}", t, System.currentTimeMillis() - t0);
         } else {
             log.warn("当前库类型={} 未接入注解建表，已跳过 TableInit（请使用 Flyway/手工 DDL 或后续扩展方言）。", t);
         }

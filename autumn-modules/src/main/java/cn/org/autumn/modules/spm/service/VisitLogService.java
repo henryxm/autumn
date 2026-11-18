@@ -69,7 +69,7 @@ public class VisitLogService extends VisitLogServiceGen implements LoopJob.OneDa
 
         List<VisitLogEntity> logEntities = list(WrapperColumns.queryWrapperAllEqQuoted(map));
 
-        if (logEntities.size() > 0)
+        if (!logEntities.isEmpty())
             visitLogEntity = logEntities.get(0);
 
         visitLogEntity.setPageView(visitLogEntity.getPageView() + 1);

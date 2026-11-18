@@ -88,12 +88,10 @@ public final class SqlServerJdbcDdlGenerator {
             sb.append(")");
             all.append(sb);
             if (tableInfo.getIndexInfos() != null) {
-                for (IndexInfo idx : tableInfo.getIndexInfos()) {
-                    idx.resolve();
-                    if (IndexTypeEnum.FULLTEXT.name().equals(idx.getIndexType())) {
-                        continue;
-                    }
-                    if (StringUtils.isBlank(idx.getName())) {
+                for (IndexInfo raw : tableInfo.getIndexInfos()) {
+                    IndexInfo idx = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
+                            cn.org.autumn.table.data.index.IndexDialectCapability.Family.SQLSERVER, raw);
+                    if (idx == null || StringUtils.isBlank(idx.getName())) {
                         continue;
                     }
                     all.append("; CREATE ");
@@ -101,8 +99,21 @@ public final class SqlServerJdbcDdlGenerator {
                         all.append("UNIQUE ");
                     }
                     all.append("INDEX ").append(bk(idx.getName())).append(" ON dbo.").append(bk(tname)).append(" (");
-                    appendIndexFields(all, idx.getFields());
+                    appendIndexColumnsOrdered(all, idx);
                     all.append(")");
+                    if (idx.getIncludeColumns() != null && !idx.getIncludeColumns().isEmpty()) {
+                        all.append(" INCLUDE (");
+                        for (int i = 0; i < idx.getIncludeColumns().size(); i++) {
+                            if (i > 0) {
+                                all.append(", ");
+                            }
+                            all.append(bk(idx.getIncludeColumns().get(i)));
+                        }
+                        all.append(")");
+                    }
+                    if (org.apache.commons.lang3.StringUtils.isNotBlank(idx.getWherePredicate())) {
+                        all.append(" WHERE ").append(idx.getWherePredicate());
+                    }
                 }
             }
             all.append(";");
@@ -185,9 +196,9 @@ public final class SqlServerJdbcDdlGenerator {
             return "";
         }
         for (Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
-            IndexInfo indexInfo = ii.getValue();
-            indexInfo.resolve();
-            if (IndexTypeEnum.FULLTEXT.name().equals(indexInfo.getIndexType())) {
+            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
+                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.SQLSERVER, ii.getValue());
+            if (indexInfo == null) {
                 continue;
             }
             if (StringUtils.isBlank(indexInfo.getName())) {
@@ -199,10 +210,44 @@ public final class SqlServerJdbcDdlGenerator {
             }
             sb.append("INDEX ").append(bk(indexInfo.getName())).append(" ON dbo.")
                     .append(bk(ii.getKey().getName())).append(" (");
-            appendIndexFields(sb, indexInfo.getFields());
-            sb.append(");");
+            appendIndexColumnsOrdered(sb, indexInfo);
+            sb.append(")");
+            if (indexInfo.getIncludeColumns() != null && !indexInfo.getIncludeColumns().isEmpty()) {
+                sb.append(" INCLUDE (");
+                for (int i = 0; i < indexInfo.getIncludeColumns().size(); i++) {
+                    if (i > 0) {
+                        sb.append(", ");
+                    }
+                    sb.append(bk(indexInfo.getIncludeColumns().get(i)));
+                }
+                sb.append(")");
+            }
+            if (StringUtils.isNotBlank(indexInfo.getWherePredicate())) {
+                sb.append(" WHERE ").append(indexInfo.getWherePredicate());
+            }
+            sb.append(";");
         }
         return sb.toString();
+    }
+
+    private static void appendIndexColumnsOrdered(StringBuilder sb, IndexInfo indexInfo) {
+        java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> specs = indexInfo.getColumnSpecs();
+        if (specs != null && !specs.isEmpty()) {
+            for (int i = 0; i < specs.size(); i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                cn.org.autumn.table.data.index.IndexColumnSpec spec = specs.get(i);
+                if (spec.isExpression()) {
+                    sb.append("(").append(spec.getExpression()).append(")");
+                } else {
+                    sb.append(bk(spec.getColumn()));
+                }
+                sb.append(" ").append(spec.getOrder().sql());
+            }
+            return;
+        }
+        appendIndexFields(sb, indexInfo.getFields());
     }
 
     public static String dropIndex(Map<String, Map<TableInfo, Object>> map)

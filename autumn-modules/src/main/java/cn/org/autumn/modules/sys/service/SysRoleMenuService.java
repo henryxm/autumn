@@ -36,7 +36,7 @@ public class SysRoleMenuService extends ServiceImpl<SysRoleMenuDao, SysRoleMenuE
         //先删除角色与菜单关系
         deleteMenus(new String[]{roleKey});
 
-        if (null == menuKeys || menuKeys.size() == 0) {
+        if (null == menuKeys || menuKeys.isEmpty()) {
             return;
         }
         SysRoleEntity sysRoleEntity = sysRoleService.getByRoleKey(roleKey);

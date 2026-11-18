@@ -68,6 +68,21 @@ public abstract class AbstractDelegatingRelationalSchemaSql implements Relationa
     }
 
     @Override
+    public String listSchemaColumnMetas() {
+        return delegate.listSchemaColumnMetas();
+    }
+
+    @Override
+    public String listSchemaIndexRows() {
+        return delegate.listSchemaIndexRows();
+    }
+
+    @Override
+    public String listSchemaTableCharsets() {
+        return delegate.listSchemaTableCharsets();
+    }
+
+    @Override
     public String addIndex(Map<String, Map<TableInfo, IndexInfo>> map) {
         return delegate.addIndex(map);
     }
