@@ -159,4 +159,9 @@ public class RoutingRelationalTableOperations implements RelationalTableOperatio
     public void addIndex(Map<TableInfo, Object> map) {
         delegate().addIndex(map);
     }
+
+    @Override
+    public void renameIndex(Map<TableInfo, Object> map) {
+        delegate().renameIndex(map);
+    }
 }

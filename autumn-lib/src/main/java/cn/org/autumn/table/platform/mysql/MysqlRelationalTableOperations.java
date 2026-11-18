@@ -139,4 +139,9 @@ public class MysqlRelationalTableOperations implements RelationalTableOperations
     public void addIndex(Map<TableInfo, Object> map) {
         tableDao.addIndex(map);
     }
+
+    @Override
+    public void renameIndex(Map<TableInfo, Object> map) {
+        tableDao.renameIndex(map);
+    }
 }

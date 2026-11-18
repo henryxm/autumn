@@ -396,7 +396,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - **`@Column`（字段）**：列名、类型、长度、是否可空、主键/自增、默认值、**`comment`（建议「短标题：详述」格式，见 2.10.5）**；**`isUnique = true`** 时在建表 SQL 中会额外生成该列的 `UNIQUE KEY`（见 `MysqlSchemaSql.createTable`）。DEFAULT 按 MySQL 规范发射（数值裸写、时间函数裸写、字符串加引号）。**TEXT/BLOB/JSON/GEOMETRY**（及自增列）上的字面量 `defaultValue`（含 `""`）会被 `ColumnDefaultRules` 忽略并 WARN；括号表达式默认值保留。TEXT/BLOB 的 `isUnique` / 索引无前缀时自动补前缀 **191**；JSON/GEOMETRY 的 `isUnique` 跳过并 WARN。
 - **`@Index`（类 / 字段）**：`name`、`fields`、`indexType`、`indexMethod`、`comment`；`where` / `include` / `parser` / `invisible` / `expression`。**字段级单列**（`fields` 空）：自动索引本字段；快捷 `order` / `length` / `collation`。
 - **`@Indexes`（类）**：打包多个 `@Index`，用于组合索引或一次声明多组索引。
-- **`@IndexField`**：仅用于 `@Index.fields`；`field`、`length`、`order`、`expression`、`collation`。**数组顺序即落库列序**。单列勿用此类重复本字段名。
+- **`@IndexField`**：仅用于 `@Index.fields`；`field`、`length`、`order`、`expression`、`collation`。**数组顺序即落库列序**。`field` **推荐实体属性驼峰**，兼容下划线列名。单列勿用此类重复本字段名。
 
 #### 2.10.2 框架如何收集索引（避免重复声明）
 
@@ -436,6 +436,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - **`FULLTEXT` / `SPATIAL`**：主要用于 MySQL 族；其它方言由 `IndexDialectCapability` WARN 跳过。
 - **`IndexMethodEnum`**：`BTREE`/`HASH` 保留；追加 `GIN`/`GIST`/`BRIN`/`SPGIST`/`RTREE`（按方言发射）。
 - **列序与 ASC/DESC**：`IndexInfo` 内部有序；DDL 与 diff 默认顺序敏感。配置 `autumn.table.index.rebuild-on-order-mismatch`（默认 true）。错序/同名定义变更走**成对重建**（日志 `Index rebuild upgrade`），与纯增删索引分离。
+- **索引身份配对**：先规范化名（忽略大小写与 `_`），再按定义指纹唯一匹配；同指纹异名 → `RENAME INDEX`（原因 `NAME`）。详见 **`docs/AI_INDEX_ANNOTATIONS.md` §7.3**。
 - **ASC/DESC 长期规则（摘要）**：默认 **ASC**（永久基线）；ASC 索引上 `ORDER BY DESC` 可用反向扫描（常略慢）；混合升降序或热点倒序才显式 `IndexOrder.DESC`（只写在排序键）。**列序优先于方向**。完整性能表、建模规则与三阶段落地见 **`docs/AI_STANDARDS.md` §10.2「列方向 ASC / DESC」**。
 - **部分索引 / INCLUDE / INVISIBLE / parser / expression**：见 `@Index` / `@IndexField`；不支持方言降级 WARN（`IndexDialectCapability.forEmit` 用副本，不改实体收集结果）。
 - **diff 扩展属性**：where/include/parser/invisible 在 SHOW/JDBC **未读回**（一侧为空）时不参与比对，避免历史库无限重建；两侧均有值时才严格比较。

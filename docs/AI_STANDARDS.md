@@ -314,7 +314,7 @@ var uuid = '${uuid!""?js_string}';
 
 ### 10.2 索引与唯一约束
 
-> **业务仓统一风格与模式目录（SQL→注解、冗余裁剪、命名、PR 清单）**见专篇 **`docs/AI_INDEX_ANNOTATIONS.md`**。本节保留**硬性纪律**与 ASC/DESC 基线；落地示例以专篇为准。
+> **业务仓统一风格与模式目录（SQL→注解、isUnique、命名/指纹身份、冗余裁剪、PR 清单）**见专篇 **`docs/AI_INDEX_ANNOTATIONS.md`**（§5 / §7）。本节保留**硬性纪律**与 ASC/DESC 基线；落地示例以专篇为准。
 
 **怎么选写法（速查）**
 
@@ -335,7 +335,7 @@ var uuid = '${uuid!""?js_string}';
 - **组合索引列序（硬性）**：`@IndexField` 数组顺序 = 落库 `SEQ_IN_INDEX` 顺序；框架用有序模型发射 DDL，**禁止**再假设 HashMap 乱序。设计时遵循最左前缀：等值列靠左，范围/排序列靠右。**列序优先于 ASC/DESC**。**频道/开关等值列**（如 `xsign`/`community`）必须靠左，禁止放在范围列之后。
 - **列方向 ASC/DESC（长期基线，见下「列方向」专节）**：**默认 ASC**（未写 = ASC）。单列用字段级 **`@Index(order = …)`**；组合用 **`@IndexField(order = …)`**。DESC **仅**按主查询 `ORDER BY` 写在**排序键**上。禁止无 `EXPLAIN` 依据批量改 DESC。主查询含稳定 `ORDER BY …, id DESC` 时，索引末尾宜带上 `id`（方向与 ORDER BY 一致）。
 - **冗余裁剪（新代码）**：若类级组合索引的最左前缀已覆盖某字段级 `@Index` 所服务的**同一查询族**，**删除**该字段级 `@Index`（避免双开）；细则与对照表见 **`docs/AI_INDEX_ANNOTATIONS.md` §5**。
-- **命名与注释（推荐）**：索引 `name` 用可读压缩语义（如 `statuslivingat`）；组合索引上方注释写明主查询/方法。见专篇 §6～§7。
+- **命名与身份（推荐）**：索引 `name` 用可读压缩语义（如 `statuslivingat`）；可空（框架按列派生）；超长截断 WARN。`@IndexField(field)` **推荐驼峰属性名**，兼容下划线。库↔实体同一索引以**定义指纹**为准，名字仅配对/落库标识；仅改名走 RENAME。见专篇 **§7**。
 - **扩展能力（可选，带默认值）**：`@Index`：`where` / `include` / `parser` / `invisible` / `expression`，以及字段级快捷 `order` / `length` / `collation`；`@IndexField`：`order` / `length` / `expression` / `collation`。不支持的方言 **WARN 并跳过/降级**。索引列 `collation` 已进模型，各方言 DDL **尚未统一发射**——列排序规则优先用 **`@Column.collation`**。
 - **同步配置**：`autumn.table.index.rebuild-on-order-mismatch`（默认 `true`）——列序/方向不一致时**按索引成对** DROP+ADD（失败 WARN 不阻断启动）；日志关键字 `Index rebuild upgrade`。设 `false` 退回仅列集合比对（运维缓冲，不是放弃列序真相）。
 - **依赖仓兼容**：升级 autumn 后，旧 `@Index`/`@IndexField(field,length)` **无需改实体**即可编译启动；`IndexInfo.getFields()` 仍可用（有序 Map 视图）。历史库方向本就是 ASC，与默认一致，**不会仅因默认 ASC 触发重建**。

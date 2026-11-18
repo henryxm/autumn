@@ -16,6 +16,10 @@ public @interface IndexField {
     /**
      * Java 属性名（转下划线列名）。与 {@link #expression()} 二选一；表达式优先。
      */
+    /**
+     * 列名：推荐实体 Java 属性驼峰（如 {@code createAt}）；亦兼容库列下划线（{@code create_at}）。
+     * 二者经 {@code HumpToUnderline} 后等价。
+     */
     String field() default "";
 
     /** 索引前缀长度；0 表示整列（再经 IndexPrefixRules 按列类型收敛）。 */

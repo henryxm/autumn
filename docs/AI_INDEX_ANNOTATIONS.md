@@ -8,10 +8,10 @@
 
 | 文档 | 读什么 |
 |------|--------|
-| **`AI_STANDARDS` §10.2** | 硬性禁止项、默认 ASC、何时写 DESC |
-| **本文** | 业务建模流程、模式目录、**`isUnique` 优先与组合告警整理（§5）**、命名、冗余裁剪、PR 清单 |
-| **`AI_MAP` §2.10** | 注解如何被 `TableInfo` 收集、前缀策略、方言降级 |
-| **`AI_BOOT` §3** | 启动同步顺序、`Index rebuild upgrade` 日志 |
+| **`AI_STANDARDS` §10.2** | 硬性禁止项、默认 ASC、何时写 DESC、命名/身份摘要 |
+| **本文** | 业务建模流程、模式目录、**§5 isUnique**、**§7 命名与身份判定**、冗余裁剪、PR 清单 |
+| **`AI_MAP` §2.10** | 注解收集、前缀策略、方言降级、**指纹配对 / RENAME** |
+| **`AI_BOOT` §3** | 启动同步顺序、`Index rebuild upgrade` / rename 日志 |
 
 **索引只写在 Entity**；Dao / `*DaoSql` **禁止**声明索引。查询写在 Provider，索引按查询设计。
 
@@ -28,7 +28,8 @@
    - 单列查找 → 字段 `@Index`  
    - **单列业务唯一 → 仅字段 `@Column(isUnique = true)`（以字段为准；禁止再 `@Index` / 禁止「唯一列最左」冗余组合）**  
    - 多列业务唯一 → 类级 `indexType = UNIQUE`（参与列不要再单列 `isUnique`）  
-   - ≥2 列普通组合 → 类级 `@Indexes` + `@IndexField` **按上列顺序**  
+   - ≥2 列普通组合 → 类级 `@Indexes` + `@IndexField` **按上列顺序**（`field` **优先驼峰属性名**）  
+   - `@Index(name)`：可读压缩语义；可空（框架派生）；仅改名不制造重建（§7）  
 4. **方向**：默认 ASC；仅对 **ORDER BY 中的排序键** 写 `IndexOrder.DESC`（等值列保持 ASC）。  
 5. **冗余**：若组合最左前缀已覆盖某字段级 `@Index` 的同一查询族，删除字段级；若组合含 `isUnique` 列，按 **§5** 整理。  
 6. **注释**：组合索引上方用一行注释写清服务的 Dao/Service 方法或 SQL 形态（便于 Review）。
@@ -40,7 +41,8 @@
 3. `@IndexField` **数组顺序 = 落库顺序**；列序优先于 ASC/DESC。  
 4. `IndexOrder.DESC` **仅**排序键，且对齐主查询 `ORDER BY`；禁止无 EXPLAIN 全库批量改 DESC。  
 5. 宽字符串（如 `VARCHAR(1000)`）参与组合索引时用 **`@IndexField(length = 191)`**（或字段 `@Index(length = n)`），勿依赖 `@Column.length` 当前缀。  
-6. Dao 层不写索引注解。
+6. Dao 层不写索引注解。  
+7. **索引身份不含 name**：列序/方向相同仅改 name → 启动 **RENAME**（§7.3），禁止靠改名触发无意义重建。
 
 ## 4. 模式目录（SQL → 注解）
 
@@ -358,13 +360,55 @@ listExpiredEnabled:  WHERE enable = 1 AND expire_time < ? ORDER BY expire_time
 
 原则：**一个查询族尽量一把索引**；避免「组合 + 同族最左单列」双开。`isUnique` 场景优先走 **§5**，不以「覆盖索引」为由保留最左唯一列组合。
 
-## 7. 索引命名（推荐）
+## 7. 索引命名与身份判定（规程）
 
-- 使用**小写蛇形压缩列语义**：`statuslivingat`、`userstatus`、`xsignvisibleauditreorder`。  
+### 7.1 `@Index(name)` 
+
+- 推荐：小写、压缩列语义、**可无下划线**（`statuslivingat`、`usertagplace`、`xsignvisibleauditreorder`）。  
 - 名称应能看出**列序意图**（读名可知大致 fields 顺序）。  
-- **改列序或 ASC/DESC 可保留原名**（框架按定义 diff，同名不一致会 `DROP+ADD`）。  
-- **列集合/角色大变**时改名，避免运维误判为「同索引微调」。  
-- 不要用无意义名如 `idx1`。
+- **允许为空**：框架按列 underline 名去 `_` 后拼接派生，再走长度截断。  
+- **改列序或 ASC/DESC 可保留原名**；列集合/角色大变再改名。  
+- **仅改名不再被当成新索引**：定义指纹相同、名字不同 → MySQL `RENAME INDEX`（失败则成对 DROP+ADD），不会「ADD 新名 + REMOVE 旧名」双开。  
+- 超长名（默认 **64**）：自动截断（前缀 + `_` + 8 位 hash）并 WARN，**不阻断**启动。  
+- 不要用无意义名如 `idx1`；禁止依赖「改名制造重建」。
+
+### 7.2 `@IndexField(field)` 
+
+- **推荐写实体 Java 属性驼峰**（与字段名一致）：`createAt`、`userTag`。  
+- **兼容库列下划线**：`create_at`、`user_tag`（框架 `HumpToUnderline`，二者等价）。  
+- 比对用列 `identityKey`（去 `_` + lower）；禁止把两种写法当成「不同列」。
+
+```java
+@Index(name = "usertagplace", fields = {
+    @IndexField(field = "user"),
+    @IndexField(field = "tag"),
+    @IndexField(field = "place"),
+    @IndexField(field = "createAt")  // 或 create_at，等价
+})
+```
+
+### 7.3 库↔实体「是否同一索引」
+
+| 层级 | 规则 |
+|------|------|
+| **身份（指纹）** | 类型/方法 + 有序列规格（`identityKey` + order + 前缀软匹配）等，**不含 name** → `sameIndexColumnsAndKind` |
+| **名字配对** | 规范化：`lower` + 去 `_`；另认 `表名_逻辑名` 别名 |
+| **配对顺序** | 先规范化名 → 再在剩余库索引中**唯一**指纹匹配；一对多则 WARN 并保守 ADD |
+| **同指纹异名** | 原因 `NAME` → 优先 `RENAME INDEX` |
+| **同名异定义** | 原因 `ORDER` / `DEFINITION` → 成对 DROP+ADD |
+
+#### 7.3.1 仅 name 不同、列序与 ASC/DESC 均相同（重启行为）
+
+```text
+库：  KEY `oldname` (user, tag, place, create_at)
+实体：@Index(name = "usertagplace", 相同列序/方向)
+```
+
+1. 规范化名配对失败（`oldname` ≠ `usertagplace`）。  
+2. 指纹唯一命中 → `classifyAfterPair` 返回 `Reason.NAME`。  
+3. 执行 `ALTER TABLE … RENAME INDEX \`oldname\` TO \`usertagplace\``（失败则同任务内 DROP+ADD）。  
+4. **不会**把旧索引当孤儿 REMOVE、同时 ADD 新名（避免双开）。  
+5. 再次启动：名与指纹均一致 → 跳过。
 
 ## 8. 注解旁注释（推荐）
 
@@ -379,8 +423,11 @@ listExpiredEnabled:  WHERE enable = 1 AND expire_time < ? ORDER BY expire_time
 
 ## 9. 与框架同步的行为（业务须知）
 
-- 启动 `autumn.table.auto=update` 时比对实体与库；列序/方向不一致默认 **成对 DROP+ADD**（`autumn.table.index.rebuild-on-order-mismatch=true`）。  
+- 启动 `autumn.table.auto=update` 时比对实体与库；身份见 **§7.3**。  
+- 列序/方向不一致默认 **成对 DROP+ADD**（`autumn.table.index.rebuild-on-order-mismatch=true`）。  
+- 仅改 `@Index(name)`：优先 **RENAME**；日志含 `reason=NAME` / `Index rename`。  
 - 日志：`Index rebuild upgrade: ok=…`；失败 WARN 不阻断启动。  
+- 索引名超长：`索引名超长已截断`；名为空：`索引名为空已按列派生`。  
 - **`含已 isUnique 列 … 建议去掉冗余唯一首列`**：不阻断；按 **§5** 整理实体后消失。  
 - 大表改 DESC/加宽组合：低峰发布，或临时 `rebuild-on-order-mismatch=false` 后手工 DDL（逃生舱，事后改回 true）。  
 - 元数据已批量预载；健康路径下索引比对不应主导启动耗时。
@@ -396,7 +443,8 @@ listExpiredEnabled:  WHERE enable = 1 AND expire_time < ? ORDER BY expire_time
 - [ ] 是否删除已被组合最左前缀覆盖的字段 `@Index`？  
 - [ ] 宽字符串是否使用 `length` 前缀？  
 - [ ] Dao 是否仍无索引注解？  
-- [ ] 索引名是否可读？是否有一行注释对齐查询？  
+- [ ] 索引名是否可读？是否有一行注释对齐查询？`@IndexField` 是否优先驼峰属性名？  
+- [ ] 索引名是否未无故超长（超长会被截断 WARN）？  
 - [ ] 启动日志是否仍刷 `含已 isUnique 列` WARN（新改动应清零或仅剩有注释的 C 类）？
 
 ## 11. 反模式
@@ -412,6 +460,7 @@ listExpiredEnabled:  WHERE enable = 1 AND expire_time < ? ORDER BY expire_time
 | 凡 `ORDER BY DESC` 就全列 DESC | 无收益、放大重建 |
 | 超长 URL 无前缀进组合 | 键长失败或隐式截断风险 |
 | 无主查询的「预防性」十几个组合 | 写放大、重建慢 |
+| 靠改 `@Index(name)`「制造」索引重建 | 现已指纹配对 + RENAME，无意义且噪音大 |
 | 在 Dao 上幻想索引 | 框架不识别 |
 
 ## 12. 维护

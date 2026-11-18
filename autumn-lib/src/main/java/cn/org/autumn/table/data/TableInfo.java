@@ -199,7 +199,7 @@ public class TableInfo {
             uk.applyPrefixLengthPolicy(clazz);
         }
         try {
-            cn.org.autumn.table.data.index.IndexAnnotationValidator.validateAll(indexInfos);
+            cn.org.autumn.table.data.index.IndexAnnotationValidator.normalizeAndValidateAll(indexInfos, name);
         } catch (IllegalArgumentException ex) {
             log.error("实体 [{}] 索引注解校验失败: {}", clazz.getName(), ex.getMessage());
             throw ex;

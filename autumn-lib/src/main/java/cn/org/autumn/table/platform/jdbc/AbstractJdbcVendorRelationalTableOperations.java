@@ -530,6 +530,18 @@ public abstract class AbstractJdbcVendorRelationalTableOperations implements Rel
         RelationalDdlScriptExecutor.execute(dataSource, ddl.addIndex(w));
     }
 
+    @Override
+    public void renameIndex(Map<TableInfo, Object> map) {
+        RelationalSchemaSql ddl = routingRelationalSchemaSql.forCurrentDatabase();
+        Map<String, Map<TableInfo, Object>> w = new HashMap<>();
+        w.put(RelationalSchemaSql.paramName, map);
+        String sql = ddl.renameIndex(w);
+        if (sql == null || sql.isBlank()) {
+            throw new UnsupportedOperationException("renameIndex not supported for current dialect");
+        }
+        RelationalDdlScriptExecutor.execute(dataSource, sql);
+    }
+
     private static Map<TableInfo, List<ColumnInfo>> castColumnMap(Map<TableInfo, List<Object>> map) {
         Map<TableInfo, List<ColumnInfo>> out = new HashMap<>();
         for (Map.Entry<TableInfo, List<Object>> e : map.entrySet()) {

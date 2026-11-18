@@ -88,6 +88,11 @@ public abstract class AbstractDelegatingRelationalSchemaSql implements Relationa
     }
 
     @Override
+    public String renameIndex(Map<String, Map<TableInfo, Object>> map) {
+        return delegate.renameIndex(map);
+    }
+
+    @Override
     public String addColumns(Map<String, Map<TableInfo, ColumnInfo>> map) {
         return delegate.addColumns(map);
     }

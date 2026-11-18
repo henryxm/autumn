@@ -163,6 +163,19 @@ public class IndexInfo {
                 && indexNamesEqualIgnoreCase(this.getName(), that.getName());
     }
 
+    /**
+     * 索引名规范化：小写并去掉 {@code _}，用于配对（与 {@link #indexNamesEqualIgnoreCase} 对齐）。
+     */
+    public static String normalizeIndexName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.replace("_", "").toLowerCase(Locale.ROOT).trim();
+    }
+
+    /**
+     * 关系库索引名是否视为同一逻辑名：忽略大小写与下划线，并认 {@code 表名_逻辑名} 别名。
+     */
     public static boolean relationalSchemaScopedIndexNamesMatch(String tableName, String a, String b) {
         if (tableName == null) {
             tableName = "";
@@ -173,11 +186,84 @@ public class IndexInfo {
         if (b == null) {
             b = "";
         }
-        if (a.equalsIgnoreCase(b)) {
+        String na = normalizeIndexName(a);
+        String nb = normalizeIndexName(b);
+        if (!na.isEmpty() && na.equals(nb)) {
             return true;
         }
-        String prefix = tableName + "_";
-        return a.equalsIgnoreCase(prefix + b) || b.equalsIgnoreCase(prefix + a);
+        String scopedB = normalizeIndexName(tableName + "_" + b);
+        String scopedA = normalizeIndexName(tableName + "_" + a);
+        return (!scopedB.isEmpty() && scopedB.equals(na)) || (!scopedA.isEmpty() && scopedA.equals(nb));
+    }
+
+    /** 关系库标识符默认上限（MySQL 64）。 */
+    public static final int DEFAULT_MAX_INDEX_NAME_LENGTH = 64;
+
+    /**
+     * 由列规格派生压缩名（无下划线），供注解 {@code name} 为空时使用。
+     */
+    public String deriveNameFromColumns() {
+        List<IndexColumnSpec> specs = getColumnSpecs();
+        if (specs == null || specs.isEmpty()) {
+            return "idx";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (IndexColumnSpec s : specs) {
+            if (s == null) {
+                continue;
+            }
+            if (s.isExpression()) {
+                sb.append("expr");
+            } else if (StringUtils.isNotBlank(s.getColumn())) {
+                sb.append(s.getColumn().replace("_", ""));
+            }
+        }
+        String raw = sb.toString().toLowerCase(Locale.ROOT);
+        return raw.isEmpty() ? "idx" : raw;
+    }
+
+    /**
+     * 超长名截断：保留前缀可读段 + {@code _} + 8 位稳定 hex；不超长则原样返回。
+     */
+    public static String truncateIndexName(String name, int maxLen) {
+        if (name == null) {
+            name = "";
+        }
+        if (maxLen <= 0) {
+            maxLen = DEFAULT_MAX_INDEX_NAME_LENGTH;
+        }
+        if (name.length() <= maxLen) {
+            return name;
+        }
+        String hash = String.format("%08x", name.hashCode());
+        if (maxLen <= 8) {
+            return hash.substring(0, maxLen);
+        }
+        int keep = maxLen - 1 - 8;
+        if (keep < 1) {
+            return hash.substring(0, maxLen);
+        }
+        return name.substring(0, keep) + "_" + hash;
+    }
+
+    /**
+     * 空名派生 + 长度截断。
+     *
+     * @return true 表示 name 被改写（派生或截断）
+     */
+    public boolean ensurePhysicalName(int maxLen) {
+        boolean changed = false;
+        if (StringUtils.isBlank(this.name)) {
+            setName(deriveNameFromColumns());
+            changed = true;
+        }
+        String current = this.name == null ? "" : this.name;
+        String truncated = truncateIndexName(current, maxLen);
+        if (!current.equals(truncated)) {
+            setName(truncated);
+            changed = true;
+        }
+        return changed;
     }
 
     /**
@@ -366,9 +452,7 @@ public class IndexInfo {
     }
 
     private static boolean indexNamesEqualIgnoreCase(String a, String b) {
-        String aa = a == null ? "" : a.replace("_", "");
-        String bb = b == null ? "" : b.replace("_", "");
-        return aa.equalsIgnoreCase(bb);
+        return normalizeIndexName(a).equals(normalizeIndexName(b));
     }
 
     @Override

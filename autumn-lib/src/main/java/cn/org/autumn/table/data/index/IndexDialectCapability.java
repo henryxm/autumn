@@ -29,6 +29,15 @@ public final class IndexDialectCapability {
     private IndexDialectCapability() {
     }
 
+    /** 索引标识符最大长度（MySQL/常见关系库为 64）。 */
+    public static int maxIndexNameLength(Family family) {
+        return IndexInfo.DEFAULT_MAX_INDEX_NAME_LENGTH;
+    }
+
+    public static int maxIndexNameLength() {
+        return IndexInfo.DEFAULT_MAX_INDEX_NAME_LENGTH;
+    }
+
     /**
      * @return true 表示可以发射（调用方应使用 {@link #forEmit} 获取降级后的副本）
      */

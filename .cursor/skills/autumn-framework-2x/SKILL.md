@@ -4,7 +4,7 @@ description: >-
   Autumn 2.0.0 line ONLY: JDK 8, Spring Boot 2.7.18, MyBatis-Plus 2.x, javax.* namespace.
   Use on autumn master (artifact 2.0.0) or business apps pinned to that stack.
   NOT for Autumn 3.0.0 / JDK 17+ / Spring Boot 3.5 / Jakarta — use autumn-framework-3x on the 3.0.0 branch when available.
-  Enforces docs/AI_STANDARDS.md + docs/AI_INDEX_ANNOTATIONS.md + docs/AI_DATABASE.md + docs/AI_DUAL_KEY.md: never combine @Column(isUnique=true) with field-level @Index (§10.2); single-field indexes on field @Index only not class-level @Indexes unless explicit (§10.2); @IndexField array order = DB column order (before ASC/DESC); channel/eq columns leftmost; drop field @Index when composite leftmost covers same query family; IndexOrder default ASC forever; DESC only on sort keys aligned to primary ORDER BY after EXPLAIN—never bulk-flip; optional where/include/parser/invisible/expression with defaults (dependents zero-change upgrade); autumn.table.index.rebuild-on-order-mismatch default true; dual-key entities (auto Long id for gen CRUD only + biz uuid via UuidBased/SnowBased or UserBased/unique user or no second PK when user suffices; legacy entities default no retrofit unless task explicitly requires upgrade; never use id as association); entity-driven schema via framework scan (no routine DDL .sql);
+  Enforces docs/AI_STANDARDS.md + docs/AI_INDEX_ANNOTATIONS.md + docs/AI_DATABASE.md + docs/AI_DUAL_KEY.md: never combine @Column(isUnique=true) with field-level @Index (§10.2); single-field indexes on field @Index only not class-level @Indexes unless explicit (§10.2); @IndexField array order = DB column order (before ASC/DESC); channel/eq columns leftmost; drop field @Index when composite leftmost covers same query family; IndexOrder default ASC forever; DESC only on sort keys aligned to primary ORDER BY after EXPLAIN—never bulk-flip; index identity by definition fingerprint not name—rename-only uses RENAME INDEX; @IndexField.field prefer camelCase Java property (snake_case OK); index name max 64 truncate+WARN; optional where/include/parser/invisible/expression with defaults (dependents zero-change upgrade); autumn.table.index.rebuild-on-order-mismatch default true; dual-key entities (auto Long id for gen CRUD only + biz uuid via UuidBased/SnowBased or UserBased/unique user or no second PK when user suffices; legacy entities default no retrofit unless task explicitly requires upgrade; never use id as association); entity-driven schema via framework scan (no routine DDL .sql);
   module dir = package = table prefix; Dao SQL only via MyBatis Provider (*DaoSql extends RuntimeSql), never inline @Select/@Update;
   No hardcoded SQL dialect quotes in Java (use RuntimeSql quote/columnInWrapper or WrapperColumns.columnInWrapper / orderByColumnExpression / entityWrapperAllEqQuoted per docs/AI_DATABASE.md §4.0);
   Prefer import over fully qualified class names unless name clash (docs/AI_CODE_STYLE.md §7);
@@ -298,8 +298,9 @@ description: >-
 - 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**，且 **`@IndexField` 顺序对齐查询最左前缀**（§10.2）？频道等值列是否靠左？
 - 组合索引若含 **`IndexOrder.DESC`**：是否只在**排序键**上、是否对齐**主查询 ORDER BY**、是否有 **EXPLAIN** 依据（禁止等值列/全表批量 DESC）？
 - 字段级单列需要 DESC/前缀时是否用 **`@Index(order=…)` / `@Index(length=…)`** 快捷，而非再写 `fields={@IndexField(field=本字段)}`？（写法表见 **`docs/AI_STANDARDS.md` §10.2**）
-- 实体索引是否对照 **`docs/AI_INDEX_ANNOTATIONS.md`**（模式目录、**§5 isUnique 优先/组合告警**、冗余裁剪、命名注释、§10 PR 清单）？
+- 实体索引是否对照 **`docs/AI_INDEX_ANNOTATIONS.md`**（模式目录、**§5 isUnique**、**§7 命名/身份**、冗余裁剪、§10 PR 清单）？
 - 单列唯一是否**只**字段 `isUnique`？组合是否仍以唯一列为最左（应删，§5 A/D）？
+- `@IndexField` 是否优先驼峰属性名？`@Index(name)` 是否可读且未依赖「改名触发重建」？
 - 机器人相关：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？管理 API 与 `message/push` 鉴权是否分离？Hook 验签是否用原始 body？
 - **safe 支付**：闸门 assess → verify 链路完整？`modules.pay` 无残留？金额是否 `amountCent`？
 - **`@FieldEncrypt`**：Service 是否 `EncryptModuleService`？`baseMapper` → `afterRead`？`searchable` + hash 列？**`@Cache`** 是否按 §7（明文键 + hash 通道）？

@@ -185,6 +185,11 @@ public class PostgresRelationalTableOperations implements RelationalTableOperati
         executeScript(ddl.addIndex(wrap));
     }
 
+    @Override
+    public void renameIndex(Map<TableInfo, Object> map) {
+        throw new UnsupportedOperationException("renameIndex not supported on PostgreSQL path; use DROP+ADD");
+    }
+
     private String findPrimaryKeyConstraintName(String tableName) {
         String sql = "SELECT c.conname FROM pg_constraint c "
                 + "JOIN pg_class r ON c.conrelid = r.oid "

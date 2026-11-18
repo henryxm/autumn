@@ -159,4 +159,10 @@ public interface TableDao {
      */
     @SelectProvider(type = QuerySql.class, method = addIndex)
     void addIndex(@Param(paramName) Map<TableInfo, Object> map);
+
+    /**
+     * 重命名索引；map value 为 {@link cn.org.autumn.table.data.index.IndexRebuildTask}。
+     */
+    @SelectProvider(type = QuerySql.class, method = renameIndex)
+    void renameIndex(@Param(paramName) Map<TableInfo, Object> map);
 }

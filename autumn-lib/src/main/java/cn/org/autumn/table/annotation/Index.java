@@ -22,7 +22,15 @@ import java.lang.annotation.*;
 @Inherited
 public @interface Index {
 
-    /** 索引名；字段级默认可空（用本字段下划线名）。 */
+    /**
+     * 索引物理名。推荐小写压缩列语义（如 {@code usertagplace}），可无下划线。
+     * <ul>
+     *   <li>可空：字段级默认用本列 underline 名；组合按列规格派生后再截断。</li>
+     *   <li>超长（默认 64）启动时截断并 WARN，不阻断初始化。</li>
+     *   <li>仅改名、列序/方向不变：按定义指纹配对后 {@code RENAME INDEX}（见
+     *       {@code docs/AI_INDEX_ANNOTATIONS.md} §7）。</li>
+     * </ul>
+     */
     String name() default "";
 
     /**

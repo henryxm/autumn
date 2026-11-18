@@ -57,6 +57,14 @@ public interface RelationalSchemaSql {
 
     String addIndex(Map<String, Map<TableInfo, IndexInfo>> map);
 
+    /**
+     * 重命名索引；value 为 {@link cn.org.autumn.table.data.index.IndexRebuildTask}。
+     * 不支持时返回空串。
+     */
+    default String renameIndex(Map<String, Map<TableInfo, Object>> map) {
+        return "";
+    }
+
     String addColumns(Map<String, Map<TableInfo, ColumnInfo>> map);
 
     String modifyColumn(Map<String, Map<TableInfo, ColumnInfo>> map);

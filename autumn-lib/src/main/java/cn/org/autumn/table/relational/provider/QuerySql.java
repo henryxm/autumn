@@ -25,6 +25,7 @@ public class QuerySql {
     public static final String dropIndex = "dropIndex";
     public static final String dropTable = "dropTable";
     public static final String addIndex = "addIndex";
+    public static final String renameIndex = "renameIndex";
     public static final String getTableMetas = "getTableMetas";
     public static final String getTableMetasPage = "getTableMetasPage";
     public static final String getTableCharacterSetName = "getTableCharacterSetName";
@@ -103,6 +104,10 @@ public class QuerySql {
 
     public String addIndex(Map<String, Map<TableInfo, IndexInfo>> map) {
         return sql().addIndex(map);
+    }
+
+    public String renameIndex(Map<String, Map<TableInfo, Object>> map) {
+        return sql().renameIndex(map);
     }
 
     public String addColumns(Map<String, Map<TableInfo, ColumnInfo>> map) {

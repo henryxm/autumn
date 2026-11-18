@@ -467,22 +467,29 @@ public class MysqlTableService {
                                   List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks) {
         List<IndexInfo> indexInfos = table.getIndexInfosCombine();
         Collection<IndexInfo> dbIndexes = filter(indexRows(table.getName()));
-        Set<IndexInfo> pairedDb = new HashSet<IndexInfo>();
+        List<IndexInfo> remainingDb = new ArrayList<>(dbIndexes);
+        Set<IndexInfo> pairedDb = Collections.newSetFromMap(new IdentityHashMap<>());
         for (IndexInfo entityIdx : indexInfos) {
-            IndexInfo dbIdx = cn.org.autumn.table.data.index.IndexDiffEngine.findByName(table.getName(), dbIndexes, entityIdx);
-            if (dbIdx == null) {
+            cn.org.autumn.table.data.index.IndexDiffEngine.PairOutcome outcome =
+                    cn.org.autumn.table.data.index.IndexDiffEngine.pair(table.getName(), entityIdx, remainingDb);
+            if (outcome.kind == cn.org.autumn.table.data.index.IndexDiffEngine.PairOutcome.Kind.AMBIGUOUS
+                    || outcome.kind == cn.org.autumn.table.data.index.IndexDiffEngine.PairOutcome.Kind.UNPAIRED) {
                 addIndexList.add(entityIdx);
                 continue;
             }
+            IndexInfo dbIdx = outcome.dbIndex;
+            cn.org.autumn.table.data.index.IndexDiffEngine.removePaired(remainingDb, dbIdx);
             pairedDb.add(dbIdx);
-            if (entityIdx.sameIndexColumnsAndKind(dbIdx)) {
+            cn.org.autumn.table.data.index.IndexRebuildTask.Reason reason =
+                    cn.org.autumn.table.data.index.IndexDiffEngine.classifyAfterPair(
+                            table.getName(), entityIdx, dbIdx);
+            if (reason == null) {
                 continue;
             }
-            // 同名不一致：成对 DROP+ADD（列序或定义），不并入全局 remove/add
-            cn.org.autumn.table.data.index.IndexRebuildTask.Reason reason =
-                    cn.org.autumn.table.data.index.IndexDiffEngine.classifyRebuild(entityIdx, dbIdx);
+            // NAME → 优先 RENAME；ORDER/DEFINITION → 成对 DROP+ADD
             if (rebuildIndexTasks != null) {
-                rebuildIndexTasks.add(new cn.org.autumn.table.data.index.IndexRebuildTask(table, dbIdx, entityIdx, reason));
+                rebuildIndexTasks.add(new cn.org.autumn.table.data.index.IndexRebuildTask(
+                        table, dbIdx, entityIdx, reason));
             } else {
                 removeIndexList.add(dbIdx);
                 addIndexList.add(entityIdx);
@@ -1031,20 +1038,23 @@ public class MysqlTableService {
     }
 
     /**
-     * 执行同名索引重建：每条独立 DROP+ADD。无任务则静默返回（幂等：二次启动不应再重建）。
-     * 成功时最多一条 INFO 汇总；明细为 debug；失败仍 WARN。
+     * 执行索引升级：NAME 优先 RENAME，否则（或失败时）DROP+ADD；ORDER/DEFINITION 成对 DROP+ADD。
+     * 无任务则静默返回。成功时最多一条 INFO 汇总；明细为 debug；失败仍 WARN。
      */
     private void rebuildIndexes(List<cn.org.autumn.table.data.index.IndexRebuildTask> tasks) {
         if (tasks == null || tasks.isEmpty()) {
             return;
         }
         int orderCount = 0;
+        int nameCount = 0;
         for (cn.org.autumn.table.data.index.IndexRebuildTask t : tasks) {
             if (t.getReason() == cn.org.autumn.table.data.index.IndexRebuildTask.Reason.ORDER) {
                 orderCount++;
+            } else if (t.getReason() == cn.org.autumn.table.data.index.IndexRebuildTask.Reason.NAME) {
+                nameCount++;
             }
         }
-        log.debug("Index rebuild upgrade begin: count={} orderFixes={}", tasks.size(), orderCount);
+        log.debug("Index rebuild upgrade begin: count={} orderFixes={} nameRenames={}", tasks.size(), orderCount, nameCount);
         int ok = 0;
         int fail = 0;
         for (cn.org.autumn.table.data.index.IndexRebuildTask task : tasks) {
@@ -1052,9 +1062,22 @@ public class MysqlTableService {
             String indexName = task.getIndexName();
             String fromCols = cn.org.autumn.table.data.index.IndexDiffEngine.formatColumns(task.getDbIndex());
             String toCols = cn.org.autumn.table.data.index.IndexDiffEngine.formatColumns(task.getEntityIndex());
-            log.debug("Index rebuild start: reason={} table={} index={} from=[{}] to=[{}]",
-                    task.getReason(), tableName, indexName, fromCols, toCols);
+            log.debug("Index rebuild start: reason={} table={} index={} fromName={} toName={} from=[{}] to=[{}]",
+                    task.getReason(), tableName, indexName,
+                    task.getDbIndex() == null ? "-" : task.getDbIndex().getName(),
+                    task.getEntityIndex() == null ? "-" : task.getEntityIndex().getName(),
+                    fromCols, toCols);
             long t0 = System.currentTimeMillis();
+            if (task.getReason() == cn.org.autumn.table.data.index.IndexRebuildTask.Reason.NAME) {
+                if (tryRenameIndex(task)) {
+                    ok++;
+                    log.debug("Index rename ok: table={} from={} to={} elapsedMs={}", tableName,
+                            task.getDbIndex().getName(), task.getEntityIndex().getName(),
+                            System.currentTimeMillis() - t0);
+                    continue;
+                }
+                log.debug("Index rename unavailable or failed, fallback DROP+ADD: table={} index={}", tableName, indexName);
+            }
             Map<TableInfo, Object> dropMap = new HashMap<>();
             dropMap.put(task.getTable(), task.getDbIndex());
             try {
@@ -1078,7 +1101,29 @@ public class MysqlTableService {
             }
         }
         if (ok > 0 || fail > 0) {
-            log.info("Index rebuild upgrade: ok={} failed={} orderFixes={}", ok, fail, orderCount);
+            log.info("Index rebuild upgrade: ok={} failed={} orderFixes={} nameRenames={}", ok, fail, orderCount, nameCount);
+        }
+    }
+
+    /** MySQL {@code RENAME INDEX}；其它方言或失败返回 false，由调用方 DROP+ADD。 */
+    private boolean tryRenameIndex(cn.org.autumn.table.data.index.IndexRebuildTask task) {
+        if (task == null || task.getTable() == null || task.getDbIndex() == null || task.getEntityIndex() == null) {
+            return false;
+        }
+        String from = task.getDbIndex().getName();
+        String to = task.getEntityIndex().getName();
+        if (StringUtils.isBlank(from) || StringUtils.isBlank(to) || from.equals(to)) {
+            return false;
+        }
+        try {
+            Map<TableInfo, Object> map = new HashMap<>();
+            map.put(task.getTable(), task);
+            tableDao.renameIndex(map);
+            return true;
+        } catch (Throwable e) {
+            log.debug("Index rename skipped: table={} from={} to={} error={}",
+                    task.getTableName(), from, to, ddlError(e));
+            return false;
         }
     }
 

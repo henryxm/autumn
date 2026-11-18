@@ -310,6 +310,34 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
     }
 
     @Override
+    public String renameIndex(final Map<String, Map<TableInfo, Object>> map) {
+        StringBuilder stringBuilder = new StringBuilder();
+        Map<TableInfo, Object> parameter = map.get(RelationalSchemaSql.paramName);
+        if (parameter == null || parameter.isEmpty()) {
+            return "";
+        }
+        for (Map.Entry<TableInfo, Object> kv : parameter.entrySet()) {
+            TableInfo tableInfo = kv.getKey();
+            Object val = kv.getValue();
+            if (!(val instanceof cn.org.autumn.table.data.index.IndexRebuildTask)) {
+                continue;
+            }
+            cn.org.autumn.table.data.index.IndexRebuildTask task =
+                    (cn.org.autumn.table.data.index.IndexRebuildTask) val;
+            IndexInfo from = task.getDbIndex();
+            IndexInfo to = task.getEntityIndex();
+            if (from == null || to == null
+                    || org.apache.commons.lang3.StringUtils.isBlank(from.getName())
+                    || org.apache.commons.lang3.StringUtils.isBlank(to.getName())) {
+                continue;
+            }
+            stringBuilder.append("ALTER TABLE `").append(tableInfo.getName()).append("` RENAME INDEX `")
+                    .append(from.getName()).append("` TO `").append(to.getName()).append("`;");
+        }
+        return stringBuilder.toString();
+    }
+
+    @Override
     public String addIndex(final Map<String, Map<TableInfo, IndexInfo>> map) {
         StringBuilder stringBuilder = new StringBuilder();
         Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);

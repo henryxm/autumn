@@ -55,4 +55,10 @@ public interface RelationalTableOperations {
     void dropTable(String tableName);
 
     void addIndex(Map<TableInfo, Object> map);
+
+    /**
+     * 仅改索引名。value 为 {@link cn.org.autumn.table.data.index.IndexRebuildTask}（含旧名/新名）。
+     * 不支持时抛异常，由调用方回退 DROP+ADD。
+     */
+    void renameIndex(Map<TableInfo, Object> map);
 }

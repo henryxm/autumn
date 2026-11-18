@@ -4,7 +4,7 @@ import cn.org.autumn.table.data.IndexInfo;
 import cn.org.autumn.table.data.TableInfo;
 
 /**
- * 同名索引重建任务：先 DROP 库内定义，再按实体 ADD（列序/方向或定义变更）。
+ * 索引升级任务：定义变更时 DROP+ADD；仅改名时优先 RENAME（失败则 DROP+ADD）。
  */
 public final class IndexRebuildTask {
 
@@ -12,7 +12,9 @@ public final class IndexRebuildTask {
         /** 列集合相同，仅顺序或 ASC/DESC 不一致（历史 HashMap 错序升级） */
         ORDER,
         /** 同名但类型/方法/列集合等定义不一致 */
-        DEFINITION
+        DEFINITION,
+        /** 定义指纹相同，仅物理索引名不同 */
+        NAME
     }
 
     private final TableInfo table;
