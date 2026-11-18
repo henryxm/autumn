@@ -653,7 +653,7 @@
                     <div class="settings-item">
                         <div class="item-label">黑名单阈值</div>
                         <div class="form-group">
-                            <input type="number" id="firewallCount" class="layui-input">
+                            <input type="number" id="firewallCount" class="layui-input" min="500" title="刷新周期内超过该次数自动拉黑；存于策略行 0.0.0.0，勿当普通黑名单删除">
                             <button class="layui-btn layui-btn-normal" id="setCountBtn" type="button">设置</button>
                         </div>
                     </div>
@@ -837,6 +837,7 @@
 
         <div class="section">
             <div class="section-title"><i class="fa fa-ban"></i>IP黑名单</div>
+            <div class="helper-text">列表已排除策略哨兵 <code>0.0.0.0</code>（其 count 即上方「黑名单阈值」）。请勿手动把 0.0.0.0 当普通 IP 添加或删除。</div>
             <div class="toolbar">
                 <input type="text" id="addBlackIp" class="layui-input" placeholder="输入IP地址">
                 <button class="layui-btn layui-btn-danger" id="addBlackBtn" type="button"><i class="fa fa-plus"></i> 添加</button>

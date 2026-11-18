@@ -243,6 +243,9 @@ public class WallController {
     @PostMapping("/ipblack/add")
     public Map<String, Object> addIpBlack(@RequestParam String ip, HttpServletRequest request) {
         requireOps(request, "ipblackAdd");
+        if (IpBlackService.isPolicyIp(ip)) {
+            throw new AException("0.0.0.0 为黑名单策略阈值配置，请使用上方「黑名单阈值」修改，不可添加为普通条目");
+        }
         IpBlackEntity entity = ipBlackService.create(ip, "手动添加", "手动添加");
         adminAccessGuard.auditWithIp(request, "wall.ipblack.add", "ip=" + ip);
         if (null == entity)
@@ -253,6 +256,9 @@ public class WallController {
     @PostMapping("/ipblack/remove")
     public Map<String, Object> removeIpBlack(@RequestParam String ip, HttpServletRequest request) {
         requireOps(request, "ipblackRemove");
+        if (IpBlackService.isPolicyIp(ip)) {
+            throw new AException("0.0.0.0 为黑名单策略阈值配置，不可删除");
+        }
         ipBlackService.removeByIp(ip);
         adminAccessGuard.auditWithIp(request, "wall.ipblack.remove", "ip=" + ip);
         return Collections.singletonMap("success", true);

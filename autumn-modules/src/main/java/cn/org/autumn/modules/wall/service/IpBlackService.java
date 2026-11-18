@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.wall.service;
 
 import cn.org.autumn.config.ClearHandler;
+import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.modules.wall.dao.IpBlackDao;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
@@ -9,10 +10,11 @@ import cn.org.autumn.site.LoadFactory;
 import cn.org.autumn.site.WallFactory;
 import cn.org.autumn.thread.FunctionQueues;
 import cn.org.autumn.utils.IPUtils;
+import cn.org.autumn.utils.PageUtils;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.util.*;
 
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,16 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> implements LoadFactory.Load, LoopJob.OneMinute, ClearHandler {
+
+    /**
+     * 黑名单表中的策略哨兵 IP：{@code count} 字段存放「刷新周期内自动拉黑阈值」，
+     * {@code available=1} 使其不进入拦截缓存；禁止当普通黑名单增删改。
+     */
+    public static final String POLICY_IP = "0.0.0.0";
+
+    /** 阈值下限（与历史 getCount 保护一致）。 */
+    public static final int MIN_FIREWALL_COUNT = 500;
+
     @Autowired
     IpWhiteService ipWhiteService;
 
@@ -31,33 +43,64 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     /**
      * 一个ip地址统计刷新周期内，ip访问次数大于该值后，把ip地址加入到黑名单
      */
-    @Setter
-    @Getter
     @Value("${autumn.firewall.count:1000}")
-    private int firewallCount;
+    private volatile int firewallCount;
+
+    public static boolean isPolicyIp(String ip) {
+        return ip != null && POLICY_IP.equals(ip.trim());
+    }
+
+    /** 内存中的当前阈值（与策略行同步）。 */
+    public int getFirewallCount() {
+        return getCount();
+    }
+
+    /**
+     * 设置自动拉黑阈值并持久化到策略行 {@link #POLICY_IP}。
+     */
+    public void setFirewallCount(int count) {
+        int next = Math.max(count, MIN_FIREWALL_COUNT);
+        this.firewallCount = next;
+        IpBlackEntity black = ensurePolicyRow(next);
+        black.setCount((long) next);
+        black.setTag("IP黑名单策略5秒自动拉黑次数");
+        black.setDescription("策略哨兵：count=自动拉黑阈值；不可删除");
+        black.setAvailable(1);
+        black.setUserAgent("");
+        black.setUpdateTime(new Date());
+        updateById(black);
+    }
 
     public int getCount() {
-        IpBlackEntity black = getByIp("0.0.0.0");
-        if (null == black) {
-            black = getById(1);
-            if (null == black) {
-                black = new IpBlackEntity();
-                black.setAvailable(1);
-            }
-            black.setIp("0.0.0.0");
-            black.setCount((long) firewallCount);
+        IpBlackEntity black = ensurePolicyRow(firewallCount);
+        if (null == black.getCount() || black.getCount().intValue() < MIN_FIREWALL_COUNT) {
+            black.setCount((long) Math.max(firewallCount, MIN_FIREWALL_COUNT));
             black.setTag("IP黑名单策略5秒自动拉黑次数");
-            black.setCreateTime(new Date());
-            black.setUserAgent("");
-            saveOrUpdate(black);
-        }
-        if (null == black.getCount() || black.getCount().intValue() < 500) {
-            black.setCount((long) firewallCount);
-            black.setTag("IP黑名单策略5秒自动拉黑次数");
+            black.setDescription("策略哨兵：count=自动拉黑阈值；不可删除");
+            black.setAvailable(1);
             black.setUserAgent("");
             updateById(black);
         }
         return black.getCount().intValue();
+    }
+
+    private IpBlackEntity ensurePolicyRow(int seedCount) {
+        IpBlackEntity black = getByIp(POLICY_IP);
+        if (null == black) {
+            black = getById(1);
+            if (null == black) {
+                black = new IpBlackEntity();
+                black.setCreateTime(new Date());
+            }
+            black.setIp(POLICY_IP);
+            black.setAvailable(1);
+            black.setCount((long) Math.max(seedCount, MIN_FIREWALL_COUNT));
+            black.setTag("IP黑名单策略5秒自动拉黑次数");
+            black.setDescription("策略哨兵：count=自动拉黑阈值；不可删除");
+            black.setUserAgent("");
+            saveOrUpdate(black);
+        }
+        return black;
     }
 
     /**
@@ -101,7 +144,15 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
      */
     public void load() {
         try {
-            ipBlackList = baseMapper.getIps(0);
+            // available=0 表示生效拦截（历史语义）；策略哨兵 0.0.0.0 固定 available=1，再显式剔除双保险
+            Set<String> loaded = baseMapper.getIps(0);
+            if (loaded == null) {
+                loaded = new HashSet<>();
+            } else {
+                loaded = new HashSet<>(loaded);
+            }
+            loaded.remove(POLICY_IP);
+            ipBlackList = loaded;
             Set<String> tmpSection = new HashSet<>();
             for (String ip : ipBlackList) {
                 if (ip.contains("/")) {
@@ -112,6 +163,15 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
         } catch (Exception e) {
             log.error("Failed to load IP blacklist data:", e);
         }
+    }
+
+    /** 列表分页排除策略哨兵，避免运维页当普通 IP 删除。 */
+    @Override
+    public PageUtils queryPage(Map<String, Object> params) {
+        Page<IpBlackEntity> page = getPage(params);
+        QueryWrapper<IpBlackEntity> qw = new QueryWrapper<>();
+        qw.ne("ip", POLICY_IP);
+        return queryPage(page, qw);
     }
 
     public boolean isBlack(String ip) {
@@ -222,6 +282,8 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
      */
     public boolean saveBlackIp(String ip, String agent, Integer count, String tag) {
         try {
+            if (isPolicyIp(ip))
+                return false;
             if (ipWhiteService.isWhite(ip, agent))
                 return false;
             if (isBlack(ip, agent)) {
@@ -278,7 +340,11 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     public IpBlackEntity create(String ip, String tag, String description) {
         IpBlackEntity blackEntity = null;
         try {
-            if ((IPUtils.isIp(ip) || IPUtils.isIPV6(ip) && !IPUtils.isInternalKeepIp(ip))) {
+            if (isPolicyIp(ip)) {
+                throw new AException("0.0.0.0 为黑名单策略阈值配置，请使用「黑名单阈值」接口修改，不可当作普通 IP 添加", 400);
+            }
+            // available=0 生效拦截（与 load getIps(0) 一致）
+            if ((IPUtils.isIp(ip) || IPUtils.isIPV6(ip)) && !IPUtils.isInternalKeepIp(ip)) {
                 blackEntity = getByIp(ip);
                 if (null == blackEntity) {
                     blackEntity = new IpBlackEntity();
@@ -293,10 +359,40 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
                     save(blackEntity);
                 }
             }
+        } catch (AException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to add blacklist IP:{}", e.getMessage());
         }
         return blackEntity;
+    }
+
+    /**
+     * 生效/停用黑名单条目。{@code available=0} 生效拦截，{@code 1} 停用（保留记录）。
+     */
+    public void setAvailable(String ip, int available) {
+        if (isPolicyIp(ip)) {
+            throw new AException("0.0.0.0 为策略哨兵，不可停用/启用；请修改黑名单阈值", 400);
+        }
+        if (available != 0 && available != 1) {
+            throw new AException("available 须为 0（生效）或 1（停用）", 400);
+        }
+        IpBlackEntity entity = getByIp(ip);
+        if (entity == null) {
+            throw new AException("黑名单IP不存在", 404);
+        }
+        entity.setAvailable(available);
+        entity.setUpdateTime(new Date());
+        updateById(entity);
+        if (available == 0) {
+            ipBlackList.add(ip);
+            if (ip.contains("/")) {
+                ipBlackSectionList.add(ip);
+            }
+        } else {
+            ipBlackList.remove(ip);
+            ipBlackSectionList.remove(ip);
+        }
     }
 
     @Override
@@ -321,7 +417,15 @@ public class IpBlackService extends WallCounter<IpBlackDao, IpBlackEntity> imple
     }
 
     public void removeByIp(String ip) {
+        if (isPolicyIp(ip)) {
+            throw new AException("0.0.0.0 为黑名单策略阈值配置，不可删除", 400);
+        }
+        IpBlackEntity entity = getByIp(ip);
+        if (entity == null) {
+            return;
+        }
         ipBlackList.remove(ip);
-        baseMapper.deleteById(getByIp(ip).getId());
+        ipBlackSectionList.remove(ip);
+        baseMapper.deleteById(entity.getId());
     }
 }

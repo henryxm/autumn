@@ -293,6 +293,9 @@ public class OpsApiController {
         if (StringUtils.isBlank(ip)) {
             throw new AException("ip 不能为空", 400);
         }
+        if (IpBlackService.isPolicyIp(ip)) {
+            throw new AException("0.0.0.0 为黑名单策略阈值，请调用 firewallCount 接口", 400);
+        }
         IpBlackEntity entity = ipBlackService.create(ip, "ops-cert", "ops-cert certId=" + session.getCertId());
         if (entity == null) {
             throw new AException("写入用户黑名单失败", 500);
@@ -314,7 +317,10 @@ public class OpsApiController {
         return Response.ok(Map.of("success", true));
     }
 
-    /** 生效/停用黑名单：{@code available=1} 生效拦截，{@code 0} 停用（保留记录）。 */
+    /**
+     * 生效/停用黑名单：与 wall 缓存一致——{@code available=0} 生效拦截，{@code 1} 停用（保留记录）。
+     * {@code 0.0.0.0} 为策略哨兵，禁止切换。
+     */
     @PostMapping("/ipblack/setAvailable")
     public Response<Map<String, Object>> ipBlackSetAvailable(@RequestBody Map<String, Object> body,
                                                              HttpServletRequest request) {
@@ -324,16 +330,38 @@ public class OpsApiController {
         if (StringUtils.isBlank(ip)) {
             throw new AException("ip 不能为空", 400);
         }
-        IpBlackEntity entity = ipBlackService.getByIp(ip);
-        if (entity == null) {
-            throw new AException("黑名单IP不存在", 404);
-        }
-        entity.setAvailable(available);
-        entity.setUpdateTime(new java.util.Date());
-        ipBlackService.updateById(entity);
+        ipBlackService.setAvailable(ip, available);
         adminAccessGuard.auditWithIp(request, "ops.ipblack.setAvailable",
                 "ip=" + ip + " available=" + available + " certId=" + session.getCertId());
         return Response.ok(Map.of("ip", ip, "available", available, "success", true));
+    }
+
+    /** 读取自动拉黑阈值（存于黑名单表策略行 0.0.0.0 的 count）。 */
+    @PostMapping("/ipblack/firewallCount/get")
+    public Response<Map<String, Object>> ipBlackFirewallCountGet(HttpServletRequest request) {
+        requireOpsSession(request);
+        return Response.ok(Map.of("firewallCount", ipBlackService.getFirewallCount()));
+    }
+
+    /** 设置自动拉黑阈值（持久化到 0.0.0.0 策略行；最小值 500）。 */
+    @PostMapping("/ipblack/firewallCount/set")
+    public Response<Map<String, Object>> ipBlackFirewallCountSet(@RequestBody Map<String, Object> body,
+                                                                 HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        Object raw = body == null ? null : body.get("count");
+        if (raw == null) {
+            throw new AException("count 不能为空", 400);
+        }
+        int count;
+        try {
+            count = raw instanceof Number ? ((Number) raw).intValue() : Integer.parseInt(String.valueOf(raw).trim());
+        } catch (Exception e) {
+            throw new AException("count 须为整数", 400);
+        }
+        ipBlackService.setFirewallCount(count);
+        adminAccessGuard.auditWithIp(request, "ops.ipblack.firewallCount",
+                "count=" + ipBlackService.getFirewallCount() + " certId=" + session.getCertId());
+        return Response.ok(Map.of("firewallCount", ipBlackService.getFirewallCount(), "success", true));
     }
 
     @PostMapping("/gate/get")

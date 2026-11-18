@@ -54,6 +54,7 @@
 | `POST /ops/api/v1/currentIp` | session | 当前访问 IP |
 | `POST /ops/api/v1/ipwhite/list\|add\|remove\|setForbidden` | session | 用户防火墙白名单（`wall_ip_white`）；见下表 |
 | `POST /ops/api/v1/ipblack/list\|add\|remove\|setAvailable` | session | 用户防火墙黑名单（`wall_ip_black`）；见下表 |
+| `POST /ops/api/v1/ipblack/firewallCount/get\|set` | session | 自动拉黑阈值（存于策略行 `0.0.0.0` 的 `count`；`set` body.`count`，下限 500） |
 
 ### 4.1 三类 IP 列表与禁用
 
@@ -61,14 +62,16 @@
 |----|----------|----------|------|----------|
 | 管理级 IP 白名单 | `/adminip` | `forbidden` | `0` 启用 / `1` 禁用 | 删除**当前访问 IP** 须 `clearToken` |
 | 用户白名单 | `/ipwhite` | `forbidden` | `0` 启用 / `1` 禁用 | 删除**当前访问 IP** 须 `clearToken` |
-| 用户黑名单 | `/ipblack` | `available` | `1` 生效拦截 / `0` 停用（保留记录） | 无 clearToken 要求 |
+| 用户黑名单 | `/ipblack` | `available` | **`0` 生效拦截** / **`1` 停用**（与 `load→getIps(0)` 一致） | 无 clearToken 要求 |
+
+**黑名单策略哨兵 `0.0.0.0`**：不是真实客户端地址，而是把「刷新周期内访问次数阈值」写在该行的 `count` 字段（`available=1` 使其不进拦截缓存）。列表接口**排除**该行；禁止 `add`/`remove`/`setAvailable`；改阈值用 `firewallCount/get|set`（wall 页「黑名单阈值」同源）。
 
 列表约定（三表相同）：
 
 - 请求：`page`（从 1）、`limit`（默认 20，最大 100）；`add` 可传 `claimCurrent=true` 认领当前访问 IP
 - 响应：`count`、`page`、`limit`、`hasMore`、`list[]`（`ip` / `tag` / `description` / 状态字段 / `createTime` 毫秒时间戳）
 - `setForbidden` body：`ip` + `forbidden`∈{0,1}
-- `setAvailable` body：`ip` + `available`∈{0,1}
+- `setAvailable` body：`ip` + `available`∈{0,1}（黑名单：**0=生效**）
 | `POST /ops/api/v1/gate/get\|setAdminIpEnable\|verifyClearToken\|setClearToken` | session；关校验 / 改令牌须原 clearToken | `get` 含 `adminIpEnable` + `clearTokenConfigured`；未配置时 App 可 `setClearToken` 首次写入；已配置须 `oldClearToken`；空令牌时危险操作拒绝；`enroll`/`claim` 自动开管理IP |
 | `POST /ops/api/v1/cert/list\|revoke` | session | 多设备列表/吊销；`revoke` 响应含 `lastCert`（吊销后是否已无有效证） |
 | `POST /ops/api/v1/cert/issue` | session | 已登录设备签发一次性认领码（明文仅返回一次；落库 salt+hash，TTL≈30min） |

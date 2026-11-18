@@ -311,16 +311,43 @@ class OpsApiControllerTest {
         MockHttpServletRequest req = new MockHttpServletRequest();
         req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
 
-        IpBlackEntity entity = new IpBlackEntity();
-        entity.setIp("203.0.113.8");
-        entity.setAvailable(1);
-        when(ipBlackService.getByIp("203.0.113.8")).thenReturn(entity);
-
         Response<Map<String, Object>> res = controller.ipBlackSetAvailable(
                 Map.of("ip", "203.0.113.8", "available", 0), req);
         assertEquals(true, res.getData().get("success"));
         assertEquals(0, res.getData().get("available"));
-        verify(ipBlackService).updateById(argThat(e -> e.getAvailable() != null && e.getAvailable() == 0));
+        verify(ipBlackService).setAvailable("203.0.113.8", 0);
+    }
+
+    @Test
+    void ipBlackAdd_rejectsPolicyIp() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        AException ex = assertThrows(AException.class,
+                () -> controller.ipBlackAdd(Map.of("ip", "0.0.0.0"), req));
+        assertTrue(ex.getMsg().contains("策略"));
+        verify(ipBlackService, never()).create(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void ipBlackFirewallCount_getAndSet() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        when(ipBlackService.getFirewallCount()).thenReturn(1000, 2000);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        Response<Map<String, Object>> got = controller.ipBlackFirewallCountGet(req);
+        assertEquals(1000, got.getData().get("firewallCount"));
+
+        Response<Map<String, Object>> set = controller.ipBlackFirewallCountSet(Map.of("count", 2000), req);
+        assertEquals(true, set.getData().get("success"));
+        assertEquals(2000, set.getData().get("firewallCount"));
+        verify(ipBlackService).setFirewallCount(2000);
     }
 
     @Test
