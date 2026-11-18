@@ -314,7 +314,7 @@ var uuid = '${uuid!""?js_string}';
 
 ### 10.2 索引与唯一约束
 
-> **业务仓统一风格与模式目录（SQL→注解、isUnique、命名/指纹身份、冗余裁剪、PR 清单）**见专篇 **`docs/AI_INDEX_ANNOTATIONS.md`**（§5 / §7）。本节保留**硬性纪律**与 ASC/DESC 基线；落地示例以专篇为准。
+> **业务仓统一风格与模式目录（SQL→注解、isUnique、命名/指纹身份、单列保留与组合对齐 Dao、PR 清单）**见专篇 **`docs/AI_INDEX_ANNOTATIONS.md`**（§5 / §6 / §7）。本节保留**硬性纪律**与 ASC/DESC 基线；落地示例以专篇为准。
 
 **怎么选写法（速查）**
 
@@ -334,7 +334,7 @@ var uuid = '${uuid!""?js_string}';
 - **单字段索引声明位置（新代码默认）**：**单字段索引一律**写在对应**字段**上的 **`@Index`**。**类级 `@Indexes`** 仅用于**组合索引**（`fields` 含 **≥2** 列）或 FULLTEXT/SPATIAL/部分索引等特殊声明。
 - **组合索引列序（硬性）**：`@IndexField` 数组顺序 = 落库 `SEQ_IN_INDEX` 顺序；框架用有序模型发射 DDL，**禁止**再假设 HashMap 乱序。设计时遵循最左前缀：等值列靠左，范围/排序列靠右。**列序优先于 ASC/DESC**。**频道/开关等值列**（如 `xsign`/`community`）必须靠左，禁止放在范围列之后。
 - **列方向 ASC/DESC（长期基线，见下「列方向」专节）**：**默认 ASC**（未写 = ASC）。单列用字段级 **`@Index(order = …)`**；组合用 **`@IndexField(order = …)`**。DESC **仅**按主查询 `ORDER BY` 写在**排序键**上。禁止无 `EXPLAIN` 依据批量改 DESC。主查询含稳定 `ORDER BY …, id DESC` 时，索引末尾宜带上 `id`（方向与 ORDER BY 一致）。
-- **冗余裁剪（新代码）**：若类级组合索引的最左前缀已覆盖某字段级 `@Index` 所服务的**同一查询族**，**删除**该字段级 `@Index`（避免双开）；细则与对照表见 **`docs/AI_INDEX_ANNOTATIONS.md` §5**。
+- **字段 `@Index` 与组合（§6）**：**既有字段级 `@Index` 默认保留**；**禁止**以「组合最左前缀已覆盖同族查询」为由批量删除单列索引（Dao 未见不等于无 `baseMapper`/Wrapper 直查）。优化重点是类级 **`@Indexes` 列序/完整度对齐 Dao**。仅当任务**明确写明**某单列无用时才删该字段 `@Index`。`isUnique` 与组合的整理见专篇 **§5**（删的是含唯一列的组合，不是普通字段索引）。
 - **命名与身份（推荐）**：索引 `name` 用可读压缩语义（如 `statuslivingat`）；可空（框架按列派生）；超长截断 WARN。`@IndexField(field)` **推荐驼峰属性名**，兼容下划线。库↔实体同一索引以**定义指纹**为准，名字仅配对/落库标识；仅改名走 RENAME。见专篇 **§7**。
 - **扩展能力（可选，带默认值）**：`@Index`：`where` / `include` / `parser` / `invisible` / `expression`，以及字段级快捷 `order` / `length` / `collation`；`@IndexField`：`order` / `length` / `expression` / `collation`。不支持的方言 **WARN 并跳过/降级**。索引列 `collation` 已进模型，各方言 DDL **尚未统一发射**——列排序规则优先用 **`@Column.collation`**。
 - **同步配置**：`autumn.table.index.rebuild-on-order-mismatch`（默认 `true`）——列序/方向不一致时**按索引成对** DROP+ADD（失败 WARN 不阻断启动）；日志关键字 `Index rebuild upgrade`。设 `false` 退回仅列集合比对（运维缓冲，不是放弃列序真相）。
@@ -399,7 +399,7 @@ public class DemoEntity { ... }
 // 禁止：无 EXPLAIN 依据把等值列或全表索引批量改成 DESC
 ```
 
-更多业务模式（热度多排序键、宽 URL 前缀、组合 UNIQUE、投放位正序、冗余裁剪、PR 清单）→ **`docs/AI_INDEX_ANNOTATIONS.md`**。
+更多业务模式（热度多排序键、宽 URL 前缀、组合 UNIQUE、投放位正序、§5 isUnique / §6 单列保留、PR 清单）→ **`docs/AI_INDEX_ANNOTATIONS.md`**。
 
 ### 10.3 整型、布尔与空值
 
@@ -588,7 +588,7 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
 | `isUnique=true` 与 `@Index` 禁止叠用 | **§10.2**；Boot/MAP 索引收集见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2** |
 | 单字段索引须字段级 `@Index` | **§10.2**；类级 `@Indexes` 仅用于组合索引（≥2 列）；DESC/前缀用 `@Index(order/length)` 快捷 |
 | 组合索引列序与 ASC/DESC | **§10.2**；列序优先；默认 ASC；DESC 仅排序键 + 主 ORDER BY |
-| 业务仓索引统一风格 / 模式目录 | **`docs/AI_INDEX_ANNOTATIONS.md`**（SQL→注解、**§5 isUnique 优先与组合告警**、冗余裁剪、命名、PR 清单） |
+| 业务仓索引统一风格 / 模式目录 | **`docs/AI_INDEX_ANNOTATIONS.md`**（SQL→注解、**§5 isUnique**、**§6 单列保留 / 组合对齐 Dao**、命名、PR 清单） |
 | 双键模型、`UuidBased` / `SnowBased` / **`UserBased`** / `AutoIdService` | **§10.4**、**`docs/AI_DUAL_KEY.md` §3～§4**；SQL 见 **`docs/AI_DATABASE.md` §1.1** |
 | Lombok 实体 / `@Slf4j` | **§2.0**、**`docs/AI_CODE_STYLE.md` §5.1 / §8** |
 | 实体业务必须落对应 Service | **§2.1**、**`docs/AI_SERVICE_COHESION.md`** |

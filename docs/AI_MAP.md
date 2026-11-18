@@ -412,8 +412,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 1. **`@Column(isUnique = true)` 优先；与字段级 `@Index` 不得叠用（团队硬性约束）**  
    规范见 **`docs/AI_STANDARDS.md` §10.2**；统一整理见 **`docs/AI_INDEX_ANNOTATIONS.md` §5**。建表时字段 `isUnique` 已生成单列 `UNIQUE KEY`，**以字段注解为单列唯一真相源**。**字段级**再写 `@Index`：忽略并 WARN。**类级单列**含该列：剔除并 WARN。**类级多列**组合含该列：**保留列序**并 WARN（`含已 isUnique 列 … 建议去掉冗余唯一首列`）——不阻断启动；业务默认删除「唯一列最左 + 附带过滤」的组合，仅当唯一列**不在最左**且服务其它列表查询时可保留（专篇 §5.4 C）。
 
-2. **字段上已有 `@Index` 时，不要在类级 `@Indexes` / 类级 `@Index` 里再包含同一列的等价索引**；反之，若类级组合最左前缀已覆盖某字段级 `@Index` 的同一查询族，**删除字段级**（见 **`docs/AI_INDEX_ANNOTATIONS.md` §5**）。  
-   否则同一列会被注册两次，建表或变更时可能生成两条含义重叠的 `INDEX`，属于重复声明。
+2. **禁止用类级 `@Indexes` 再声明与某字段级 `@Index` 同构的单列索引**（类级只写 ≥2 列组合）。**既有字段级 `@Index` 默认保留**：不得因「组合最左已覆盖」删除单列索引；优化重点是组合列序对齐 Dao（见 **`docs/AI_INDEX_ANNOTATIONS.md` §6**）。`isUnique` 与含唯一列的组合见 **§5**。
 
 3. **单字段索引写在字段上，类级 `@Indexes` 仅用于组合索引（团队默认，新代码）**  
    规范见 **`docs/AI_STANDARDS.md` §10.2**：`TableInfo` 虽会收集类上单列 `@Index` / `@Indexes({ @Index(fields = 单字段) })`，但**除非明确指明**，新代码**禁止**用类级方式为单列建索引；**`@Index` 直接标在字段上**。类级 **`@Indexes`** 用于 **`fields` 含两列及以上** 的组合索引，或一次声明多组组合/特殊索引（如 `FULLTEXT`）。存量类级单列索引默认保持。
