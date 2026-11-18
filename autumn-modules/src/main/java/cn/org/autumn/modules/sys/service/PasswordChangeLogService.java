@@ -12,12 +12,11 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -27,9 +26,8 @@ import java.util.Map;
  * 登录口令变更审计：落库 previousHash（非明文），并支持历史口令匹配 / 防重用。
  */
 @Service
+@Slf4j
 public class PasswordChangeLogService extends ModuleService<PasswordChangeLogDao, PasswordChangeLogEntity> {
-
-    private static final Logger log = LoggerFactory.getLogger(PasswordChangeLogService.class);
 
     public static final String ACTION_CHANGE = "CHANGE";
     public static final String ACTION_RESET = "RESET";

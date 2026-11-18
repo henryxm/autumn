@@ -1,8 +1,7 @@
 package cn.org.autumn.table.data;
 
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * MySQL 系建表/改表时列默认值与不可索引类型的兼容规则。
@@ -14,9 +13,8 @@ import org.slf4j.LoggerFactory;
  * MySQL 8.0.13+ 允许的括号表达式默认值（如 {@code (JSON_OBJECT())}、{@code ('')}）予以保留。
  * 数值/日期等非字符串类型上的空串默认值同样清理。
  */
+@Slf4j
 public final class ColumnDefaultRules {
-
-    private static final Logger log = LoggerFactory.getLogger(ColumnDefaultRules.class);
 
     private ColumnDefaultRules() {
     }

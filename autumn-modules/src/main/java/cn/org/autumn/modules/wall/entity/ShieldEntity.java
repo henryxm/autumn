@@ -19,7 +19,7 @@ public class ShieldEntity implements Serializable {
     private Long id;
 
     @Cache
-    @Column(comment = "资源", isUnique = true, defaultValue = "")
+    @Column(comment = "资源", isUnique = true)
     private String uri;
 
     /** 0/1 存库；Java boolean，见 {@link cn.org.autumn.config.BooleanNumericTypeHandler} */

@@ -31,6 +31,11 @@ public class IndexInfo {
     List<String> includeColumns = new ArrayList<>();
     String parser = "";
     boolean invisible;
+    /**
+     * 预检标记：为 true 时 {@link cn.org.autumn.table.data.index.IndexDialectCapability#forEmit}
+     * 返回 null，跳过 ADD DDL（不阻断启动）。
+     */
+    boolean skipEmit;
 
     public IndexInfo() {
         fields = new LinkedHashMap<>();
@@ -146,6 +151,7 @@ public class IndexInfo {
         i.parser = src.getParser();
         i.invisible = src.invisible;
         i.includeColumns = new ArrayList<>(src.getIncludeColumns());
+        i.skipEmit = src.skipEmit;
         i.setColumnSpecs(src.getColumnSpecs());
         return i;
     }
@@ -837,5 +843,14 @@ public class IndexInfo {
 
     public void setInvisible(boolean invisible) {
         this.invisible = invisible;
+    }
+
+    /** 预检要求跳过 DDL 发射（列数超限、未知列等）。 */
+    public boolean isSkipEmit() {
+        return skipEmit;
+    }
+
+    public void setSkipEmit(boolean skipEmit) {
+        this.skipEmit = skipEmit;
     }
 }

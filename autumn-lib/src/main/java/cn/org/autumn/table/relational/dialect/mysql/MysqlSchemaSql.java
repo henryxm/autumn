@@ -9,9 +9,8 @@ import cn.org.autumn.table.data.IndexPrefixRules;
 import cn.org.autumn.table.data.TableInfo;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
@@ -20,11 +19,11 @@ import java.util.Map;
 /**
  * MySQL / MariaDB / TiDB / OceanBase MySQL 等主路径：不含内嵌 H2 兼容分支。
  */
+@Slf4j
 public class MysqlSchemaSql implements RelationalSchemaSql {
 
     public static final MysqlSchemaSql INSTANCE = new MysqlSchemaSql();
 
-    private static final Logger log = LoggerFactory.getLogger(MysqlSchemaSql.class);
 
     protected MysqlSchemaSql() {
     }

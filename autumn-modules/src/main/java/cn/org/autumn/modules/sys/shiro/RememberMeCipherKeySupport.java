@@ -2,10 +2,9 @@ package cn.org.autumn.modules.sys.shiro;
 
 import cn.org.autumn.utils.RedisKeys;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import lombok.extern.slf4j.Slf4j;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,9 +28,8 @@ import java.util.Base64;
  * 不落在节点 uuid 子目录：uuid 存于 {@code node-profile.json}；集群共享钥按 namespace 对齐 Redis，
  * 不应按节点 uuid 分叉。Docker 挂载整个 {@code autumn.node.home} 即可重启保留。
  */
+@Slf4j
 public final class RememberMeCipherKeySupport {
-
-    private static final Logger log = LoggerFactory.getLogger(RememberMeCipherKeySupport.class);
 
     /** 历史上流传的 guns/renren 默认钥，禁止再使用 */
     public static final String FORBIDDEN_LEGACY_BASE64 = "Z3VucwAAAAAAAAAAAAAAAA==";

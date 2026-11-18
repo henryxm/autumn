@@ -48,6 +48,7 @@
   - 索引前缀：`IndexPrefixRules` 会按 `@Column.type()` 与 Java 类型收敛前缀长度，非字符串/二进制串列不会生成非法 `` `col`(n) ``；数值、日期等列可正常加 `@Index`（整列索引）。**TEXT/BLOB** 整列索引非法：未写前缀时自动补 **191** 并 WARN。`IndexTypeEnum.FULLTEXT` 仍仅适用于字符型列（MySQL 全文索引语义）。详见 `docs/AI_MAP.md` 2.10.3。
   - **组合索引列序 / ASC·DESC**：`@IndexField` 数组顺序即落库顺序；**默认 ASC**（永久基线）。ASC 索引上 `ORDER BY DESC` 通常仍可用（反向扫描，略慢）；`IndexOrder.DESC` 仅对主查询排序键显式声明（混合序/热点才需要）。列序优先于方向；禁止无 EXPLAIN 批量改 DESC。错序时逐条 `DROP+ADD`（日志 `Index rebuild upgrade`）。完整说明见 **`docs/AI_STANDARDS.md` §10.2「列方向 ASC / DESC」**。
   - **业务仓统一风格**：SQL→注解模式、**`isUnique` 优先与组合告警整理**、**既有字段 `@Index` 默认保留**、组合列序对齐 Dao、命名/身份判定、PR 清单见 **`docs/AI_INDEX_ANNOTATIONS.md`**（§5 / §6 / §7；与 §10.2 硬性纪律配套）。启动 WARN `含已 isUnique 列` 不阻断；仅改索引名走指纹配对 + RENAME。
+  - **索引限制运行时防护**：`IndexLimitGuard` 预检列数/重复列/未知列（含父类）/表索引数/键长/`isUnique`**默认空串**；列数与未知列 `skipEmit`，其余默认 WARN；重建前不可发射则**不 DROP**；**不拖垮启动**。配置 `autumn.table.index.*`（**`AI_INDEX_ANNOTATIONS.md` §7.4**）。
   - **扩展索引属性**：`where` / `include` / `parser` / `invisible` / `expression` 均为可选默认空；依赖仓不改旧实体即可升级。
   - **升级冒烟（依赖仓零改）**：升 autumn 后至少能编译 `im`、`vshort`、`minclouds-account`；旧 `@Indexes`/`@IndexField(field,length)` 实体表结构同步不因新校验失败；`IndexInfo.getFields()` 仍可用（有序 Map）。
   - **`defaultValue`（MySQL）**：数值/tinyint 不带引号；`CURRENT_TIMESTAMP` 等时间函数裸写；字符串加引号（VARCHAR `""` → `DEFAULT ''`）。TEXT/BLOB/JSON/GEOMETRY 与 `AUTO_INCREMENT` 的字面量 DEFAULT（含空串）由 `ColumnDefaultRules` **忽略并 WARN**；MySQL 8.0.13+ 括号表达式（如 `(JSON_OBJECT())`）保留。数值/日期上的空串默认值同样清理。JSON/GEOMETRY 的 `isUnique` 会跳过并 WARN（需函数/生成列索引）。

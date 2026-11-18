@@ -436,8 +436,9 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - **`IndexMethodEnum`**：`BTREE`/`HASH` 保留；追加 `GIN`/`GIST`/`BRIN`/`SPGIST`/`RTREE`（按方言发射）。
 - **列序与 ASC/DESC**：`IndexInfo` 内部有序；DDL 与 diff 默认顺序敏感。配置 `autumn.table.index.rebuild-on-order-mismatch`（默认 true）。错序/同名定义变更走**成对重建**（日志 `Index rebuild upgrade`），与纯增删索引分离。
 - **索引身份配对**：先规范化名（忽略大小写与 `_`），再按定义指纹唯一匹配；同指纹异名 → `RENAME INDEX`（原因 `NAME`）。详见 **`docs/AI_INDEX_ANNOTATIONS.md` §7.3**。
+- **运行时限制预检**（`IndexLimitGuard`，收集后 / `forEmit` 前）：列数&gt;16 / 未知列 → **`skipEmit`**（未知列认父类字段）；重复列去重；表索引&gt;64 / 键长粗估&gt;3072 → 默认仅 WARN；`isUnique`+**默认空串** WARN。重建前 `canEmit=false` 不 DROP。不阻断启动。详见 **`docs/AI_INDEX_ANNOTATIONS.md` §7.4**。
 - **ASC/DESC 长期规则（摘要）**：默认 **ASC**（永久基线）；ASC 索引上 `ORDER BY DESC` 可用反向扫描（常略慢）；混合升降序或热点倒序才显式 `IndexOrder.DESC`（只写在排序键）。**列序优先于方向**。完整性能表、建模规则与三阶段落地见 **`docs/AI_STANDARDS.md` §10.2「列方向 ASC / DESC」**。
-- **部分索引 / INCLUDE / INVISIBLE / parser / expression**：见 `@Index` / `@IndexField`；不支持方言降级 WARN（`IndexDialectCapability.forEmit` 用副本，不改实体收集结果）。
+- **部分索引 / INCLUDE / INVISIBLE / parser / expression**：见 `@Index` / `@IndexField`；不支持方言降级 WARN（`IndexDialectCapability.forEmit` 用副本，不改实体收集结果；`skipEmit` 返回 null）。
 - **diff 扩展属性**：where/include/parser/invisible 在 SHOW/JDBC **未读回**（一侧为空）时不参与比对，避免历史库无限重建；两侧均有值时才严格比较。
 - **兼容**：业务仓旧注解零改；历史库方向本为 ASC，与默认一致；`IndexInfo.getFields()` 仍为有序 Map 视图。
 

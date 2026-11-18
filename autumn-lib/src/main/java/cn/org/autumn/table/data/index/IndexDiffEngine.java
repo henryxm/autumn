@@ -2,9 +2,8 @@ package cn.org.autumn.table.data.index;
 
 import cn.org.autumn.table.annotation.IndexOrder;
 import cn.org.autumn.table.data.IndexInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import lombok.extern.slf4j.Slf4j;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -17,9 +16,8 @@ import java.util.Set;
  * 身份以<strong>定义指纹</strong>（{@link IndexInfo#sameIndexColumnsAndKind}）为准；
  * 名字仅作配对回退与落库标识（规范化：忽略大小写与下划线）。
  */
+@Slf4j
 public final class IndexDiffEngine {
-
-    private static final Logger log = LoggerFactory.getLogger(IndexDiffEngine.class);
 
     private IndexDiffEngine() {
     }

@@ -9,7 +9,7 @@
 | 文档 | 读什么 |
 |------|--------|
 | **`AI_STANDARDS` §10.2** | 硬性禁止项、默认 ASC、何时写 DESC、命名/身份摘要 |
-| **本文** | 业务建模流程、模式目录、**§5 isUnique**、**§6 单列保留 / 组合对齐 Dao**、**§7 命名与身份判定**、PR 清单 |
+| **本文** | 业务建模流程、模式目录、**§5 isUnique**、**§6 单列保留 / 组合对齐 Dao**、**§7 命名/身份/运行时限制**、PR 清单 |
 | **`AI_MAP` §2.10** | 注解收集、前缀策略、方言降级、**指纹配对 / RENAME** |
 | **`AI_BOOT` §3** | 启动同步顺序、`Index rebuild upgrade` / rename 日志 |
 
@@ -414,6 +414,42 @@ listExpiredEnabled:  WHERE enable = 1 AND expire_time < ? ORDER BY expire_time
 4. **不会**把旧索引当孤儿 REMOVE、同时 ADD 新名（避免双开）。  
 5. 再次启动：名与指纹均一致 → 跳过。
 
+### 7.4 运行时限制与日志（IndexLimitGuard）
+
+启动收集后预检（**不阻断启动**；`where`/`expression` 注入仍抛错）。硬失败项直接 `skipEmit`；软项默认仅 WARN：
+
+| 检查 | 默认行为 | 典型日志 |
+|------|----------|----------|
+| 单索引列数 &gt; 16（`max-columns-per-index`；≤0 关闭） | **`skipEmit`** | `索引列数超限…跳过发射` |
+| 索引内重复列 | 去重保留首次 | `索引含重复列已去重` |
+| `@IndexField` 未知列 | **`skipEmit`** | `索引含未知列…跳过发射` |
+| 单表索引数 &gt; 64 | 仅 WARN；`skip-on-limit-violation=true` 时尾部 skip | `单表索引数量超过建议阈值` |
+| 键长粗估 &gt; 3072（`max-key-bytes`；0 关闭） | 仅 WARN；strict 时 skip | `索引键长粗估超限` |
+| `isUnique` + **默认空串**（`""`/`''`） | WARN（可空 + default `NULL` **不**告警；MySQL UNIQUE 允许多 NULL） | `列 isUnique 且默认空串` |
+| 名超长 / 截断后重名 | 截断 + WARN | `索引名超长已截断` / `Duplicate index name` |
+| ADD 失败 | catch + 人话 `reason=`（认文案或 `ERROR nnnn` 形态，避免裸数字误伤） | `Index add failed: … reason=` |
+
+配置（`application.yml` 或系统属性；`MysqlTableService` `@PostConstruct` 写入系统属性）：
+
+```yaml
+autumn.table.index:
+  max-name-length: 0          # 0=跟方言（MySQL 64 / PG 63 / Oracle 旧 30）
+  max-columns-per-index: 16   # ≤0 关闭列数检查
+  max-per-table: 64
+  max-key-bytes: 3072         # 0 关闭键长粗估
+  warn-unique-blank-default: true
+  skip-on-limit-violation: false  # true 时键长/表数超限也 skipEmit
+```
+
+`IndexDialectCapability.forEmit` 对 `skipEmit` / 列数超限返回 `null`；同步路径用 `canEmit` 静默跳过（避免与预检 / 方言降级 WARN 重复）。
+
+稳定性约定：
+
+- 未知列检查扫描**本类+父类**字段，避免继承列被误 `skipEmit`。  
+- 索引**重建**前若 `canEmit=false`，**不 DROP** 库侧索引（防止 ADD 失败留下空洞）。  
+- 重复列去重在 diff 前完成，指纹与发射定义一致。  
+- JDBC 空 DDL 脚本直接跳过；MySQL MyBatis ADD 路径亦先 `canEmit`。
+
 ## 8. 注解旁注释（推荐）
 
 ```java
@@ -433,6 +469,7 @@ listExpiredEnabled:  WHERE enable = 1 AND expire_time < ? ORDER BY expire_time
 - 日志：`Index rebuild upgrade: ok=…`；失败 WARN 不阻断启动。  
 - 索引名超长：`索引名超长已截断`；名为空：`索引名为空已按列派生`。  
 - **`含已 isUnique 列 … 建议去掉冗余唯一首列`**：不阻断；按 **§5** 整理实体后消失。  
+- 硬限制预检见 **§7.4**（列数/重复列/未知列/表索引数/键长/`isUnique`**默认空串**）；超限勿依赖崩库发现。  
 - 大表改 DESC/加宽组合：低峰发布，或临时 `rebuild-on-order-mismatch=false` 后手工 DDL（逃生舱，事后改回 true）。  
 - 元数据已批量预载；健康路径下索引比对不应主导启动耗时。
 
@@ -464,7 +501,9 @@ listExpiredEnabled:  WHERE enable = 1 AND expire_time < ? ORDER BY expire_time
 | 以「组合最左已覆盖」批量删除既有字段 `@Index` | 误伤非 Dao 单列查询；违反 §6 |
 | 频道等值列放在组合中间/右侧 | 最左前缀失效 |
 | 凡 `ORDER BY DESC` 就全列 DESC | 无收益、放大重建 |
-| 超长 URL 无前缀进组合 | 键长失败或隐式截断风险 |
+| 超长 URL 无前缀进组合 | 键长失败或隐式截断风险；启动粗估 WARN（§7.4） |
+| 单索引 &gt;16 列 / 表索引暴增 / 重复列 / 错列名 | 预检 skipEmit 或 ADD 失败 WARN；应改注解 |
+| `isUnique` 且 `defaultValue=""` / `''`（多行空串） | UNIQUE 落库失败；改非空唯一值或普通 `@Index`（可空 + NULL 通常无妨） |
 | 无主查询的「预防性」十几个组合 | 写放大、重建慢 |
 | 靠改 `@Index(name)`「制造」索引重建 | 现已指纹配对 + RENAME，无意义且噪音大 |
 | 在 Dao 上幻想索引 | 框架不识别 |

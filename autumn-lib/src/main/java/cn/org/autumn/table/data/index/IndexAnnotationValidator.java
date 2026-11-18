@@ -3,9 +3,8 @@ package cn.org.autumn.table.data.index;
 import cn.org.autumn.table.annotation.IndexTypeEnum;
 import cn.org.autumn.table.data.IndexInfo;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import lombok.extern.slf4j.Slf4j;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -13,11 +12,10 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * 索引注解安全校验：where/expression 白名单；空名派生；超长截断；同名冲突提示。
+ * 索引注解安全校验：where/expression 白名单；空名派生；超长截断；同名冲突提示；限制预检。
  */
+@Slf4j
 public final class IndexAnnotationValidator {
-
-    private static final Logger log = LoggerFactory.getLogger(IndexAnnotationValidator.class);
 
     /** 允许标识符、比较、数字、空白、括号、逗号、点号、单引号字面量、白名单函数名。 */
     private static final Pattern SAFE_EXPR = Pattern.compile(
@@ -73,17 +71,26 @@ public final class IndexAnnotationValidator {
     }
 
     public static void validateAll(List<IndexInfo> indexes) {
-        normalizeAndValidateAll(indexes, null);
+        normalizeAndValidateAll(indexes, null, null, 0);
     }
 
     /**
      * 空名派生、超长截断（WARN）、安全校验、实体内重名检测。不阻断启动（除 unsafe expression）。
      */
     public static void normalizeAndValidateAll(List<IndexInfo> indexes, String tableName) {
+        normalizeAndValidateAll(indexes, tableName, null, 0);
+    }
+
+    /**
+     * @param entityClass     用于限制预检（未知列 / isUnique 空串 / 键长）；可 null
+     * @param extraIndexCount 未并入列表的内联 UNIQUE 数量
+     */
+    public static void normalizeAndValidateAll(List<IndexInfo> indexes, String tableName,
+                                               Class<?> entityClass, int extraIndexCount) {
         if (indexes == null) {
             return;
         }
-        int max = IndexDialectCapability.maxIndexNameLength();
+        int max = resolveMaxNameLength();
         String table = tableName == null ? "" : tableName;
         for (IndexInfo i : indexes) {
             if (i == null) {
@@ -100,6 +107,8 @@ public final class IndexAnnotationValidator {
             }
             validate(i);
         }
+        IndexLimitGuard.guard(indexes, table, entityClass, extraIndexCount);
+        // 截断 + 预检后再扫实体内重名（含异名截成同名；skipEmit 仍参与检测，便于发现注解笔误）
         Set<String> names = new HashSet<>();
         for (IndexInfo i : indexes) {
             if (i == null || StringUtils.isBlank(i.getName())) {
@@ -110,6 +119,14 @@ public final class IndexAnnotationValidator {
                 log.warn("Duplicate index name in entity: table={} name={}", table, i.getName());
             }
         }
+    }
+
+    static int resolveMaxNameLength() {
+        int override = IndexTableSettings.maxNameLengthOverride();
+        if (override > 0) {
+            return override;
+        }
+        return IndexDialectCapability.maxIndexNameLength();
     }
 
     public static void rejectUnsafe(String kind, String raw) {

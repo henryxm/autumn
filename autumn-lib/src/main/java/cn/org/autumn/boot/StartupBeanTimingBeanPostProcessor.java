@@ -1,5 +1,6 @@
 package cn.org.autumn.boot;
 
+import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -8,8 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationListener;
@@ -26,10 +26,9 @@ import org.springframework.lang.Nullable;
  * {@code autumn.startup.bean-timing.threshold-ms}（默认 50）、
  * {@code autumn.startup.bean-timing.top}（默认 25）。
  */
+@Slf4j
 public class StartupBeanTimingBeanPostProcessor implements BeanPostProcessor, ApplicationListener<ContextRefreshedEvent>,
         PriorityOrdered {
-
-    private static final Logger log = LoggerFactory.getLogger(StartupBeanTimingBeanPostProcessor.class);
 
     private final Environment environment;
     private final ConcurrentHashMap<String, Long> startNs = new ConcurrentHashMap<>();
@@ -121,12 +120,10 @@ public class StartupBeanTimingBeanPostProcessor implements BeanPostProcessor, Ap
             shown++;
         }
         if (shown == 0) {
-            log.info("Startup bean timing: none above thresholdMs={} (beans={} selfSumMs={})",
-                    thresholdMs, rows.size(), sumMs);
+            log.debug("Startup bean timing: none above thresholdMs={} (beans={} selfSumMs={})", thresholdMs, rows.size(), sumMs);
             return;
         }
-        log.info("Startup bean timing top{}(>= {}ms): {} | beans={} selfSumMs={}",
-                shown, thresholdMs, sb, rows.size(), sumMs);
+        log.debug("Startup bean timing top{}(>= {}ms): {} | beans={} selfSumMs={}", shown, thresholdMs, sb, rows.size(), sumMs);
     }
 
     private static long parseLong(@Nullable String raw, long def) {

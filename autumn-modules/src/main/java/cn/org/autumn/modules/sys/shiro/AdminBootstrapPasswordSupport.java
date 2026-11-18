@@ -1,9 +1,8 @@
 package cn.org.autumn.modules.sys.shiro;
 
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import lombok.extern.slf4j.Slf4j;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,9 +19,8 @@ import java.util.Set;
  * 文件默认 {@code {node.home}/security/admin-bootstrap.credentials}（节点独有，改密后删除）。
  * 不把明文写入 DB/SysConfig。
  */
+@Slf4j
 public final class AdminBootstrapPasswordSupport {
-
-    private static final Logger log = LoggerFactory.getLogger(AdminBootstrapPasswordSupport.class);
 
     public static final String RELATIVE_UNDER_HOME = "security/admin-bootstrap.credentials";
 

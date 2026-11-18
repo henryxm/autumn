@@ -3,11 +3,12 @@ package cn.org.autumn.boot;
 import cn.org.autumn.config.JvmRestartHandler;
 import cn.org.autumn.install.InstallJvmRestartCleanupCoordinator;
 import cn.org.autumn.install.InstallRestartCoordinator;
+
+import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.metrics.buffering.BufferingApplicationStartup;
 import org.springframework.boot.context.metrics.buffering.StartupTimeline;
@@ -18,9 +19,8 @@ import org.springframework.core.env.Environment;
  * Autumn 应用入口封装：首次 {@link SpringApplication#run}，并在 {@code autumn.install.mode=true} 时
  * 循环处理安装向导触发的进程内重启（等待 {@link InstallRestartCoordinator}、JVM 清理、再次 run）。
  */
+@Slf4j
 public final class AutumnSpringApplication {
-
-    private static final Logger log = LoggerFactory.getLogger(AutumnSpringApplication.class);
 
     private AutumnSpringApplication() {
     }
@@ -109,9 +109,9 @@ public final class AutumnSpringApplication {
             shown++;
         }
         if (shown == 0) {
-            log.info("Startup steps: none above thresholdMs={} (events={})", thresholdMs, events.size());
+            log.debug("Startup steps: none above thresholdMs={} (events={})", thresholdMs, events.size());
         } else {
-            log.info("Startup steps top{}(>= {}ms): {}", shown, thresholdMs, sb);
+            log.debug("Startup steps top{}(>= {}ms): {}", shown, thresholdMs, sb);
         }
     }
 }

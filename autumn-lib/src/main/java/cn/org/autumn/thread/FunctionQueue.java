@@ -40,15 +40,21 @@ public class FunctionQueue {
     private static final int DEFAULT_CAPACITY = 10000;
     private static final int DEFAULT_MAX_HISTORY = 500;
     private static final long DEFAULT_SLOW_MS = 30000L;
-    /** 单任务最大执行时间；超时 interrupt，再超时则硬废弃 worker */
+    /**
+     * 单任务最大执行时间；超时 interrupt，再超时则硬废弃 worker
+     */
     private static final long DEFAULT_MAX_TASK_MS = 60000L;
-    /** interrupt 后仍未退出则硬废弃的宽限 */
+    /**
+     * interrupt 后仍未退出则硬废弃的宽限
+     */
     private static final long DEFAULT_HARD_ABANDON_MS = 5000L;
     private static final long WATCHDOG_INTERVAL_MS = 1000L;
     private static final int BACKLOG_WARN_THRESHOLD = 1000;
     private static final long STOP_JOIN_MS = 3000L;
     private static final int DEFAULT_PEEK_LIMIT = 50;
-    /** 有积压且非执行中超过该时间视为卡死，尝试唤醒/重启 */
+    /**
+     * 有积压且非执行中超过该时间视为卡死，尝试唤醒/重启
+     */
     private static final long STALL_MS = 5000L;
 
     private final Object offerLock = new Object();
@@ -72,10 +78,14 @@ public class FunctionQueue {
     private final AtomicLong taskIdSeq = new AtomicLong();
 
     private final ConcurrentLinkedDeque<FunctionTaskRecord> history = new ConcurrentLinkedDeque<>();
-    /** 同名任务去重：已在排队或执行中的 name */
+    /**
+     * 同名任务去重：已在排队或执行中的 name
+     */
     private final ConcurrentHashMap<String, Boolean> namedInFlight = new ConcurrentHashMap<>();
 
-    /** 队列实例永不替换，容量仅作软上限 */
+    /**
+     * 队列实例永不替换，容量仅作软上限
+     */
     private final LinkedBlockingQueue<QueuedFunction> queue = new LinkedBlockingQueue<>();
     private volatile int capacity = DEFAULT_CAPACITY;
     private volatile OverflowPolicy overflowPolicy = OverflowPolicy.REJECT;
@@ -93,7 +103,9 @@ public class FunctionQueue {
     private final AtomicBoolean idleWaiting = new AtomicBoolean(false);
     private final AtomicBoolean timeoutInterruptSent = new AtomicBoolean(false);
     private final AtomicLong lastProgressMs = new AtomicLong(System.currentTimeMillis());
-    /** 有积压且未执行时首次观测时间；正常空闲 take 不计入 */
+    /**
+     * 有积压且未执行时首次观测时间；正常空闲 take 不计入
+     */
     private final AtomicLong idleStallSinceMs = new AtomicLong(0);
     private final Date startTime = new Date();
 
@@ -103,7 +115,7 @@ public class FunctionQueue {
             return;
         startWorkerThread();
         startWatchdog();
-        log.info("FunctionQueue worker started: name={}, capacity={}, maxTaskTimeoutMs={}, hardAbandonMs={}", WORKER_NAME, capacity, maxTaskTimeoutMs, hardAbandonMs);
+        log.debug("FunctionQueue worker started: name={}, capacity={}, maxTaskTimeoutMs={}, hardAbandonMs={}", WORKER_NAME, capacity, maxTaskTimeoutMs, hardAbandonMs);
     }
 
     @PreDestroy

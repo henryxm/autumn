@@ -63,8 +63,7 @@ public class PostApplicationRunner implements ApplicationRunner {
             refreshFactory.refresh();
             long t4 = System.currentTimeMillis();
             initializationProgress.markDone();
-            log.info("Application init phases: initMs={} loadMs={} upgradeMs={} refreshMs={}",
-                    t1 - t0, t2 - t1, t3 - t2, t4 - t3);
+            log.debug("Application init phases: initMs={} loadMs={} upgradeMs={} refreshMs={}", t1 - t0, t2 - t1, t3 - t2, t4 - t3);
         } catch (Exception e) {
             log.error("Application initializing with error:{}", e.getMessage(), e);
             initializationProgress.markFailed(e);

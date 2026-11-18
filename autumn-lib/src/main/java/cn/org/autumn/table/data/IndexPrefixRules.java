@@ -3,11 +3,11 @@ package cn.org.autumn.table.data;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.utils.HumpConvert;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -17,9 +17,8 @@ import java.util.Map;
  * TEXT/BLOB 族则相反：整列索引非法，必须带前缀。本类在生成 DDL 前统一收敛 {@link IndexInfo} /
  * {@link UniqueKeyInfo} 中的 length 字段，使任意可索引列均可建索引而不因错误前缀失败。
  */
+@Slf4j
 public final class IndexPrefixRules {
-
-    private static final Logger log = LoggerFactory.getLogger(IndexPrefixRules.class);
 
     /**
      * utf8mb4 下 InnoDB 唯一索引常见安全前缀（767/4）；TEXT/BLOB 未声明 length 时采用。
@@ -171,12 +170,13 @@ public final class IndexPrefixRules {
 
     /**
      * 根据实体类字段与 {@link Column} 注解，修正索引条目中各列的前缀长度（类级 {@code @Indexes}} 中显式 length 可能误用于数值列）。
+     * 扫描范围含父类字段（与列同步 {@code recursionParents} 对齐）。
      */
     public static void applyPrefixLengthPolicy(Map<String, Integer> fields, Class<?> entityClass) {
         if (fields == null || fields.isEmpty() || entityClass == null) {
             return;
         }
-        Field[] declared = entityClass.getDeclaredFields();
+        Field[] declared = fieldsIncludingSuper(entityClass);
         List<String> keys = new ArrayList<>(fields.keySet());
         for (String colKey : keys) {
             Integer old = fields.get(colKey);
@@ -194,7 +194,26 @@ public final class IndexPrefixRules {
         }
     }
 
-    static Field findFieldForColumnKey(Field[] declared, String columnKey) {
+    /**
+     * 本类 + 父类声明字段（不含 {@link Object}），子类在前。供索引预检 / 前缀策略使用。
+     */
+    public static Field[] fieldsIncludingSuper(Class<?> entityClass) {
+        if (entityClass == null) {
+            return new Field[0];
+        }
+        List<Field> all = new ArrayList<>();
+        Class<?> c = entityClass;
+        while (c != null && c != Object.class) {
+            Field[] declared = c.getDeclaredFields();
+            if (declared != null && declared.length > 0) {
+                Collections.addAll(all, declared);
+            }
+            c = c.getSuperclass();
+        }
+        return all.toArray(new Field[0]);
+    }
+
+    public static Field findFieldForColumnKey(Field[] declared, String columnKey) {
         if (columnKey == null || declared == null) {
             return null;
         }

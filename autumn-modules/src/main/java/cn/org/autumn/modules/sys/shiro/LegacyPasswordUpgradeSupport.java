@@ -4,8 +4,7 @@ import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 遗留 SHA-256 口令 → PBKDF2 惰性升级（原子 CAS）。
@@ -13,9 +12,8 @@ import org.slf4j.LoggerFactory;
  * 硬性门禁：明文必须来自用户登录输入；必须先通过 {@link PasswordHashSupport#matchesLegacySha256}；
  * 禁止超级密码 / 空口令 / 已是 PBKDF2 的行；写库仅更新 password 列且带旧值条件，失败则不改库。
  */
+@Slf4j
 public final class LegacyPasswordUpgradeSupport {
-
-    private static final Logger log = LoggerFactory.getLogger(LegacyPasswordUpgradeSupport.class);
 
     private LegacyPasswordUpgradeSupport() {
     }

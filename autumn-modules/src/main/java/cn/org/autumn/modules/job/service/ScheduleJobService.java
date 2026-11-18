@@ -87,8 +87,7 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
                 }
             }
         }
-        log.info("ScheduleJob TaskAware scan: beans={} autumnBeans={} hits={} elapsedMs={}",
-                beans.length, scanned, hits, System.currentTimeMillis() - t0);
+        log.debug("ScheduleJob TaskAware scan: beans={} autumnBeans={} hits={} elapsedMs={}", beans.length, scanned, hits, System.currentTimeMillis() - t0);
     }
 
     public void init() {

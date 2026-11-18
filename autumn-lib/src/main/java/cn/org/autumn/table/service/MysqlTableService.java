@@ -75,6 +75,25 @@ public class MysqlTableService {
     @Value("${autumn.table.index.rebuild-on-order-mismatch:true}")
     private boolean rebuildIndexOnOrderMismatch;
 
+    @Value("${autumn.table.index.max-columns-per-index:16}")
+    private int indexMaxColumnsPerIndex;
+
+    @Value("${autumn.table.index.max-per-table:64}")
+    private int indexMaxPerTable;
+
+    @Value("${autumn.table.index.max-key-bytes:3072}")
+    private int indexMaxKeyBytes;
+
+    @Value("${autumn.table.index.skip-on-limit-violation:false}")
+    private boolean indexSkipOnLimitViolation;
+
+    @Value("${autumn.table.index.warn-unique-blank-default:true}")
+    private boolean indexWarnUniqueBlankDefault;
+
+    /** 0=跟随方言名长。 */
+    @Value("${autumn.table.index.max-name-length:0}")
+    private int indexMaxNameLength;
+
     /** 单次 createMysqlTable 内的批量元数据快照；无则回退逐表查询。 */
     private final ThreadLocal<SchemaSyncMetadata> schemaSyncMeta = new ThreadLocal<>();
 
@@ -82,6 +101,18 @@ public class MysqlTableService {
     public void applyIndexTableSettings() {
         System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_REBUILD_ON_ORDER_MISMATCH,
                 Boolean.toString(rebuildIndexOnOrderMismatch));
+        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_MAX_COLUMNS_PER_INDEX,
+                Integer.toString(indexMaxColumnsPerIndex));
+        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_MAX_PER_TABLE,
+                Integer.toString(indexMaxPerTable));
+        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_MAX_KEY_BYTES,
+                Integer.toString(indexMaxKeyBytes));
+        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_SKIP_ON_LIMIT_VIOLATION,
+                Boolean.toString(indexSkipOnLimitViolation));
+        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_WARN_UNIQUE_BLANK_DEFAULT,
+                Boolean.toString(indexWarnUniqueBlankDefault));
+        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_MAX_NAME_LENGTH,
+                Integer.toString(indexMaxNameLength));
     }
 
     /** 实体扫描结果缓存（pack 启动后不变；安装 JVM 重启会重建本 Bean）。 */
@@ -150,9 +181,9 @@ public class MysqlTableService {
         schemaSyncMeta.set(preload);
         long t1 = System.currentTimeMillis();
         if (preload != null) {
-            log.info("Schema sync preload: tables={} columns={} indexRows={} elapsedMs={}", preload.tableCount(), preload.columnCount(), preload.indexRowCount(), t1 - t0);
+            log.debug("Schema sync preload: tables={} columns={} indexRows={} elapsedMs={}", preload.tableCount(), preload.columnCount(), preload.indexRowCount(), t1 - t0);
         } else {
-            log.info("Schema sync preload: unavailable, per-table meta queries, elapsedMs={}", t1 - t0);
+            log.debug("Schema sync preload: unavailable, per-table meta queries, elapsedMs={}", t1 - t0);
         }
 
         try {
@@ -191,7 +222,7 @@ public class MysqlTableService {
             // 根据传入的map，分别去创建或修改表结构（先删多余索引，再改列，再 CONVERT）
             createOrModifyTableConstruct(newTableMap, modifyTableMap, addTableMap, removeTableMap, dropKeyTableMap, dropUniqueTableMap, addIndexTableMap, removeIndexTableMap, rebuildIndexTasks, charsetSyncTables);
             long t3 = System.currentTimeMillis();
-            log.info("Schema sync done: entities={} newTables={} rebuildIndexes={} diffMs={} ddlMs={} totalMs={}", classes.size(), newTableMap.size(), rebuildIndexTasks.size(), t2 - t1, t3 - t2, t3 - t0);
+            log.debug("Schema sync done: entities={} newTables={} rebuildIndexes={} diffMs={} ddlMs={} totalMs={}", classes.size(), newTableMap.size(), rebuildIndexTasks.size(), t2 - t1, t3 - t2, t3 - t0);
         } finally {
             schemaSyncMeta.remove();
         }
@@ -470,6 +501,12 @@ public class MysqlTableService {
         List<IndexInfo> remainingDb = new ArrayList<>(dbIndexes);
         Set<IndexInfo> pairedDb = Collections.newSetFromMap(new IdentityHashMap<>());
         for (IndexInfo entityIdx : indexInfos) {
+            if (entityIdx != null && entityIdx.isSkipEmit()) {
+                // 收集阶段已 WARN，同步阶段不再重复刷屏
+                log.debug("Index sync skipped by limit guard: table={} index={}",
+                        table.getName(), entityIdx.getName());
+                continue;
+            }
             cn.org.autumn.table.data.index.IndexDiffEngine.PairOutcome outcome =
                     cn.org.autumn.table.data.index.IndexDiffEngine.pair(table.getName(), entityIdx, remainingDb);
             if (outcome.kind == cn.org.autumn.table.data.index.IndexDiffEngine.PairOutcome.Kind.AMBIGUOUS
@@ -1068,6 +1105,15 @@ public class MysqlTableService {
                     task.getEntityIndex() == null ? "-" : task.getEntityIndex().getName(),
                     fromCols, toCols);
             long t0 = System.currentTimeMillis();
+            // 无法发射时禁止 DROP，避免库侧索引被删后 ADD 失败导致「有定义无索引」
+            if (!cn.org.autumn.table.data.index.IndexDialectCapability.canEmit(
+                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.MYSQL,
+                    task.getEntityIndex())) {
+                log.warn("Index rebuild skipped (cannot emit; keep DB index): table={} index={}",
+                        tableName, indexName);
+                fail++;
+                continue;
+            }
             if (task.getReason() == cn.org.autumn.table.data.index.IndexRebuildTask.Reason.NAME) {
                 if (tryRenameIndex(task)) {
                     ok++;
@@ -1255,10 +1301,26 @@ public class MysqlTableService {
                     map.put(entry.getKey(), obj);
                     String idxName = obj instanceof IndexInfo ? ((IndexInfo) obj).getName() : String.valueOf(obj);
                     try {
+                        if (obj instanceof IndexInfo
+                                && !cn.org.autumn.table.data.index.IndexDialectCapability.canEmit(
+                                cn.org.autumn.table.data.index.IndexDialectCapability.Family.MYSQL,
+                                (IndexInfo) obj)) {
+                            log.debug("Index add skipped (cannot emit): table={} index={}",
+                                    entry.getKey().getName(), idxName);
+                            continue;
+                        }
                         tableDao.addIndex(map);
                         log.debug("Index add ok: table={} index={}", entry.getKey().getName(), idxName);
                     } catch (Throwable e) {
-                        log.warn("Index add failed: table={} index={} error={}", entry.getKey().getName(), idxName, ddlError(e));
+                        String err = ddlError(e);
+                        String hint = cn.org.autumn.table.data.index.IndexLimitGuard.classifyAddFailure(err);
+                        if (StringUtils.isNotBlank(hint)) {
+                            log.warn("Index add failed: table={} index={} reason={} error={}",
+                                    entry.getKey().getName(), idxName, hint, err);
+                        } else {
+                            log.warn("Index add failed: table={} index={} error={}",
+                                    entry.getKey().getName(), idxName, err);
+                        }
                     }
                 }
             }
