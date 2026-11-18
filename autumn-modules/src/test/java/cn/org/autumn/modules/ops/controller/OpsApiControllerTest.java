@@ -6,6 +6,7 @@ import cn.org.autumn.model.Response;
 import cn.org.autumn.model.SecurityOpsCertConfig;
 import cn.org.autumn.model.SecurityOpsConfig;
 import cn.org.autumn.modules.ops.service.OpsCertService;
+import cn.org.autumn.modules.ops.service.OpsRuntimeSnapshotService;
 import cn.org.autumn.modules.ops.service.OpsSessionService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
@@ -40,6 +41,7 @@ class OpsApiControllerTest {
     private IpWhiteService ipWhiteService;
     private IpBlackService ipBlackService;
     private AdminAccessGuard adminAccessGuard;
+    private OpsRuntimeSnapshotService opsRuntimeSnapshotService;
 
     @BeforeEach
     void setUp() {
@@ -51,6 +53,7 @@ class OpsApiControllerTest {
         ipWhiteService = mock(IpWhiteService.class);
         ipBlackService = mock(IpBlackService.class);
         adminAccessGuard = mock(AdminAccessGuard.class);
+        opsRuntimeSnapshotService = mock(OpsRuntimeSnapshotService.class);
         ReflectionTestUtils.setField(controller, "opsCertService", opsCertService);
         ReflectionTestUtils.setField(controller, "opsSessionService", opsSessionService);
         ReflectionTestUtils.setField(controller, "sysConfigService", sysConfigService);
@@ -58,6 +61,7 @@ class OpsApiControllerTest {
         ReflectionTestUtils.setField(controller, "ipWhiteService", ipWhiteService);
         ReflectionTestUtils.setField(controller, "ipBlackService", ipBlackService);
         ReflectionTestUtils.setField(controller, "adminAccessGuard", adminAccessGuard);
+        ReflectionTestUtils.setField(controller, "opsRuntimeSnapshotService", opsRuntimeSnapshotService);
     }
 
     @Test
@@ -109,6 +113,29 @@ class OpsApiControllerTest {
         assertFalse(res.getData().values().stream().anyMatch(v -> "SERVER_PRIV_MUST_NOT_LEAK".equals(String.valueOf(v))));
         verify(sysConfigService).saveSecurityOpsConfig(argThat(c -> c.isAdminIpEnable()));
         verify(ipAdminWhiteService).create(eq("198.51.100.20"), eq("ops-enroll"), anyString());
+    }
+
+    @Test
+    void runtimeSnapshot_requiresSession_andReturnsJvmSystem() {
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        AException missing = assertThrows(AException.class, () -> controller.runtimeSnapshot(req));
+        assertEquals(401, missing.getCode());
+
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+        Map<String, Object> snap = new HashMap<>();
+        snap.put("collectedAt", 1L);
+        snap.put("system", Map.of("available", true, "osName", "macOS"));
+        snap.put("jvm", Map.of("available", true, "threadLive", 10));
+        when(opsRuntimeSnapshotService.snapshot()).thenReturn(snap);
+
+        Response<Map<String, Object>> res = controller.runtimeSnapshot(req);
+        assertEquals(0, res.getCode());
+        assertTrue(res.getData().containsKey("system"));
+        assertTrue(res.getData().containsKey("jvm"));
+        verify(adminAccessGuard).auditWithIp(eq(req), eq("ops.runtime.snapshot"), contains("ops-cert"));
     }
 
     @Test

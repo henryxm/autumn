@@ -72,6 +72,7 @@
 - 响应：`count`、`page`、`limit`、`hasMore`、`list[]`（`ip` / `tag` / `description` / 状态字段 / `createTime` 毫秒时间戳）
 - `setForbidden` body：`ip` + `forbidden`∈{0,1}
 - `setAvailable` body：`ip` + `available`∈{0,1}（黑名单：**0=生效**）
+| `POST /ops/api/v1/runtime/snapshot` | session | 运行快照：`system`/`jvm`/`disk`/`database`/`firewall`/`traffic`/`redis`/`paths`（分段独立失败不影响整包） |
 | `POST /ops/api/v1/gate/get\|setAdminIpEnable\|verifyClearToken\|setClearToken` | session；关校验 / 改令牌须原 clearToken | `get` 含 `adminIpEnable` + `clearTokenConfigured`；未配置时 App 可 `setClearToken` 首次写入；已配置须 `oldClearToken`；空令牌时危险操作拒绝；`enroll`/`claim` 自动开管理IP |
 | `POST /ops/api/v1/cert/list\|revoke` | session | 多设备列表/吊销；`revoke` 响应含 `lastCert`（吊销后是否已无有效证） |
 | `POST /ops/api/v1/cert/issue` | session | 已登录设备签发一次性认领码（明文仅返回一次；落库 salt+hash，TTL≈30min） |

@@ -6,6 +6,7 @@ import cn.org.autumn.model.Response;
 import cn.org.autumn.model.SecurityOpsCertConfig;
 import cn.org.autumn.model.SecurityOpsConfig;
 import cn.org.autumn.modules.ops.service.OpsCertService;
+import cn.org.autumn.modules.ops.service.OpsRuntimeSnapshotService;
 import cn.org.autumn.modules.ops.service.OpsSessionService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
@@ -57,6 +58,9 @@ public class OpsApiController {
 
     @Autowired
     private AdminAccessGuard adminAccessGuard;
+
+    @Autowired
+    private OpsRuntimeSnapshotService opsRuntimeSnapshotService;
 
     @PostMapping("/probe")
     public Response<Map<String, Object>> probe(HttpServletRequest request) {
@@ -373,6 +377,18 @@ public class OpsApiController {
         data.put("adminIpEnable", sysConfigService.isAdminIpEnable());
         // 仅暴露是否已配置，不下发令牌明文
         data.put("clearTokenConfigured", clearTokenConfigured);
+        return Response.ok(data);
+    }
+
+    /**
+     * 运行状态快照：JVM/磁盘/库连接与表数/防火墙与攻击线索/访问与 Redis 等分段聚合。
+     */
+    @PostMapping("/runtime/snapshot")
+    public Response<Map<String, Object>> runtimeSnapshot(HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        Map<String, Object> data = opsRuntimeSnapshotService.snapshot();
+        adminAccessGuard.auditWithIp(request, "ops.runtime.snapshot",
+                "certId=" + session.getCertId());
         return Response.ok(data);
     }
 

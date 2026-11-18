@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.wall.service;
 
+import cn.org.autumn.modules.ops.service.OpsRuntimeTrafficCounter;
 import cn.org.autumn.modules.sys.entity.SysUserEntity;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.oauth.service.SecurityRequestService;
@@ -62,7 +63,13 @@ public class WallService {
     @Autowired
     JumpService jumpService;
 
+    @Autowired(required = false)
+    OpsRuntimeTrafficCounter opsRuntimeTrafficCounter;
+
     public boolean isEnabled(ServletRequest servletRequest, ServletResponse servletResponse, boolean counter, boolean shield) throws IOException {
+        if (opsRuntimeTrafficCounter != null) {
+            opsRuntimeTrafficCounter.record();
+        }
         if (!wallFactory.isOpen())
             return true;
         HttpServletRequest request = (HttpServletRequest) servletRequest;

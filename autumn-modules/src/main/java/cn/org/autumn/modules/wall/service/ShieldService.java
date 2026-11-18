@@ -220,4 +220,29 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
     public static synchronized void setAttack(boolean value) {
         attack = value;
     }
+
+    /** 当前 5 秒窗口内访问 IP 样本数（Shield 内存计数）。 */
+    public int getVisitWindowSize() {
+        return visit.size();
+    }
+
+    /** 攻击模式下放行 IP 集大小。 */
+    public int getAllowedIpSize() {
+        return ips.size();
+    }
+
+    /** 攻击模式放行 IP 样本（上限 {@code limit}）。 */
+    public List<String> getAllowedIpSample(int limit) {
+        if (ips.isEmpty() || limit <= 0) {
+            return Collections.emptyList();
+        }
+        List<String> out = new ArrayList<>();
+        for (String ip : ips) {
+            out.add(ip);
+            if (out.size() >= limit) {
+                break;
+            }
+        }
+        return out;
+    }
 }
