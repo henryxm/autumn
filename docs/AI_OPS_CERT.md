@@ -42,21 +42,78 @@
 | `ready` + 本地有证 | 可管理 | 进入该站管理页 |
 | `enrollAvailable=false` 且本地无证 | 需重置 | wall 重置或 DB 清理后再入驻 |
 
-## 4. API 一览
+## 4. 鉴权分层与 API 矩阵
 
-| Action | 鉴权 | 说明 |
-|--------|------|------|
-| `POST /ops/api/v1/probe` | Probe Token | 能力与入驻态 |
-| `POST /ops/api/v1/enroll` | body.`secret`=OpsEnroll | body.`clientPublicKey`；返回 `certId`/`siteId`/`serverPublicKey`；烧毁共享 enroll hash；**不下发私钥** |
-| `POST /ops/api/v1/challenge` | body.`certId` | `nonce`（TTL≈120s） |
-| `POST /ops/api/v1/session` | 签名 + AES 包裹 | 返回 `sessionId` |
-| `POST /ops/api/v1/adminip/list\|add\|remove\|setForbidden` | `X-Ops-Session` | 管理 IP（`wall_ip_admin_white`）；见下表 |
-| `POST /ops/api/v1/currentIp` | session | 当前访问 IP |
-| `POST /ops/api/v1/ipwhite/list\|add\|remove\|setForbidden` | session | 用户防火墙白名单（`wall_ip_white`）；见下表 |
-| `POST /ops/api/v1/ipblack/list\|add\|remove\|setAvailable` | session | 用户防火墙黑名单（`wall_ip_black`）；见下表 |
-| `POST /ops/api/v1/ipblack/firewallCount/get\|set` | session | 自动拉黑阈值（存于策略行 `0.0.0.0` 的 `count`；`set` body.`count`，下限 500） |
+### 4.0 威胁模型与横切
 
-### 4.1 三类 IP 列表与禁用
+| 层 | 机制 | 说明 |
+|----|------|------|
+| Shiro | `/ops/api/v1/**` = **`anon`** | 框架不拦；**真实鉴权在 `OpsApiController` / 服务层** |
+| 管理 IP 门禁 | `AdminAccessGuard` **豁免** `OpsApiController` | 门禁开启时 App 仍可靠证书会话加白（设计如此） |
+| Wall / Shield | **`/ops/api/v1` 未**列入 `isBypassUri` | 黑名单或攻击模式强校验仍可能拦住 ops（与「证书自救」冲突）→ 见 §4.5 残留风险 |
+| 传输 | **须 TLS** | 一期管理 API body 多为明文 JSON；`X-Ops-Session` 鉴权；开会话时协商 AES，**管理读写未强制 body 加密** |
+| CORS | Allow-Headers 默认**未**含 Probe/Session 头 | 原生 App 通常无感；Web 壳需网关补头 |
+
+**分层一览**
+
+| 层级 | 含义 | 允许泄露面 |
+|------|------|------------|
+| **T0** 发现 | 固定公开 Probe Token（源码/文档可知） | 协议能力位、`opsCert` 态、`siteId`/指纹摘要；**无私钥 / IP 名单 / runtime** |
+| **T1** 入驻 | 一次性 OpsEnroll / claimSecret | 服务端公钥与 `certId`；**永不下发任何私钥** |
+| **T2** 握手 | 有效证 + 私钥签名 | `nonce` / `sessionId` |
+| **T3** 管理 | `X-Ops-Session`（危险写 + clearToken） | IP 名单、门禁、证书列表、runtime 等 |
+| **T4** 破窗 | 超管登录 + clearToken（或 wall 同源） | 清证重置 |
+
+```text
+probe(T0) → enroll|claim(T1) → challenge → session(T2) → 管理 API(T3)
+                                                      ↘ 危险写 + clearToken
+reset / wall opscert/reset (T4，不依赖 ops session)
+```
+
+### 4.1 完整 API 鉴权矩阵（`POST /ops/api/v1/…`，共 29）
+
+列说明：**鉴权** = Controller/Service 实际校验；**附加** = clearToken 等；**敏感响应** = 须防经弱鉴权泄露；**结论** = 安全评审口径。
+
+| # | 路径 | 层级 | 鉴权（Helper） | 附加 | 敏感响应（摘要） | 风险 | 结论 |
+|---|------|------|----------------|------|------------------|------|------|
+| 1 | `/probe` | T0 | `assertProbe`（头 `X-Autumn-Ops-Probe: autumn-ops-probe`） | — | `autumn`/`protocolVersion`/`opsCert`/`adminIpEnable`/`enrollAvailable`/`siteId`/`serverFingerprint` | 指纹可被扫 | **允许「匿名」发现**（持公开 Probe Token）；**禁止**扩返回名单/路径/JVM/clients |
+| 2 | `/enroll` | T1 | body.`secret`=OpsEnroll + `clientPublicKey`（服务层） | 成功烧毁 enroll hash；自动开管理 IP + 认领当前 IP | `certId`/`siteId`/`serverPublicKey`/`serverFingerprint`/`adminIpEnable` | secret 泄露=可入驻 | **非匿名**；依赖日志口令熵；**不下发私钥** |
+| 3 | `/challenge` | T2 | 有效 `certId` | — | `nonce`/`expireSeconds` | 可探测证是否存在 | **持证前置**；certId 宜不可猜测；见 §4.5 |
+| 4 | `/session` | T2 | certId + nonce + 客户端私钥签名 + AES 经服务端公钥包裹 | — | `sessionId`/`expireAt` | 低（密码学绑定） | **证明持证**；换取会话头 |
+| 5 | `/adminip/list` | T3 | `requireOpsSession` | — | 管理 IP 分页列表 | 高 | **必须会话** |
+| 6 | `/adminip/add` | T3 | session | 可 `claimCurrent` | `ip`/成功标志 | 高 | **必须会话** |
+| 7 | `/adminip/remove` | T3 | session | 删**当前访问 IP** 时 `assertClearToken` | `ip` | 高 | 会话 + 条件 clearToken |
+| 8 | `/adminip/setForbidden` | T3 | session | — | 状态 | 高 | **必须会话** |
+| 9 | `/currentIp` | T3 | session | — | 当前访问 IP | 低 | **必须会话** |
+| 10 | `/ipwhite/list` | T3 | session | — | 用户白名单列表 | 中高 | **必须会话** |
+| 11 | `/ipwhite/add` | T3 | session | 可 `claimCurrent` | `ip` | 中高 | **必须会话** |
+| 12 | `/ipwhite/remove` | T3 | session | 删当前 IP 时 clearToken | `ip` | 中高 | 会话 + 条件 clearToken |
+| 13 | `/ipwhite/setForbidden` | T3 | session | — | 状态 | 中高 | **必须会话** |
+| 14 | `/ipblack/list` | T3 | session | — | 黑名单列表（不含 `0.0.0.0` 哨兵） | 中高 | **必须会话** |
+| 15 | `/ipblack/add` | T3 | session | 拒 `0.0.0.0` | `ip` | 中高 | **必须会话** |
+| 16 | `/ipblack/remove` | T3 | session | 拒删哨兵 | `ip` | 中高 | **必须会话** |
+| 17 | `/ipblack/setAvailable` | T3 | session | 拒哨兵 | `available`（0=生效） | 中高 | **必须会话** |
+| 18 | `/ipblack/firewallCount/get` | T3 | session | — | `firewallCount` | 中 | **必须会话** |
+| 19 | `/ipblack/firewallCount/set` | T3 | session | 下限 500 | `firewallCount` | 中 | **必须会话** |
+| 20 | `/gate/get` | T3 | session | — | `adminIpEnable`/`clearTokenConfigured`（布尔，**非明文**） | 低中 | **必须会话**；禁止下发 clearToken 明文 |
+| 21 | `/runtime/snapshot` | T3 | session | — | 主机/磁盘/库/路径/防火墙样本/Redis/访问量等 | **高** | **必须会话**；禁止降到 Probe |
+| 22 | `/gate/verifyClearToken` | T3 | session + `assertClearToken` | — | `valid` | 低（可爆破） | 会话 + 正确令牌 |
+| 23 | `/gate/setClearToken` | T3 | session | 已配置须 `oldClearToken`；首次可直接设 | `clearTokenConfigured`/`changed` | 中（首次抢注） | **必须会话**；见 §4.5 |
+| 24 | `/gate/setAdminIpEnable` | T3 | session | `enable=false` 须 clearToken | `adminIpEnable` | 高 | 关校验 = 会话 + clearToken |
+| 25 | `/cert/list` | T3 | session | — | 设备 `certId`/label/revoked/时间/`self`/`activeCount` | 中 | **必须会话** |
+| 26 | `/cert/issue` | T3 | session | — | **`claimSecret` 明文一次**、claimId、expiresAt | 高 | **必须会话**；仅展示一次；须 TLS |
+| 27 | `/cert/claim` | T1 | body.`claimSecret` + `clientPublicKey` | 成功同 enroll 自动开管理 IP | 同 enroll | 高（码泄露） | **非匿名**；单次消费 |
+| 28 | `/cert/revoke` | T3 | session | — | `success`/`lastCert` | 高 | **必须会话** |
+| 29 | `/reset` | T4 | `assertClearToken` + `requireSystemAdmin` | **不要** ops session | siteId/fingerprint/`enrollAvailable`/hint | 关键 | **超管登录 + clearToken**；防证丢死锁 |
+
+**浏览器 wall 旁路（非 App 通道，对照用）**
+
+| 路径 | 鉴权 | 说明 |
+|------|------|------|
+| `GET /wall/api/opscert/status` | `requireOps`（超管 + 可选管理 IP） | 证书态摘要 |
+| `POST /wall/api/opscert/reset` | 超管 | 等同清证重生（日志新 OpsEnroll） |
+
+### 4.2 三类 IP 列表与禁用
 
 | 表 | 接口前缀 | 状态字段 | 语义 | 危险操作 |
 |----|----------|----------|------|----------|
@@ -72,16 +129,38 @@
 - 响应：`count`、`page`、`limit`、`hasMore`、`list[]`（`ip` / `tag` / `description` / 状态字段 / `createTime` 毫秒时间戳）
 - `setForbidden` body：`ip` + `forbidden`∈{0,1}
 - `setAvailable` body：`ip` + `available`∈{0,1}（黑名单：**0=生效**）
-| `POST /ops/api/v1/runtime/snapshot` | session | 运行快照：`system`/`jvm`/`disk`/`database`/`firewall`/`traffic`/`redis`/`paths`（分段独立失败不影响整包） |
-| `POST /ops/api/v1/gate/get\|setAdminIpEnable\|verifyClearToken\|setClearToken` | session；关校验 / 改令牌须原 clearToken | `get` 含 `adminIpEnable` + `clearTokenConfigured`；未配置时 App 可 `setClearToken` 首次写入；已配置须 `oldClearToken`；空令牌时危险操作拒绝；`enroll`/`claim` 自动开管理IP |
-| `POST /ops/api/v1/cert/list\|revoke` | session | 多设备列表/吊销；`revoke` 响应含 `lastCert`（吊销后是否已无有效证） |
-| `POST /ops/api/v1/cert/issue` | session | 已登录设备签发一次性认领码（明文仅返回一次；落库 salt+hash，TTL≈30min） |
-| `POST /ops/api/v1/cert/claim` | body.`claimSecret` | 新设备本地生成 RSA → 提交公钥认领；返回同 enroll（**不下发私钥**） |
-| `POST /ops/api/v1/reset` | 超管登录 + `clearToken` | 清客户端、清 pendingClaims、清服务端钥、重发 OpsEnroll（RSA 延后到下次 enroll） |
 
-Shiro：`/ops/api/v1/**` = `anon`。`AdminAccessGuard` 豁免 `OpsApiController`。  
-Wall：`GET /wall/api/opscert/status`、`POST /wall/api/opscert/reset`。
+### 4.3 敏感数据与禁止项
 
+| 通道 | **允许**返回 | **禁止**返回 / 行为 |
+|------|--------------|---------------------|
+| T0 `probe` | 能力位、入驻态、`siteId`、指纹摘要、`adminIpEnable` | 私钥、`clients[]` 明细、任一类 IP 名单、clearToken 明文、runtime/JDBC 密码、磁盘路径细节 |
+| T1 enroll/claim | 服务端**公钥**、`certId`、指纹、`adminIpEnable` | 服务端/客户端**私钥**；不得在错误响应中区分「口令格式」与「口令正确但其它失败」到可利用程度以外的额外材料 |
+| T2 challenge/session | nonce、sessionId、过期 | 名单 / runtime |
+| T3 session 管理 | 名单、门禁布尔、证书元数据、runtime 分段、一次性 `claimSecret` | clearToken **明文**；不得把 session API 改成仅 Probe Token |
+| T4 reset | 重置后 siteId/指纹/enroll 可用提示 | 新 OpsEnroll **明文只进服务器日志**，不进 API body |
+
+部署：**禁止**对公网以明文 HTTP 暴露 `/ops/api/v1`。会话只授权运维名单 / 门禁 / 证书 / runtime，**不做**任意 gen CRUD。
+
+### 4.4 错误码（鉴权相关）
+
+| 场景 | 码 |
+|------|-----|
+| Probe Token / 入驻口令 / 签名 / 认领码失败 | 403 |
+| 缺 `X-Ops-Session` / 会话过期 | 401 |
+| 参数缺失 | 400 |
+
+### 4.5 残留风险（接受或后续加固）
+
+| 风险 | 现状 | 处理 |
+|------|------|------|
+| 固定公开 Probe Token | 文档/源码可知 | **接受**（发现必需）；严格限制 probe 响应面（§4.3） |
+| `challenge` 可探测 certId 是否存在 | 无效证 → 403 | **接受**（依赖 UUID 熵）；后续可统一错误文案 / 限速 |
+| Wall/Shield 仍拦 ops | 未 bypass | **文档标明**；黑名单自救可能失败 → 后续评估将 `/ops/api/v1/**` 加入旁路或对有效 Session 放行 |
+| 无 Redis 多节点会话 | 内存会话 | 需 LB 粘性；入驻验密不依赖粘性 |
+| 持 session 设备失窃 | 可改名单/发认领码/拉 runtime | 吊销证、短会话 TTL；运维设备须保护 |
+| 首次 `setClearToken` 可抢注 | 未配置时可直接写入 | 审计；后续可加 enroll 后短窗 |
+| 一期 body 明文 | 依赖 TLS | **接受**于内网/HTTPS；公网必须 TLS |
 ## 5. 完整交互时序
 
 1. App 多站点列表 → 添加标题 + Base URL → **自动 probe**。
@@ -111,15 +190,11 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 2. **同证备份/迁移**：App 口令导出**同一**客户端私钥包并在另一设备导入（共享同一 `certId`；适合备份，不适合作为「给同事单独一台机」的主路径）。
 3. **唯一设备丢失 / 全部吊销**：走 §5.1 wall 重置或 DB 清空后再 `OpsEnroll` 入驻。
 
-## 6. 错误与安全
+## 6. 错误与安全（摘要）
 
-| 场景 | 码 |
-|------|-----|
-| Probe/入驻/签名失败 | 403 |
-| 缺会话 / 会话过期 | 401 |
-| 参数缺失 | 400 |
+鉴权分层、完整矩阵、敏感禁止项与残留风险见 **§4**（以 §4.1 / §4.3 / §4.5 为准）。
 
-- 会话只授权运维白名单 / 用户防火墙名单 / 门禁开关 / 证书吊销，**不做**任意 gen CRUD。
+- 错误码见 §4.4。
 - 关 `adminIpEnable`、删除「当前访问 IP」的管理/用户白名单均须 `clearToken`（与 wall 对齐）。
 - 无 Redis 的多节点：会话阶段需 LB 粘性；**入驻验密不依赖粘性**（共享 hash）。
 - 服务端 RSA **不在启动时生成**；仅在 OpsEnroll secret 校验成功后「空则写」。
@@ -136,6 +211,7 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 ## 8. 联调清单
 
 - [ ] probe → pending/ready；错误站「不兼容」
+- [ ] **无** Probe 头调 probe → 403；**仅** Probe 头调 `adminip/list` / `runtime/snapshot` → **401**（缺会话）
 - [ ] OpsEnroll 仅成功一次；响应无私钥
 - [ ] 双节点同一 OpsEnroll 均可 enroll；fingerprint/clients 一致
 - [ ] session → claimCurrent → wall 可见管理 IP
@@ -144,3 +220,4 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 - [ ] 吊销最后一张有效证响应 `lastCert=true`
 - [ ] `/rsa/api/v1` 与账号密码登录回归
 - [ ] wall bootstrap / clearToken 解锁仍可用
+- [ ] （现状记录）客户端 IP 在用户黑名单时：`/ops/api/v1/probe` 与 session 是否被 Wall 拦截（见 §4.5）

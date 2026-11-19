@@ -38,7 +38,7 @@
 - **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**：**3.0.0 安全加固兼容性与回滚**（口令/Token 双读、破坏性变更清单 C-xx/D-xx、配置开关、回归与回滚）
 - **`docs/AI_ADMIN_ACCESS_MATRIX.md`**：**管理访问权限矩阵**（L0–L3 分层、API/页面强制对照表、判定顺序、常量集、业务三步判定卡；对齐 C-20/C-22/C-23）
 - **`docs/AI_ADMIN_IP_BIZ.md`**：**业务仓管理 IP 门禁接入**（非 `cn.org.autumn.modules` 前缀：模式 A 标准包 / B `managedModules` / C 薄切面委托 `enforceAdminIpApiIfRequired`；对齐 C-20；矩阵见 AI_ADMIN_ACCESS_MATRIX）
-- **`docs/AI_OPS_CERT.md`**：**运维双边 RSA 证书通道**（`/ops/api/v1` probe/enroll/session、OpsEnroll、管理 IP/gate；与 `/rsa/api/v1` 隔离；客户端独立仓 `autumn-app`）
+- **`docs/AI_OPS_CERT.md`**：**运维双边 RSA 证书通道**（`/ops/api/v1`；**§4 鉴权矩阵** T0–T4：probe 匿名 / 入驻口令 / 证书会话 / 超管重置；敏感禁止项；与 `/rsa/api/v1` 隔离；客户端独立仓 `autumn-app`）
 - `docs/AI_CODEGEN.md`：**生成链路与三步流程**（纪律回链 **STANDARDS §11**；基类缓存/队列详解）
 - `docs/AI_TEMPLATES.md`：模块任务模板库
 - `docs/AI_GOVERNANCE.md`：治理协作、术语、维护口径
