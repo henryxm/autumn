@@ -638,6 +638,7 @@ public class AdminAccessGuard {
                 || "AdminBootstrapController".equals(simple)
                 || "WallController".equals(simple)
                 || "OpsApiController".equals(simple)
+                || "OpsDiscoverController".equals(simple)
                 || "SpmController".equals(simple)) {
             return true;
         }

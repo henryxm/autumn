@@ -31,6 +31,14 @@
 - 响应：`autumn=true`、`protocolVersion=1`、`opsCert`=`none|pending|ready`、`adminIpEnable`、`enrollAvailable`、`siteId`、`serverFingerprint`
 - 无密钥材料；错误 Token → 403
 
+### 3.0 发现 URL（分享 / 扫码）
+
+- 规范形态：`{baseUrl}/ops/discover`（由站点 baseUrl **动态拼接**，**不含** OpsEnroll / 分享口令 / 私钥）
+- `GET /ops/discover`：匿名 HTML 落地页（提示用超然信打开；可展示 `siteId` / 指纹摘要，**禁止**密钥）
+- Shiro：`/ops/discover` = `anon`；管理 IP 门禁豁免 `OpsDiscoverController`
+- App：拦截该 path（或 `crchat://vc/autumnops?base=`）→ 剥离 baseUrl → 本地 `POST …/probe`；不依赖落地页内容
+- 等价标记（客户端）：`?autumn_ops=1` / `#autumn_ops`（可选）
+
 ### 3.1 客户端探测结果矩阵
 
 | 结果 | 判定 | 用户文案 |
