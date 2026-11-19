@@ -200,10 +200,10 @@ reset / wall opscert/reset (T4，不依赖 ops session)
 UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CONFIG';
 ```
 
-### 5.2 多设备
+### 5.2 多设备与密钥共享
 
 1. **推荐（独立密钥）**：已登录设备 `POST /ops/api/v1/cert/issue` → 将 `claimSecret` 分享给新设备 → 新设备本地生成 RSA → `POST /ops/api/v1/cert/claim`。每台设备各自 `certId`，可单独吊销。
-2. **同证备份/迁移**：App 口令导出**同一**客户端私钥包并在另一设备导入（共享同一 `certId`；适合备份，不适合作为「给同事单独一台机」的主路径）。
+2. **同证共享（IM）**：超然信会话发送 **`AutumnOps`** 消息（口令包裹同一客户端私钥包 + 站点元数据；分享口令不当场写入消息）。对端按 `Data.type` 打开运维 Gate 导入（共享同一 `certId`）。协议见 IM [`IM_CLIENT_AUTUMN_OPS.md`](../im/docs/IM_CLIENT_AUTUMN_OPS.md)。**禁止**用 `LocalFile` / 文件后缀作为运维入口。
 3. **唯一设备丢失 / 全部吊销**：走 §5.1 wall 重置或 DB 清空后再 `OpsEnroll` 入驻。
 
 ## 6. 错误与安全（摘要）
@@ -218,10 +218,10 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 ## 7. 客户端
 
 - **真源**：独立仓 [`autumn-app`](https://git.minclouds.com/henryxm/autumn-app.git)（本地常并列于 `../autumn-app`）
-  - `packages/autumn_ops` — 协议 lib（probe/enroll/session/adminip/gate/ipwhite/ipblack）
-  - `packages/autumn_ops_ui` — Material 多站点列表/添加/管理
+  - `packages/autumn_ops` — 协议 lib（probe/enroll/session/adminip/gate/ipwhite/ipblack、`AutumnOpsPayload`）
+  - `packages/autumn_ops_ui` — Material 多站点列表/添加/管理 / Gate
   - `shell` — 独立 Flutter 启动壳（打包运行）
-- 超然信 / XSign / XSVideo **暂不内嵌**运维客户端；运维使用独立壳。
+- **超然信 Flutter**：挂载 `AutumnOpsHost`；会话内运维密钥共享走 IM **`AutumnOps`**（见 IM `IM_CLIENT_AUTUMN_OPS.md`）；发现 URL / VC 进 Gate。
 - 协议字段以本文为准。
 
 ## 8. 联调清单
