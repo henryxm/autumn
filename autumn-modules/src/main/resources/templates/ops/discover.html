@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title><#if siteName?? && siteName?has_content>${siteName?html} · 超然信<#else>超然信</#if></title>
+  <link rel="icon" type="image/png" href="${request.contextPath}/statics/img/chaoranxin-app-icon.png"/>
+  <link rel="apple-touch-icon" href="${request.contextPath}/statics/img/chaoranxin-app-icon.png"/>
+  <style>
+    :root {
+      --ink: #14212b;
+      --muted: #5a6b78;
+      --line: #d7e0e8;
+      --sand: #f3f6f8;
+      --paper: #ffffff;
+      --accent: #0f6e56;
+      --accent-hover: #0b5744;
+      --accent-soft: #e6f4ef;
+      --ops: #1a4f7a;
+      --ops-soft: #e8f1f8;
+      --dl: #0f6e56;
+      --dl-soft: #e6f4ef;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 480px at 12% -10%, #e8f2ee 0%, transparent 55%),
+        radial-gradient(900px 420px at 100% 0%, #eef3f7 0%, transparent 50%),
+        var(--sand);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 40px 22px 48px;
+    }
+    .brand {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .brand-logo {
+      width: 88px;
+      height: 88px;
+      object-fit: contain;
+      margin: 0 auto 16px;
+      display: block;
+      box-shadow: 0 10px 28px rgba(20, 33, 43, 0.14);
+    }
+    .brand h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4.8vw, 2.75rem);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      line-height: 1.15;
+    }
+    .brand .lead {
+      margin: 0 auto;
+      max-width: 36em;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+    .why {
+      margin: 0 auto 28px;
+      max-width: 720px;
+      text-align: center;
+    }
+    .why h2 {
+      margin: 0 0 10px;
+      font-size: 1.15rem;
+      font-weight: 650;
+    }
+    .why p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 0.98rem;
+    }
+    .why ul {
+      list-style: none;
+      margin: 16px 0 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      text-align: left;
+    }
+    .why li {
+      padding: 14px 14px 16px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .why li strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+      color: var(--ink);
+    }
+    .why li span {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.55;
+    }
+    .tracks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: stretch;
+      margin-top: 8px;
+    }
+    .track {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 22px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+    .track-ops { box-shadow: 0 0 0 1px rgba(26, 79, 122, 0.04); }
+    .track-dl { box-shadow: 0 0 0 1px rgba(15, 110, 86, 0.04); }
+    .track-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+    .track-ops .track-badge { background: var(--ops-soft); color: var(--ops); }
+    .track-dl .track-badge { background: var(--dl-soft); color: var(--dl); }
+    .track h2 {
+      margin: 0 0 8px;
+      font-size: 1.28rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .track .intro {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.65;
+      flex: 0 0 auto;
+    }
+    .qr-block {
+      text-align: center;
+      margin: 0 0 16px;
+    }
+    .qr-box {
+      width: 168px;
+      height: 168px;
+      margin: 0 auto 12px;
+      padding: 10px;
+      background: var(--sand);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-box canvas, .qr-box img, .qr-box table {
+      max-width: 100%;
+      height: auto;
+    }
+    .qr-caption {
+      margin: 0;
+      font-size: 0.88rem;
+      font-weight: 650;
+      color: var(--ink);
+    }
+    .qr-hint {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .steps {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: step;
+    }
+    .steps li {
+      position: relative;
+      padding: 10px 0 10px 36px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+    .steps li:first-child { border-top: none; }
+    .steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 11px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .track-ops .steps li::before { background: var(--ops); }
+    .track-dl .steps li::before { background: var(--dl); }
+    .steps li strong { color: var(--ink); font-weight: 650; }
+    .track-actions {
+      margin-top: auto;
+      padding-top: 16px;
+      text-align: center;
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 22px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: background .15s ease, color .15s ease, border-color .15s ease;
+      border: 1px solid transparent;
+    }
+    .btn-ops {
+      background: var(--ops);
+      color: #fff;
+    }
+    .btn-ops:hover { background: #153f63; }
+    .btn-dl {
+      background: var(--dl);
+      color: #fff;
+    }
+    .btn-dl:hover { background: var(--accent-hover); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--dl);
+      border-color: rgba(15, 110, 86, 0.35);
+      margin-left: 8px;
+    }
+    .btn-ghost:hover {
+      background: var(--dl-soft);
+    }
+    .stores {
+      list-style: none;
+      margin: 12px 0 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px 14px;
+    }
+    .stores a {
+      color: var(--dl);
+      text-decoration: none;
+      font-size: 0.86rem;
+      border-bottom: 1px solid transparent;
+    }
+    .stores a:hover { border-bottom-color: var(--dl); }
+    .flow {
+      margin-top: 28px;
+      padding: 22px 20px;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+    .flow h2 {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 1.12rem;
+      font-weight: 650;
+    }
+    .flow > p {
+      margin: 0 auto 16px;
+      text-align: center;
+      max-width: 40em;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .flow-item {
+      padding: 14px 12px;
+      border-radius: 12px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      text-align: center;
+    }
+    .flow-item .n {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .flow-item h3 {
+      margin: 0 0 6px;
+      font-size: 0.92rem;
+      font-weight: 650;
+    }
+    .flow-item p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+    .note {
+      margin-top: 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+    }
+    .foot {
+      margin-top: 36px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+    }
+    @media (max-width: 820px) {
+      .why ul { grid-template-columns: 1fr; }
+      .tracks { grid-template-columns: 1fr; }
+      .flow-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      .wrap { padding: 28px 16px 36px; }
+      .flow-grid { grid-template-columns: 1fr; }
+      .btn-ghost { display: inline-block; margin: 10px 0 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="brand">
+      <#if logoUrl?? && logoUrl?has_content>
+      <img class="brand-logo" src="${logoUrl?html}" alt="超然信" width="88" height="88"/>
+      <#else>
+      <img class="brand-logo" src="${request.contextPath}/statics/img/chaoranxin-app-icon.png" alt="超然信" width="88" height="88"/>
+      </#if>
+      <h1>超然信</h1>
+      <p class="lead">在手机上管理本站运维。安装超然信后，扫一扫或打开本页，即可添加站点并开始使用。</p>
+    </header>
+
+    <section class="why" aria-labelledby="why-title">
+      <h2 id="why-title">超然信能为你做什么？</h2>
+      <p>网页只能帮你了解步骤；真正添加站点、完成绑定和日常运维，都在超然信 App 里完成，随时随身可用。</p>
+      <ul>
+        <li>
+          <strong>随身管站点</strong>
+          <span>用手机随时查看并管理本站运维，出门也能处理。</span>
+        </li>
+        <li>
+          <strong>多站统一管理</strong>
+          <span>一台手机可添加多个站点，按站点分别管理，互不干扰。</span>
+        </li>
+        <li>
+          <strong>分工更清晰</strong>
+          <span>超然信负责运维连接与授权；日常后台菜单仍用账号密码登录。</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="tracks" aria-label="站点运维与超然信下载">
+      <#-- 左：站点运维；右：超然信下载 — 并重 -->
+      <article class="track track-ops" id="ops">
+        <span class="track-badge">站点运维</span>
+        <h2>连接并管理本站</h2>
+        <p class="intro">已经装好超然信？用 App 扫下方「运维码」，或把本页链接发到手机并用超然信打开，即可自动识别本站并进入管理引导。</p>
+        <#if (adminDiscoverPreview?? && adminDiscoverPreview) && (publicDiscoverEnabled?? && !publicDiscoverEnabled)>
+        <p class="intro" style="color:#8a4b08;background:#fff7e8;border:1px solid #f0d9a8;border-radius:10px;padding:10px 12px;">
+          公网发现页当前已关闭：浏览器访问该链接将得到 404。下方二维码仅供后台预览；对外分享前请先在超然信中重新打开发现页。
+        </p>
+        </#if>
+        <div class="qr-block">
+          <div id="qr-ops" class="qr-box" data-url="${(discoverAbsoluteUrl!'')?html}"></div>
+          <p class="qr-caption">扫码打开运维</p>
+          <p class="qr-hint">用超然信扫一扫，一键进入本站管理</p>
+        </div>
+        <ol class="steps">
+          <li>打开超然信，点<strong>扫一扫</strong>对准「运维码」；也可以把本页链接发到手机，用超然信打开。</li>
+          <li>App 会自动识别本站：首次使用会引导你添加站点；以前添加过则可直接进入管理。</li>
+          <li>第一次绑定时，到本站后台按提示复制<strong>入驻口令</strong>，粘贴到超然信中完成绑定。</li>
+          <li>绑定成功后，即可在超然信里管理本站运维；日常后台功能仍用账号密码登录网站。</li>
+        </ol>
+        <div class="track-actions">
+          <a class="btn btn-ops" href="${(discoverAbsoluteUrl!'')?html}">复制本页链接</a>
+        </div>
+      </article>
+
+      <article class="track track-dl" id="download">
+        <span class="track-badge">超然信下载</span>
+        <h2>安装超然信</h2>
+        <p class="intro">还没有安装？先下载超然信。支持 iOS、Android、鸿蒙等；也可扫安装码打开官网，再到应用市场搜索「超然信」。</p>
+        <div class="qr-block">
+          <div id="qr-install" class="qr-box" data-url="${(installQrUrl!'')?html}"></div>
+          <p class="qr-caption">扫码安装</p>
+          <p class="qr-hint">扫码打开官网，再到应用市场安装</p>
+        </div>
+        <ol class="steps">
+          <li>用手机扫「安装码」，或点下方按钮打开<strong>超然信官网</strong>。</li>
+          <li>在应用市场搜索「<strong>超然信</strong>」并安装（如华为、应用宝、App Store 等）。</li>
+          <li>装好后回到本页，用左侧「运维码」扫一扫，添加并管理本站。</li>
+          <li>之后也可以在聊天里打开运维相关消息，或从收藏入口再次进入管理。</li>
+        </ol>
+        <div class="track-actions">
+          <a class="btn btn-dl" href="${(officialUrl!'https://chaoran.xin/')?html}" target="_blank" rel="noopener noreferrer">访问超然信官网</a>
+          <#if storeLinks?? && (storeLinks?size > 0)>
+          <a class="btn btn-ghost" href="#stores">应用市场链接</a>
+          </#if>
+        </div>
+        <#if storeLinks?? && (storeLinks?size > 0)>
+        <ul class="stores" id="stores">
+          <#list storeLinks as link>
+          <li>
+            <a href="${(link.url!'')?html}" target="_blank" rel="noopener noreferrer">${(link.name!'')?html}</a>
+          </li>
+          </#list>
+        </ul>
+        </#if>
+      </article>
+    </section>
+
+    <section class="flow" aria-labelledby="flow-title">
+      <h2 id="flow-title">怎么开始用？</h2>
+      <p>按下面四步，从安装到日常管理，几分钟就能上手。</p>
+      <div class="flow-grid">
+        <div class="flow-item">
+          <div class="n">1</div>
+          <h3>安装超然信</h3>
+          <p>扫右侧安装码，或到应用市场搜索下载</p>
+        </div>
+        <div class="flow-item">
+          <div class="n">2</div>
+          <h3>扫运维码</h3>
+          <p>用超然信扫左侧二维码，添加本站</p>
+        </div>
+        <div class="flow-item">
+          <div class="n">3</div>
+          <h3>完成绑定</h3>
+          <p>按 App 提示，粘贴后台给出的入驻口令</p>
+        </div>
+        <div class="flow-item">
+          <div class="n">4</div>
+          <h3>开始管理</h3>
+          <p>在超然信里管运维；网站后台仍用账号登录</p>
+        </div>
+      </div>
+      <p class="note">换手机时，可在超然信中导出 / 导入运维资料，继续管理已添加的站点。</p>
+    </section>
+
+    <footer class="foot">
+      <#if siteName?? && siteName?has_content>
+      <p>本服务由 ${siteName?html} 提供</p>
+      </#if>
+      <p>© 超然信</p>
+    </footer>
+  </main>
+
+  <script src="${request.contextPath}/statics/plugins/qrcode/qrcode.min.js"></script>
+  <script>
+    (function () {
+      function render(id) {
+        var el = document.getElementById(id);
+        if (!el || typeof QRCode === 'undefined') return;
+        var url = el.getAttribute('data-url') || '';
+        if (!url) return;
+        el.innerHTML = '';
+        new QRCode(el, {
+          text: url,
+          width: 148,
+          height: 148,
+          colorDark: '#14212b',
+          colorLight: '#f3f6f8',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+      render('qr-install');
+      render('qr-ops');
+
+      // 「复制本页运维入口」：拦截默认跳转，优先复制链接
+      var opsBtn = document.querySelector('.btn-ops');
+      if (opsBtn) {
+        opsBtn.addEventListener('click', function (e) {
+          var href = opsBtn.getAttribute('href') || '';
+          if (!href || !navigator.clipboard || !navigator.clipboard.writeText) return;
+          e.preventDefault();
+          navigator.clipboard.writeText(href).then(function () {
+            var old = opsBtn.textContent;
+            opsBtn.textContent = '已复制本页链接';
+            setTimeout(function () { opsBtn.textContent = old; }, 1600);
+          }).catch(function () {
+            window.location.href = href;
+          });
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

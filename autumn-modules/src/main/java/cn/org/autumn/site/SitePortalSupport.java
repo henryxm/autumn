@@ -5,12 +5,16 @@ import cn.org.autumn.model.ComplianceFilingType;
 import cn.org.autumn.model.SiteFilingView;
 import cn.org.autumn.model.SiteLegalLinksView;
 import cn.org.autumn.model.SitePortalBranding;
+import cn.org.autumn.model.SitePortalChaoranxin;
 import cn.org.autumn.model.SitePortalConfig;
 import cn.org.autumn.model.SitePortalLegalLinks;
 import cn.org.autumn.model.SitePortalMeta;
+import cn.org.autumn.model.SitePortalStoreLink;
 import cn.org.autumn.modules.sys.entity.LoadingTheme;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.utils.WebPathUtils;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +97,39 @@ public class SitePortalSupport {
 
     public static boolean isShellPortalView(String viewName) {
         String v = normalizeViewName(viewName);
-        return "index".equals(v) || "index1".equals(v) || "main".equals(v);
+        return "index".equals(v) || "index1".equals(v) || "main".equals(v) || "ops/discover".equals(v);
+    }
+
+    /**
+     * 超然信公开落地页（{@code /ops/discover} 与后台 {@code main.html} 同源）。
+     * 仅注入公开字段，不含 ops 证书 / siteId / 指纹。
+     */
+    public void applyDiscoverPublicModel(HttpServletRequest request, Model model) {
+        if (model == null) {
+            return;
+        }
+        SitePortalConfig config = sysConfigService.getSitePortalConfig();
+        SitePortalBranding branding = resolveBranding(config);
+        String logoUrl = branding.getLogoUrl();
+        if (StringUtils.isNotBlank(logoUrl)) {
+            logoUrl = resolveUrl(request, logoUrl);
+        }
+        String siteName = StringUtils.defaultIfBlank(branding.getSiteName(), sysConfigService.getLoadingBrand());
+        model.addAttribute("siteName", StringUtils.defaultString(siteName));
+        model.addAttribute("logoUrl", StringUtils.defaultString(logoUrl));
+
+        SitePortalChaoranxin cx = config.getChaoranxin() == null ? new SitePortalChaoranxin() : config.getChaoranxin();
+        String officialUrl = StringUtils.defaultIfBlank(cx.getOfficialUrl(), SitePortalChaoranxin.DEFAULT_OFFICIAL_URL);
+        String installQrUrl = StringUtils.defaultIfBlank(cx.getInstallQrUrl(), officialUrl);
+        model.addAttribute("officialUrl", officialUrl);
+        model.addAttribute("installQrUrl", installQrUrl);
+        model.addAttribute(
+                "discoverAbsoluteUrl",
+                WebPathUtils.absoluteUrl(request, "/ops/discover", sysConfigService.isSsl()));
+        List<SitePortalStoreLink> storeLinks = cx.getStoreLinks();
+        model.addAttribute(
+                "storeLinks",
+                storeLinks == null || storeLinks.isEmpty() ? Collections.emptyList() : storeLinks);
     }
 
     private static String normalizeViewName(String viewName) {

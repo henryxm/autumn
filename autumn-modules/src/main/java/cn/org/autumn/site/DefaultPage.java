@@ -1,6 +1,7 @@
 package cn.org.autumn.site;
 
 import cn.org.autumn.config.PageHandler;
+import cn.org.autumn.modules.ops.service.OpsDiscoverSupport;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.utils.WebPathUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,9 @@ public class DefaultPage implements PageHandler {
 
     @Autowired
     SitePortalSupport sitePortalSupport;
+
+    @Autowired
+    OpsDiscoverSupport opsDiscoverSupport;
 
     @Override
     public String login(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
@@ -128,8 +132,7 @@ public class DefaultPage implements PageHandler {
 
     @Override
     public String main(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Model model) {
-        sitePortalSupport.applyToModel(httpServletRequest, model);
-        return "main";
+        return opsDiscoverSupport.resolveAdminDiscoverView(httpServletRequest, model);
     }
 
     @Override

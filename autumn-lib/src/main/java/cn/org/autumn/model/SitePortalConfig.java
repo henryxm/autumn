@@ -32,6 +32,7 @@ public class SitePortalConfig implements Serializable {
     private SitePortalMeta meta = new SitePortalMeta();
     private SitePortalLegalLinks legalLinks = new SitePortalLegalLinks();
     private List<ComplianceFilingItem> filings = new ArrayList<>();
+    private SitePortalChaoranxin chaoranxin = new SitePortalChaoranxin();
 
     public List<String> validateAndFix() {
         List<String> fixes = new ArrayList<>();
@@ -46,6 +47,9 @@ public class SitePortalConfig implements Serializable {
         }
         if (filings == null) {
             filings = new ArrayList<>();
+        }
+        if (chaoranxin == null) {
+            chaoranxin = new SitePortalChaoranxin();
         }
         branding.setSiteName(trimToEmpty(branding.getSiteName()));
         branding.setTagline(trimToEmpty(branding.getTagline()));
@@ -82,6 +86,33 @@ public class SitePortalConfig implements Serializable {
             cleaned.add(item);
         }
         filings = cleaned;
+
+        chaoranxin.setOfficialUrl(normalizeLinkUrl(
+                chaoranxin.getOfficialUrl(),
+                SitePortalChaoranxin.DEFAULT_OFFICIAL_URL,
+                fixes,
+                "超然信官网链接无效，已恢复默认"));
+        String installQr = normalizeOptionalLinkUrl(
+                chaoranxin.getInstallQrUrl(), fixes, "安装二维码链接无效，已清空");
+        chaoranxin.setInstallQrUrl(installQr);
+        List<SitePortalStoreLink> stores = new ArrayList<>();
+        if (chaoranxin.getStoreLinks() != null) {
+            for (SitePortalStoreLink link : chaoranxin.getStoreLinks()) {
+                if (link == null) {
+                    continue;
+                }
+                String name = trimToEmpty(link.getName());
+                String url = normalizeOptionalLinkUrl(link.getUrl(), fixes, "应用市场链接无效，已丢弃");
+                if (StringUtils.isBlank(name) || StringUtils.isBlank(url)) {
+                    continue;
+                }
+                SitePortalStoreLink cleanedLink = new SitePortalStoreLink();
+                cleanedLink.setName(name);
+                cleanedLink.setUrl(url);
+                stores.add(cleanedLink);
+            }
+        }
+        chaoranxin.setStoreLinks(stores);
         return fixes;
     }
 

@@ -145,6 +145,12 @@ var vm = new Vue({
                         $(this).on('click', function () {
                             var $a = $(this).children('a');
                             var href = $a.data('url');
+                            if (href && (href.indexOf('http://') === 0 || href.indexOf('https://') === 0 || href.charAt(0) === '/')) {
+                                var ctx = (typeof window.__AUTUMN_CTX__ === 'string') ? window.__AUTUMN_CTX__ : '';
+                                var target = (href.indexOf('http') === 0) ? href : ((ctx || '') + href);
+                                window.open(target, '_blank');
+                                return;
+                            }
                             var icon = $a.children('i:first').data('icon');
                             var title = $a.children('span').text();
                             var data = {
@@ -160,6 +166,12 @@ var vm = new Vue({
                     $this.on('click', function () {
                         var $a = $(this).children('a');
                         var href = $a.data('url');
+                        if (href && (href.indexOf('http://') === 0 || href.indexOf('https://') === 0 || href.charAt(0) === '/')) {
+                            var ctx = (typeof window.__AUTUMN_CTX__ === 'string') ? window.__AUTUMN_CTX__ : '';
+                            var target = (href.indexOf('http') === 0) ? href : ((ctx || '') + href);
+                            window.open(target, '_blank');
+                            return;
+                        }
                         var icon = $a.children('i:first').data('icon');
                         var title = $a.children('span').text();
                         var data = {

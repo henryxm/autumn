@@ -72,6 +72,7 @@ public class OpsApiController {
         data.put("opsCert", opsCertService.opsCertStatus());
         data.put("adminIpEnable", sysConfigService.isAdminIpEnable());
         data.put("enrollAvailable", opsCertService.isEnrollAvailable());
+        data.put("discoverEnabled", opsCertService.isDiscoverEnabled());
         SecurityOpsCertConfig cfg = opsCertService.getConfig();
         data.put("siteId", cfg.getSiteId());
         data.put("serverFingerprint", cfg.getFingerprint());
@@ -93,6 +94,7 @@ public class OpsApiController {
         data.put("serverPublicKey", cfg.getServerPublicKey());
         data.put("serverFingerprint", cfg.getFingerprint());
         data.put("adminIpEnable", sysConfigService.isAdminIpEnable());
+        data.put("discoverEnabled", opsCertService.isDiscoverEnabled());
         // 私钥永不下发
         return Response.ok(data);
     }
@@ -375,6 +377,7 @@ public class OpsApiController {
         boolean clearTokenConfigured = ops != null && StringUtils.isNotBlank(ops.getClearToken());
         Map<String, Object> data = new HashMap<>();
         data.put("adminIpEnable", sysConfigService.isAdminIpEnable());
+        data.put("discoverEnabled", opsCertService.isDiscoverEnabled());
         // 仅暴露是否已配置，不下发令牌明文
         data.put("clearTokenConfigured", clearTokenConfigured);
         return Response.ok(data);
@@ -456,8 +459,7 @@ public class OpsApiController {
     public Response<Map<String, Object>> gateSetAdminIpEnable(@RequestBody Map<String, Object> body,
                                                               HttpServletRequest request) {
         OpsSessionService.OpsSession session = requireOpsSession(request);
-        boolean enable = Boolean.TRUE.equals(body.get("enable"))
-                || "true".equalsIgnoreCase(str(body, "enable"));
+        boolean enable = parseEnableFlag(body.get("enable"), str(body, "enable"));
         if (!enable) {
             assertClearToken(body);
             persistAdminIpEnable(false);
@@ -467,6 +469,20 @@ public class OpsApiController {
         adminAccessGuard.auditWithIp(request, "ops.gate.adminIpEnable",
                 "enable=" + enable + " certId=" + session.getCertId());
         return Response.ok(Map.of("adminIpEnable", sysConfigService.isAdminIpEnable()));
+    }
+
+    /**
+     * 开关公开发现页 {@code /ops/discover}（不要求 clearToken）。
+     */
+    @PostMapping("/gate/setDiscoverEnabled")
+    public Response<Map<String, Object>> gateSetDiscoverEnabled(@RequestBody Map<String, Object> body,
+                                                                HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        boolean enable = parseEnableFlag(body.get("enable"), str(body, "enable"));
+        opsCertService.setDiscoverEnabled(enable);
+        adminAccessGuard.auditWithIp(request, "ops.gate.discoverEnabled",
+                "enable=" + enable + " certId=" + session.getCertId());
+        return Response.ok(Map.of("discoverEnabled", opsCertService.isDiscoverEnabled()));
     }
 
     @PostMapping("/cert/list")
@@ -524,6 +540,7 @@ public class OpsApiController {
         data.put("serverPublicKey", cfg.getServerPublicKey());
         data.put("serverFingerprint", cfg.getFingerprint());
         data.put("adminIpEnable", sysConfigService.isAdminIpEnable());
+        data.put("discoverEnabled", opsCertService.isDiscoverEnabled());
         return Response.ok(data);
     }
 
@@ -551,6 +568,7 @@ public class OpsApiController {
         data.put("siteId", cfg.getSiteId());
         data.put("serverFingerprint", cfg.getFingerprint());
         data.put("enrollAvailable", true);
+        data.put("discoverEnabled", opsCertService.isDiscoverEnabled());
         data.put("hint", "请查看服务器日志中的入驻口令：OpsEnroll secret=");
         return Response.ok(data);
     }
@@ -614,8 +632,7 @@ public class OpsApiController {
 
     private String resolveIp(Map<String, Object> body, HttpServletRequest request) {
         String ip = str(body, "ip");
-        boolean claimCurrent = Boolean.TRUE.equals(body.get("claimCurrent"))
-                || "true".equalsIgnoreCase(str(body, "claimCurrent"));
+        boolean claimCurrent = parseEnableFlag(body.get("claimCurrent"), str(body, "claimCurrent"));
         if (claimCurrent || StringUtils.isBlank(ip)) {
             ip = IPUtils.getIp(request);
         }
@@ -623,6 +640,21 @@ public class OpsApiController {
             throw new AException("ip 不能为空", 400);
         }
         return ip;
+    }
+
+    /** 解析开关：true/false、1/0、"true"/"false"（大小写不敏感）。其余视为 false。 */
+    private static boolean parseEnableFlag(Object raw, String asString) {
+        if (Boolean.TRUE.equals(raw)) {
+            return true;
+        }
+        if (raw instanceof Number && ((Number) raw).intValue() == 1) {
+            return true;
+        }
+        if (StringUtils.isBlank(asString)) {
+            return false;
+        }
+        String s = asString.trim();
+        return "true".equalsIgnoreCase(s) || "1".equals(s);
     }
 
     /** 规范化分页：page 从 1，limit 默认 20、最大 100。 */

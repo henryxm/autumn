@@ -72,6 +72,7 @@ class OpsApiControllerTest {
         req.addHeader(AutumnOpsProbe.HEADER, AutumnOpsProbe.TOKEN);
         when(opsCertService.opsCertStatus()).thenReturn("pending");
         when(opsCertService.isEnrollAvailable()).thenReturn(true);
+        when(opsCertService.isDiscoverEnabled()).thenReturn(true);
         when(sysConfigService.isAdminIpEnable()).thenReturn(false);
         SecurityOpsCertConfig cfg = new SecurityOpsCertConfig();
         cfg.setSiteId("autumn-test");
@@ -82,6 +83,7 @@ class OpsApiControllerTest {
         assertEquals(0, res.getCode());
         assertEquals(true, res.getData().get("autumn"));
         assertEquals("pending", res.getData().get("opsCert"));
+        assertEquals(true, res.getData().get("discoverEnabled"));
         assertFalse(String.valueOf(res.getData()).contains("Private"));
     }
 
@@ -90,6 +92,7 @@ class OpsApiControllerTest {
         OpsClientCertEntry entry = new OpsClientCertEntry();
         entry.setCertId("ops-1");
         when(opsCertService.enroll(anyString(), anyString(), anyString())).thenReturn(entry);
+        when(opsCertService.isDiscoverEnabled()).thenReturn(false);
         SecurityOpsCertConfig cfg = new SecurityOpsCertConfig();
         cfg.setSiteId("site");
         cfg.setServerPublicKey("SERVER_PUB");
@@ -109,6 +112,7 @@ class OpsApiControllerTest {
         assertEquals("ops-1", res.getData().get("certId"));
         assertEquals("SERVER_PUB", res.getData().get("serverPublicKey"));
         assertEquals(true, res.getData().get("adminIpEnable"));
+        assertEquals(false, res.getData().get("discoverEnabled"));
         assertFalse(res.getData().containsKey("serverPrivateKey"));
         assertFalse(res.getData().values().stream().anyMatch(v -> "SERVER_PRIV_MUST_NOT_LEAK".equals(String.valueOf(v))));
         verify(sysConfigService).saveSecurityOpsConfig(argThat(c -> c.isAdminIpEnable()));
@@ -220,6 +224,7 @@ class OpsApiControllerTest {
         MockHttpServletRequest req = new MockHttpServletRequest();
         req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
         when(sysConfigService.isAdminIpEnable()).thenReturn(false);
+        when(opsCertService.isDiscoverEnabled()).thenReturn(false);
 
         SecurityOpsConfig ops = new SecurityOpsConfig();
         ops.setClearToken("secret-token");
@@ -227,7 +232,29 @@ class OpsApiControllerTest {
 
         Response<Map<String, Object>> res = controller.gateGet(req);
         assertEquals(true, res.getData().get("clearTokenConfigured"));
+        assertEquals(false, res.getData().get("discoverEnabled"));
         assertFalse(res.getData().values().stream().anyMatch(v -> "secret-token".equals(String.valueOf(v))));
+    }
+
+    @Test
+    void gateSetDiscoverEnabled_togglesWithoutClearToken() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        when(opsCertService.isDiscoverEnabled()).thenReturn(true);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        Response<Map<String, Object>> res = controller.gateSetDiscoverEnabled(
+                Map.of("enable", 1), req);
+        assertEquals(true, res.getData().get("discoverEnabled"));
+        verify(opsCertService).setDiscoverEnabled(true);
+
+        when(opsCertService.isDiscoverEnabled()).thenReturn(false);
+        Response<Map<String, Object>> off = controller.gateSetDiscoverEnabled(
+                Map.of("enable", false), req);
+        assertEquals(false, off.getData().get("discoverEnabled"));
+        verify(opsCertService).setDiscoverEnabled(false);
     }
 
     @Test

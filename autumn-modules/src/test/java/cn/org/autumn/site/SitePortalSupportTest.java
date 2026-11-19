@@ -137,6 +137,41 @@ public class SitePortalSupportTest {
         assertTrue(SitePortalSupport.isShellPortalView("index"));
         assertTrue(SitePortalSupport.isShellPortalView("/index1.html"));
         assertTrue(SitePortalSupport.isShellPortalView("main.html"));
+        assertTrue(SitePortalSupport.isShellPortalView("ops/discover"));
         assertFalse(SitePortalSupport.isShellPortalView("login"));
+    }
+
+    @Test
+    public void applyDiscoverPublicModelExposesOnlyPublicFields() {
+        SitePortalConfig config = new SitePortalConfig();
+        cn.org.autumn.model.SitePortalBranding branding = new cn.org.autumn.model.SitePortalBranding();
+        branding.setSiteName("示例站");
+        branding.setLogoUrl("/statics/img/logo.png");
+        config.setBranding(branding);
+        cn.org.autumn.model.SitePortalChaoranxin cx = new cn.org.autumn.model.SitePortalChaoranxin();
+        cx.setOfficialUrl("https://chaoran.xin/");
+        cx.setInstallQrUrl("https://chaoran.xin/download");
+        config.setChaoranxin(cx);
+        LoadingTheme theme = new LoadingTheme();
+        theme.setBrand("Autumn");
+        when(sysConfigService.getSitePortalConfig()).thenReturn(config);
+        when(sysConfigService.getLoadingTheme()).thenReturn(theme);
+        when(sysConfigService.getLoadingBrand()).thenReturn("示例站");
+        when(sysConfigService.isSsl()).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setScheme("https");
+        request.setServerName("ops.example.com");
+        request.setServerPort(443);
+        request.setContextPath("");
+        org.springframework.ui.ExtendedModelMap model = new org.springframework.ui.ExtendedModelMap();
+        support.applyDiscoverPublicModel(request, model);
+        assertEquals("示例站", model.get("siteName"));
+        assertEquals("/statics/img/logo.png", model.get("logoUrl"));
+        assertEquals("https://chaoran.xin/", model.get("officialUrl"));
+        assertEquals("https://chaoran.xin/download", model.get("installQrUrl"));
+        assertEquals("https://ops.example.com/ops/discover", model.get("discoverAbsoluteUrl"));
+        assertFalse(model.containsAttribute("siteId"));
+        assertFalse(model.containsAttribute("fingerprint"));
+        assertFalse(model.containsAttribute("opsCert"));
     }
 }

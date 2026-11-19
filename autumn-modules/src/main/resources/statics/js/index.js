@@ -1,7 +1,39 @@
+function isAbsoluteMenuUrl(url) {
+	if (!url) {
+		return false;
+	}
+	return url.indexOf('http://') === 0 || url.indexOf('https://') === 0 || url.charAt(0) === '/';
+}
+
+function resolveAbsoluteMenuUrl(url) {
+	if (!url) {
+		return '';
+	}
+	if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+		return url;
+	}
+	var ctx = (typeof window.__AUTUMN_CTX__ === 'string') ? window.__AUTUMN_CTX__ : '';
+	if (ctx && url.indexOf(ctx + '/') === 0) {
+		return url;
+	}
+	return (ctx || '') + url;
+}
+
+function openAbsoluteMenuUrl(url) {
+	var target = resolveAbsoluteMenuUrl(url);
+	if (target) {
+		window.open(target, '_blank');
+	}
+}
+
 //生成菜单
 var menuItem = Vue.extend({
     name: 'menu-item',
     props:{item:{}},
+    methods: {
+		isAbsoluteMenuUrl: isAbsoluteMenuUrl,
+		openAbsoluteMenuUrl: openAbsoluteMenuUrl
+	},
     template:[
         '<li>',
         '	<a v-if="item.type === 0" href="javascript:;">',
@@ -13,12 +45,17 @@ var menuItem = Vue.extend({
         '		<menu-item :item="item" v-for="item in item.list"></menu-item>',
         '	</ul>',
 
-        '	<a v-if="item.type === 1 && item.parentId === 0" :href="\'#\'+item.url">',
+        '	<a v-if="item.type === 1 && isAbsoluteMenuUrl(item.url)" href="javascript:;" @click="openAbsoluteMenuUrl(item.url)">',
         '		<i v-if="item.icon != null" :class="item.icon"></i>',
         '		<span>{{item.name}}</span>',
         '	</a>',
 
-        '	<a v-if="item.type === 1 && item.parentId != 0" :href="\'#\'+item.url"><i v-if="item.icon != null" :class="item.icon"></i><i v-else class="fa fa-circle-o"></i> {{item.name}}</a>',
+        '	<a v-if="item.type === 1 && !isAbsoluteMenuUrl(item.url) && item.parentId === 0" :href="\'#\'+item.url">',
+        '		<i v-if="item.icon != null" :class="item.icon"></i>',
+        '		<span>{{item.name}}</span>',
+        '	</a>',
+
+        '	<a v-if="item.type === 1 && !isAbsoluteMenuUrl(item.url) && item.parentId != 0" :href="\'#\'+item.url"><i v-if="item.icon != null" :class="item.icon"></i><i v-else class="fa fa-circle-o"></i> {{item.name}}</a>',
         '</li>'
     ].join('')
 });
@@ -217,6 +254,9 @@ function routerList(router, menuList){
 		if(menu.type == 0){
 			routerList(router, menu.list);
 		}else if(menu.type == 1){
+			if (isAbsoluteMenuUrl(menu.url)) {
+				continue;
+			}
 			router.add('#'+menu.url, function() {
 				var url = window.location.hash;
 				

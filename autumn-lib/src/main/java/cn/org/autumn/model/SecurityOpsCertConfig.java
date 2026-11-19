@@ -52,6 +52,13 @@ public class SecurityOpsCertConfig implements Serializable {
     @ConfigField(category = InputType.NumberType, name = "最近重置时间", description = "最近一次运维证书重置的时间戳（毫秒）")
     private long resetAt = 0L;
 
+    /**
+     * 是否开放 {@code /ops/discover} 公开落地页；默认 true；证书绑定成功后自动 false。
+     */
+    @ConfigField(category = InputType.BooleanType, name = "站点发现页",
+            description = "关闭后浏览器访问发现页仅提示用超然信管理；可用运维 App 再打开")
+    private boolean discoverEnabled = true;
+
     private List<OpsClientCertEntry> clients = new ArrayList<>();
 
     /** 已登录设备签发的待认领码（明文不落库）。 */

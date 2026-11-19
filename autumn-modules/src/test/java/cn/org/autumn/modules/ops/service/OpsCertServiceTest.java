@@ -87,6 +87,7 @@ class OpsCertServiceTest {
         SecurityOpsCertConfig cfg = service.getConfig();
         assertTrue(cfg.isEnrollSecretConsumed());
         assertFalse(cfg.hasEnrollMaterial());
+        assertFalse(cfg.isDiscoverEnabled());
     }
 
     @Test
@@ -134,6 +135,7 @@ class OpsCertServiceTest {
         assertTrue(service.hasEnrollHash());
         assertFalse(after.hasServerKeyPair());
         assertEquals("pending", service.opsCertStatus());
+        assertTrue(after.isDiscoverEnabled());
     }
 
     @Test
@@ -185,6 +187,7 @@ class OpsCertServiceTest {
         assertNotNull(b.getCertId());
         assertNotEquals(a.getCertId(), b.getCertId());
         assertEquals(2, service.countActiveClients());
+        assertFalse(service.getConfig().isDiscoverEnabled());
 
         assertThrows(AException.class, () -> service.claim(claimSecret, deviceB.getPublicKey(), "again"));
     }
@@ -249,6 +252,7 @@ class OpsCertServiceTest {
         c.setEnrollSaltB64(src.getEnrollSaltB64());
         c.setEnrollHashB64(src.getEnrollHashB64());
         c.setResetAt(src.getResetAt());
+        c.setDiscoverEnabled(src.isDiscoverEnabled());
         c.setClients(src.getClients() == null ? new ArrayList<>() : new ArrayList<>(src.getClients()));
         c.setPendingClaims(src.getPendingClaims() == null ? new ArrayList<>() : new ArrayList<>(src.getPendingClaims()));
         return c;

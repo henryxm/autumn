@@ -60,4 +60,27 @@ public class SitePortalConfigTest {
         meta.setVersionLabel("v2.0.0");
         assertEquals("", SitePortalConfig.buildCopyrightLine(meta));
     }
+
+    @Test
+    public void validateAndFixChaoranxinDefaultsAndStoreLinks() {
+        SitePortalConfig config = new SitePortalConfig();
+        config.setChaoranxin(null);
+        config.validateAndFix();
+        assertEquals(SitePortalChaoranxin.DEFAULT_OFFICIAL_URL, config.getChaoranxin().getOfficialUrl());
+
+        SitePortalStoreLink ok = new SitePortalStoreLink();
+        ok.setName(" 华为 ");
+        ok.setUrl(" https://appgallery.huawei.com/ ");
+        SitePortalStoreLink bad = new SitePortalStoreLink();
+        bad.setName("空链");
+        bad.setUrl("javascript:alert(1)");
+        config.getChaoranxin().getStoreLinks().add(ok);
+        config.getChaoranxin().getStoreLinks().add(bad);
+        config.getChaoranxin().setOfficialUrl("");
+        config.validateAndFix();
+        assertEquals(SitePortalChaoranxin.DEFAULT_OFFICIAL_URL, config.getChaoranxin().getOfficialUrl());
+        assertEquals(1, config.getChaoranxin().getStoreLinks().size());
+        assertEquals("华为", config.getChaoranxin().getStoreLinks().get(0).getName());
+        assertEquals("https://appgallery.huawei.com/", config.getChaoranxin().getStoreLinks().get(0).getUrl());
+    }
 }

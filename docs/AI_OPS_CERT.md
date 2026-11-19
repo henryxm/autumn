@@ -28,15 +28,22 @@
 
 - Header：`X-Autumn-Ops-Probe: autumn-ops-probe`（`AutumnOpsProbe.TOKEN`）
 - `POST /ops/api/v1/probe`
-- 响应：`autumn=true`、`protocolVersion=1`、`opsCert`=`none|pending|ready`、`adminIpEnable`、`enrollAvailable`、`siteId`、`serverFingerprint`
+- 响应：`autumn=true`、`protocolVersion=1`、`opsCert`=`none|pending|ready`、`adminIpEnable`、`enrollAvailable`、`discoverEnabled`、`siteId`、`serverFingerprint`
 - 无密钥材料；错误 Token → 403
 
-### 3.0 发现 URL（分享 / 扫码）
+### 3.0 发现 URL（分享 / 扫码）与公开落地页
 
 - 规范形态：`{baseUrl}/ops/discover`（由站点 baseUrl **动态拼接**，**不含** OpsEnroll / 分享口令 / 私钥）
-- `GET /ops/discover`：匿名 HTML 落地页（提示用超然信打开；可展示 `siteId` / 指纹摘要，**禁止**密钥）
-- Shiro：`/ops/discover` = `anon`；管理 IP 门禁豁免 `OpsDiscoverController`
-- App：拦截该 path（或 `crchat://vc/autumnops?base=`）→ 剥离 baseUrl → 本地 `POST …/probe`；不依赖落地页内容
+- `GET /ops/discover`：匿名 **超然信公开落地页**（受 `SECURITY_OPS_CERT_CONFIG.discoverEnabled` 控制，**默认 true**）
+  - **开启**：模板 `templates/ops/discover.html` — 双轨并重（站点运维 / 超然信下载）、双二维码、可复制本页链接
+  - **关闭**：对外 **404**（如同页面不存在，避免被探测）；**不**渲染关闭说明页、**不**输出站点/运维字段
+  - 证书 **enroll / cert/claim 成功后自动** `discoverEnabled=false`；`reset` 后恢复 `true`；App 可经会话再开关
+  - 后台登录首页 `main`：管理员已登录，**始终**完整落地页（版面不受开关控制）；模板注入 `publicDiscoverEnabled` 真值，公网已关时提示「勿对外分发运维码」
+  - **注意**：`discoverEnabled` **不削弱** T0 `probe`（持公开 Probe Token 仍可探测）；仅控制浏览器 HTML 发现页是否存在
+  - 可选商店链与官网 URL 见 `SITE_PORTAL_CONFIG.chaoranxin`（`docs/AI_SITE_PORTAL.md`）
+- Shiro：`/ops/discover` = `anon`；管理 IP 门禁豁免 `OpsDiscoverController`；关闭发现页**不**禁止 `/ops/api/v1/probe`
+- 后台菜单：运维监控 →「公开落地页」新窗口打开 `/ops/discover`（用于查看**公网真实态**：关闭时即为 404；完整落地预览请看登录后首页 `main`）
+- App：拦截该 path（或 `crchat://vc/autumnops?base=`）→ 剥离 baseUrl → 本地 `POST …/probe`；**不依赖落地页文案**
 - 等价标记（客户端）：`?autumn_ops=1` / `#autumn_ops`（可选）
 
 ### 3.1 客户端探测结果矩阵
@@ -84,8 +91,8 @@ reset / wall opscert/reset (T4，不依赖 ops session)
 
 | # | 路径 | 层级 | 鉴权（Helper） | 附加 | 敏感响应（摘要） | 风险 | 结论 |
 |---|------|------|----------------|------|------------------|------|------|
-| 1 | `/probe` | T0 | `assertProbe`（头 `X-Autumn-Ops-Probe: autumn-ops-probe`） | — | `autumn`/`protocolVersion`/`opsCert`/`adminIpEnable`/`enrollAvailable`/`siteId`/`serverFingerprint` | 指纹可被扫 | **允许「匿名」发现**（持公开 Probe Token）；**禁止**扩返回名单/路径/JVM/clients |
-| 2 | `/enroll` | T1 | body.`secret`=OpsEnroll + `clientPublicKey`（服务层） | 成功烧毁 enroll hash；自动开管理 IP + 认领当前 IP | `certId`/`siteId`/`serverPublicKey`/`serverFingerprint`/`adminIpEnable` | secret 泄露=可入驻 | **非匿名**；依赖日志口令熵；**不下发私钥** |
+| 1 | `/probe` | T0 | `assertProbe`（头 `X-Autumn-Ops-Probe: autumn-ops-probe`） | — | `autumn`/`protocolVersion`/`opsCert`/`adminIpEnable`/`enrollAvailable`/`discoverEnabled`/`siteId`/`serverFingerprint` | 指纹可被扫 | **允许「匿名」发现**（持公开 Probe Token）；**禁止**扩返回名单/路径/JVM/clients |
+| 2 | `/enroll` | T1 | body.`secret`=OpsEnroll + `clientPublicKey`（服务层） | 成功烧毁 enroll hash；自动开管理 IP + 认领当前 IP；**关发现页** | `certId`/`siteId`/`serverPublicKey`/`serverFingerprint`/`adminIpEnable`/`discoverEnabled` | secret 泄露=可入驻 | **非匿名**；依赖日志口令熵；**不下发私钥** |
 | 3 | `/challenge` | T2 | 有效 `certId` | — | `nonce`/`expireSeconds` | 可探测证是否存在 | **持证前置**；certId 宜不可猜测；见 §4.5 |
 | 4 | `/session` | T2 | certId + nonce + 客户端私钥签名 + AES 经服务端公钥包裹 | — | `sessionId`/`expireAt` | 低（密码学绑定） | **证明持证**；换取会话头 |
 | 5 | `/adminip/list` | T3 | `requireOpsSession` | — | 管理 IP 分页列表 | 高 | **必须会话** |
@@ -103,16 +110,17 @@ reset / wall opscert/reset (T4，不依赖 ops session)
 | 17 | `/ipblack/setAvailable` | T3 | session | 拒哨兵 | `available`（0=生效） | 中高 | **必须会话** |
 | 18 | `/ipblack/firewallCount/get` | T3 | session | — | `firewallCount` | 中 | **必须会话** |
 | 19 | `/ipblack/firewallCount/set` | T3 | session | 下限 500 | `firewallCount` | 中 | **必须会话** |
-| 20 | `/gate/get` | T3 | session | — | `adminIpEnable`/`clearTokenConfigured`（布尔，**非明文**） | 低中 | **必须会话**；禁止下发 clearToken 明文 |
+| 20 | `/gate/get` | T3 | session | — | `adminIpEnable`/`discoverEnabled`/`clearTokenConfigured`（布尔，**非明文**） | 低中 | **必须会话**；禁止下发 clearToken 明文 |
 | 21 | `/runtime/snapshot` | T3 | session | — | 主机/磁盘/库/路径/防火墙样本/Redis/访问量等 | **高** | **必须会话**；禁止降到 Probe |
 | 22 | `/gate/verifyClearToken` | T3 | session + `assertClearToken` | — | `valid` | 低（可爆破） | 会话 + 正确令牌 |
 | 23 | `/gate/setClearToken` | T3 | session | 已配置须 `oldClearToken`；首次可直接设 | `clearTokenConfigured`/`changed` | 中（首次抢注） | **必须会话**；见 §4.5 |
 | 24 | `/gate/setAdminIpEnable` | T3 | session | `enable=false` 须 clearToken | `adminIpEnable` | 高 | 关校验 = 会话 + clearToken |
+| 24b | `/gate/setDiscoverEnabled` | T3 | session | body.`enable`；**不要求** clearToken | `discoverEnabled` | 低中 | 会话即可开关公开发现页 |
 | 25 | `/cert/list` | T3 | session | — | 设备 `certId`/label/revoked/时间/`self`/`activeCount` | 中 | **必须会话** |
 | 26 | `/cert/issue` | T3 | session | — | **`claimSecret` 明文一次**、claimId、expiresAt | 高 | **必须会话**；仅展示一次；须 TLS |
-| 27 | `/cert/claim` | T1 | body.`claimSecret` + `clientPublicKey` | 成功同 enroll 自动开管理 IP | 同 enroll | 高（码泄露） | **非匿名**；单次消费 |
-| 28 | `/cert/revoke` | T3 | session | — | `success`/`lastCert` | 高 | **必须会话** |
-| 29 | `/reset` | T4 | `assertClearToken` + `requireSystemAdmin` | **不要** ops session | siteId/fingerprint/`enrollAvailable`/hint | 关键 | **超管登录 + clearToken**；防证丢死锁 |
+| 27 | `/cert/claim` | T1 | body.`claimSecret` + `clientPublicKey` | 成功同 enroll：开管理 IP + **关发现页** | 同 enroll + `discoverEnabled` | 高（码泄露） | **非匿名**；单次消费 |
+| 28 | `/cert/revoke` | T3 | session | — | `success`/`lastCert` | 高 | **必须会话**；吊销不自动重开发现页 |
+| 29 | `/reset` | T4 | `assertClearToken` + `requireSystemAdmin` | **不要** ops session | siteId/fingerprint/`enrollAvailable`/`discoverEnabled`/hint | 关键 | **超管登录 + clearToken**；reset **重开**发现页 |
 
 **浏览器 wall 旁路（非 App 通道，对照用）**
 

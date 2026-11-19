@@ -55,7 +55,7 @@
     function initSitePortalAdmin(ctx) {
         ctx = ctx || '';
         var API = ctx + '/sys/site-portal';
-        var state = { syncLoadingTheme: true, filings: [] };
+        var state = { syncLoadingTheme: true, filings: [], storeLinks: [] };
         var defaultFilingUrls = {};
 
         function toast(msg, ok) {
@@ -114,8 +114,57 @@
                     helpUrl: document.getElementById('helpUrl').value.trim(),
                     contactUrl: document.getElementById('contactUrl').value.trim()
                 },
-                filings: state.filings
+                filings: state.filings,
+                chaoranxin: {
+                    officialUrl: document.getElementById('cxOfficialUrl').value.trim() || 'https://chaoran.xin/',
+                    installQrUrl: document.getElementById('cxInstallQrUrl').value.trim(),
+                    storeLinks: state.storeLinks
+                }
             };
+        }
+
+        function storeLinkTemplate(item, index) {
+            return '<div class="filing-item" data-store-index="' + index + '">' +
+                '<div class="filing-head"><strong>商店 #' + (index + 1) + '</strong><button type="button" class="btn btn-danger btn-remove-store">删除</button></div>' +
+                '<div class="grid filing-grid">' +
+                '<div class="field"><label>名称</label><input class="s-name" value="' + escapeAttr(item.name || '') + '" placeholder="华为应用市场"></div>' +
+                '<div class="field"><label>链接</label><input class="s-url" value="' + escapeAttr(item.url || '') + '" placeholder="https://..."></div>' +
+                '</div></div>';
+        }
+
+        function readStoreFromElement(el) {
+            return {
+                name: el.querySelector('.s-name').value.trim(),
+                url: el.querySelector('.s-url').value.trim()
+            };
+        }
+
+        function collectStoreLinksFromDom() {
+            document.querySelectorAll('#storeLinksBox .filing-item').forEach(function(el) {
+                var idx = parseInt(el.getAttribute('data-store-index'), 10);
+                state.storeLinks[idx] = readStoreFromElement(el);
+            });
+        }
+
+        function renderStoreLinks() {
+            var box = document.getElementById('storeLinksBox');
+            if (!box) {
+                return;
+            }
+            box.innerHTML = state.storeLinks.map(function(item, i) { return storeLinkTemplate(item, i); }).join('');
+            box.querySelectorAll('.filing-item').forEach(function(el) {
+                var idx = parseInt(el.getAttribute('data-store-index'), 10);
+                el.querySelectorAll('input').forEach(function(node) {
+                    node.addEventListener('input', function() {
+                        state.storeLinks[idx] = readStoreFromElement(el);
+                    });
+                });
+                el.querySelector('.btn-remove-store').addEventListener('click', function() {
+                    state.storeLinks.splice(idx, 1);
+                    renderStoreLinks();
+                });
+            });
+            global.AutumnIframeAutoHeight.scheduleFrameHeightSync();
         }
 
         function readFilingFromElement(el) {
@@ -171,7 +220,12 @@
             document.getElementById('aboutUrl').value = legal.aboutUrl || '';
             document.getElementById('helpUrl').value = legal.helpUrl || '';
             document.getElementById('contactUrl').value = legal.contactUrl || '';
+            var cx = data.chaoranxin || {};
+            document.getElementById('cxOfficialUrl').value = cx.officialUrl || 'https://chaoran.xin/';
+            document.getElementById('cxInstallQrUrl').value = cx.installQrUrl || '';
+            state.storeLinks = (cx.storeLinks || []).slice();
             renderFilings();
+            renderStoreLinks();
         }
 
         function renderFilings() {
@@ -277,8 +331,13 @@
             state.filings.push({ type: 'icp', number: '', url: defaultFilingUrls.icp || '', showIcon: false });
             renderFilings();
         });
+        document.getElementById('addStoreLinkBtn').addEventListener('click', function() {
+            state.storeLinks.push({ name: '', url: '' });
+            renderStoreLinks();
+        });
         document.getElementById('saveBtn').addEventListener('click', function() {
             collectFilingsFromDom();
+            collectStoreLinksFromDom();
             var payload = readForm();
             api('/save', { method: 'POST', body: JSON.stringify(payload) }).then(function(res) {
                 if (res.code !== 0) {

@@ -200,6 +200,7 @@ public class OpsCertService implements InitFactory.Init {
         cfg.setEnrollSecretConsumed(true);
         cfg.setEnrollSaltB64("");
         cfg.setEnrollHashB64("");
+        cfg.setDiscoverEnabled(false);
         sysConfigService.saveSecurityOpsCertConfig(cfg);
         log.info("OpsCert client enrolled certId={} label={} fingerprint={}", entry.getCertId(), entry.getLabel(), cfg.getFingerprint());
         return entry;
@@ -381,6 +382,7 @@ public class OpsCertService implements InitFactory.Init {
             cfg.setClients(new ArrayList<>());
         }
         cfg.getClients().add(entry);
+        cfg.setDiscoverEnabled(false);
         sysConfigService.saveSecurityOpsCertConfig(cfg);
         log.info("OpsCert client claimed certId={} label={} claimId={}",
                 entry.getCertId(), entry.getLabel(), matched.getClaimId());
@@ -403,10 +405,26 @@ public class OpsCertService implements InitFactory.Init {
         cfg.setResetAt(System.currentTimeMillis());
         cfg.setClients(new ArrayList<>());
         cfg.setPendingClaims(new ArrayList<>());
+        cfg.setDiscoverEnabled(true);
         sysConfigService.saveSecurityOpsCertConfig(cfg);
         ensureEnrollSecretIfNeeded();
         log.warn("OpsCert reset completed; OpsEnroll reissued (server RSA deferred until enroll)");
         return getConfig();
+    }
+
+    /** 公开发现页是否开启（旧配置缺字段时 Gson/Java 默认为 true）。 */
+    public boolean isDiscoverEnabled() {
+        return getConfig().isDiscoverEnabled();
+    }
+
+    public synchronized void setDiscoverEnabled(boolean enabled) {
+        SecurityOpsCertConfig cfg = copy(getConfig());
+        if (cfg.isDiscoverEnabled() == enabled) {
+            return;
+        }
+        cfg.setDiscoverEnabled(enabled);
+        sysConfigService.saveSecurityOpsCertConfig(cfg);
+        log.info("OpsCert discoverEnabled={}", enabled);
     }
 
     private synchronized void purgeExpiredClaims() {

@@ -119,6 +119,19 @@
                 <div class="filings" id="filingsBox"></div>
                 <p class="hint">类型按中国大陆常见合规分类；默认跳转指向主管部门门户，可手填更精确的公示链接。公安备案 URL 会根据备案号自动提取 recordcode。前缀/后缀仅展示，链接仅作用于「展示文案」。</p>
             </div>
+            <div class="section">
+                <div class="section-head">
+                    <h2>超然信公开页</h2>
+                    <button type="button" class="btn btn-ghost" id="addStoreLinkBtn">+ 应用市场链接</button>
+                </div>
+                <p class="hint">配置 /ops/discover 与后台首页同源落地页。禁止填写运维证书、密钥或站点指纹。</p>
+                <div class="grid">
+                    <div class="field"><label>官网 URL</label><input id="cxOfficialUrl" placeholder="https://chaoran.xin/"></div>
+                    <div class="field"><label>安装二维码 URL</label><input id="cxInstallQrUrl" placeholder="留空则使用官网 URL"></div>
+                </div>
+                <div class="filings" id="storeLinksBox" style="margin-top:14px;"></div>
+                <p class="hint">应用市场链接可选；未配置时页面仅展示「各大应用市场搜索『超然信』」文案，不编造商店深链。</p>
+            </div>
             <div class="actions">
                 <button type="button" class="btn btn-primary" id="saveBtn">保存配置</button>
                 <button type="button" class="btn btn-ghost" id="reloadBtn">重新加载</button>

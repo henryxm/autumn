@@ -1,34 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>欢迎使用${siteName!'Autumn'}系统开发平台</title>
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
-    <link rel="stylesheet" href="${request.contextPath}/statics/css/bootstrap.min.css">
+  <meta charset="utf-8"/>
+  <title>已迁至 ops/discover</title>
+  <!-- 后台默认首页内容已迁至 templates/ops/discover.html；DefaultPage.main 返回视图名 ops/discover。 -->
 </head>
 <body>
-<div class="panel panel-default">
-    <div class="panel-heading">基本信息</div>
-    <div style="padding: 10px 0 20px 10px;">
-        <h3>&nbsp;&nbsp;&nbsp;项目说明</h3>
-        <ul>
-            <li>欢迎使用 ${siteName!'Autumn'}。采用 Spring、MyBatis、Shiro 框架开发的一套权限系统，极低门槛，拿来即用。</li>
-            <li>设计之初，就非常注重安全性，为企业系统保驾护航，让一切都变得如此简单。</li>
-            <li>提供了代码生成器，只需编写30%左右代码，其余的代码交给系统自动生成，可快速完成开发任务</li>
-            <li>提供双向生成功能：</li>
-            <li>&nbsp;&nbsp;1. 实体类自动生成数据库表，全过程不需要任何SQL语句，所有表自动生成</li>
-            <li>&nbsp;&nbsp;2. 通过表生成基础结构代码，生成代码中已包含CRUD功能，表级别的API接口全部都有</li>
-            <li>&nbsp;&nbsp;3. 基本实例数据全自动通过代码初始化，无需干预</li>
-            <li>&nbsp;&nbsp;4. 仅仅只需要修改数据库连接地址，用户名，密码，即可启动运行。</li>
-            <li><a href="${request.contextPath}/?${(spm.sys_config)!"spm=sys.config"}">配置</a></li>
-         </ul>
-
-        <h3>&nbsp;&nbsp;&nbsp;获取帮助</h3>
-        <ul>
-            <li>Git地址：<a href="https://github.com/henryxm/autumn" target="_blank">https://github.com/henryxm/autumn</a></li>
-        </ul>
-    </div>
-</div>
+  <p>后台首页已迁至公开落地页模板 <code>ops/discover</code>。</p>
 </body>
 </html>
