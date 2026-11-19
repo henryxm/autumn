@@ -138,9 +138,11 @@ public final class IndexPrefixRules {
     }
 
     /**
-     * 注解仍为默认 {@link DataType#VARCHAR}，但 Java 类型非字符串系：视为未指定 SQL 类型，前缀按 Java 类型判断。
+     * 注解仍为默认 {@link DataType#VARCHAR}，但 Java 类型非字符串系：视为未指定 SQL 类型。
+     * <p>建表时 {@link cn.org.autumn.table.data.ColumnInfo} 会按 Java 类型改成 tinyint/int 等；
+     * 键长粗估 / 前缀策略须同样识别，避免把 boolean/int 当成 {@code VARCHAR(255)}×4。
      */
-    private static boolean isUnsetVarcharOnNonStringField(Field field, Column column) {
+    public static boolean isUnsetVarcharOnNonStringField(Field field, Column column) {
         if (field == null || column == null) {
             return false;
         }

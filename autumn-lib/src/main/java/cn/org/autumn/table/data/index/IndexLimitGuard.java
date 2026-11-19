@@ -252,6 +252,8 @@ public final class IndexLimitGuard {
 
     /**
      * utf8mb4 粗估：字符列按 bytesPerChar * min(prefixOrLen, colLen)；其它类型按固定小常量。
+     * <p>须与建表一致：注解默认 {@code type=VARCHAR} 落在 boolean/int 等字段上时，
+     * 按非字符串计（勿用 length=255×4），否则会出现 {@code deletedstatusapplevisible} 一类假阳性。
      */
     static int estimateKeyBytes(List<IndexColumnSpec> specs, Class<?> entityClass) {
         if (specs == null || specs.isEmpty()) {
@@ -267,7 +269,10 @@ public final class IndexLimitGuard {
             Field f = IndexPrefixRules.findFieldForColumnKey(fields, spec.getColumn());
             Column col = f != null ? f.getAnnotation(Column.class) : null;
             int prefix = Math.max(0, spec.getPrefixLength());
-            if (col != null && IndexPrefixRules.supportsMysqlPrefixIndex(col.type())) {
+            boolean stringKey = col != null
+                    && IndexPrefixRules.supportsMysqlPrefixIndex(col.type())
+                    && !IndexPrefixRules.isUnsetVarcharOnNonStringField(f, col);
+            if (stringKey) {
                 int colLen = Math.max(1, col.length());
                 int use = prefix > 0 ? Math.min(prefix, colLen) : colLen;
                 total += use * charsetBytesPerChar(col);
@@ -275,10 +280,33 @@ public final class IndexLimitGuard {
                 int use = prefix > 0 ? prefix : 255;
                 total += use * 4;
             } else {
-                total += 8;
+                total += fixedKeyBytesForField(f);
             }
         }
         return total;
+    }
+
+    /** 非字符列键长粗估（对齐常见 InnoDB 存储量级，偏保守即可）。 */
+    static int fixedKeyBytesForField(Field f) {
+        if (f == null) {
+            return 8;
+        }
+        Class<?> ft = f.getType();
+        if (ft == boolean.class || ft == Boolean.class || ft == byte.class || ft == Byte.class) {
+            return 1;
+        }
+        if (ft == short.class || ft == Short.class) {
+            return 2;
+        }
+        if (ft == int.class || ft == Integer.class || ft == float.class || ft == Float.class) {
+            return 4;
+        }
+        if (ft == long.class || ft == Long.class || ft == double.class || ft == Double.class
+                || ft == java.util.Date.class || ft == java.sql.Date.class
+                || ft == java.sql.Timestamp.class || ft == java.math.BigDecimal.class) {
+            return 8;
+        }
+        return 8;
     }
 
     private static int charsetBytesPerChar(Column col) {

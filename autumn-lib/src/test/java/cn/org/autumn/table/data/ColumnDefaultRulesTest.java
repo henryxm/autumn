@@ -21,6 +21,9 @@ class ColumnDefaultRulesTest {
         @Column(type = DataType.VARCHAR, length = 64, defaultValue = "")
         String name;
 
+        @Column(type = DataType.VARCHAR, length = 64, isUnique = true, defaultValue = "")
+        String uniqueCode;
+
         @Column(isKey = true, isAutoIncrement = true, defaultValue = "0")
         Long id;
 
@@ -87,6 +90,15 @@ class ColumnDefaultRulesTest {
         ColumnInfo info = new ColumnInfo(Sample.class.getDeclaredField("name"));
         assertFalse(ColumnDefaultRules.sanitizeMysqlColumnDefault(info, Sample.class.getName()));
         assertEquals("", info.getDefaultValue());
+    }
+
+    @Test
+    void sanitize_clearsBlankDefaultOnUniqueVarchar() throws Exception {
+        ColumnInfo info = new ColumnInfo(Sample.class.getDeclaredField("uniqueCode"));
+        assertTrue(info.isUnique());
+        assertEquals("", info.getDefaultValue());
+        assertTrue(ColumnDefaultRules.sanitizeMysqlColumnDefault(info, Sample.class.getName()));
+        assertEquals("NULL", info.getDefaultValue());
     }
 
     @Test

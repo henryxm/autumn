@@ -126,8 +126,7 @@ public final class ColumnDefaultRules {
         String trimmed = dv.trim();
 
         if (columnInfo.isAutoIncrement()) {
-            warn(logWarn, "Column default ignored (AUTO_INCREMENT forbids DEFAULT): owner={} column={} type={} defaultValue={}",
-                    owner, col, type, dv);
+            warn(logWarn, "Column default ignored (AUTO_INCREMENT forbids DEFAULT): owner={} column={} type={} defaultValue={}", owner, col, type, dv);
             columnInfo.setDefaultValue("NULL");
             return true;
         }
@@ -137,19 +136,33 @@ public final class ColumnDefaultRules {
                 // MySQL 8.0.13+ expression default; keep as-is
                 return false;
             }
-            warn(logWarn, "Column default ignored (type forbids literal DEFAULT): owner={} column={} type={} defaultValue={}",
-                    owner, col, type, dv);
+            warn(logWarn, "Column default ignored (type forbids literal DEFAULT): owner={} column={} type={} defaultValue={}", owner, col, type, dv);
             columnInfo.setDefaultValue("NULL");
             return true;
         }
 
         if (trimmed.isEmpty() && !allowsEmptyStringMysqlDefault(columnInfo.getType())) {
-            warn(logWarn, "Column default ignored (empty string invalid for type): owner={} column={} type={} defaultValue={}",
-                    owner, col, type, dv);
+            warn(logWarn, "Column default ignored (empty string invalid for type): owner={} column={} type={} defaultValue={}", owner, col, type, dv);
+            columnInfo.setDefaultValue("NULL");
+            return true;
+        }
+
+        // UNIQUE + DEFAULT ''：多行空串必撞唯一约束；建表改为无字面量 DEFAULT（sentinel NULL）
+        if (columnInfo.isUnique() && isBlankStringDefaultLiteral(trimmed)) {
+            warn(logWarn, "Column default ignored (UNIQUE forbids blank string default): owner={} column={} type={} defaultValue={}", owner, col, type, dv);
             columnInfo.setDefaultValue("NULL");
             return true;
         }
         return false;
+    }
+
+    /** {@code ""} / {@code ''} / 空串；不含 {@code NULL}。 */
+    static boolean isBlankStringDefaultLiteral(String trimmedOrRaw) {
+        if (trimmedOrRaw == null) {
+            return false;
+        }
+        String t = trimmedOrRaw.trim();
+        return t.isEmpty() || "\"\"".equals(t) || "''".equals(t);
     }
 
     private static void warn(boolean logWarn, String format, Object... args) {

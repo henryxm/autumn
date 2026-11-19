@@ -425,7 +425,7 @@ listExpiredEnabled:  WHERE enable = 1 AND expire_time < ? ORDER BY expire_time
 | `@IndexField` 未知列 | **`skipEmit`** | `索引含未知列…跳过发射` |
 | 单表索引数 &gt; 64 | 仅 WARN；`skip-on-limit-violation=true` 时尾部 skip | `单表索引数量超过建议阈值` |
 | 键长粗估 &gt; 3072（`max-key-bytes`；0 关闭） | 仅 WARN；strict 时 skip | `索引键长粗估超限` |
-| `isUnique` + **默认空串**（`""`/`''`） | WARN（可空 + default `NULL` **不**告警；MySQL UNIQUE 允许多 NULL） | `列 isUnique 且默认空串` |
+| `isUnique` + **默认空串**（`""`/`''`） | 预检 WARN；建表侧 `ColumnDefaultRules` **去掉**字面量 `DEFAULT ''`（改 sentinel `NULL`） | `列 isUnique 且默认空串` / `UNIQUE forbids blank string default` |
 | 名超长 / 截断后重名 | 截断 + WARN | `索引名超长已截断` / `Duplicate index name` |
 | ADD 失败 | catch + 人话 `reason=`（认文案或 `ERROR nnnn` 形态，避免裸数字误伤） | `Index add failed: … reason=` |
 

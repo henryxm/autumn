@@ -161,6 +161,29 @@ class IndexLimitGuardTest {
     }
 
     @Test
+    void keyBytesEstimateIgnoresDefaultVarcharOnBooleanInt() {
+        // 对齐 shop_goods_basic.deletedstatusapplevisible：boolean/int 注解默认 type=VARCHAR
+        IndexInfo idx = new IndexInfo();
+        idx.setName("deletedstatusapplevisible");
+        idx.setIndexType("NORMAL");
+        idx.setIndexMethod("BTREE");
+        idx.appendColumn("deleted", 0, IndexOrder.ASC);
+        idx.appendColumn("status", 0, IndexOrder.ASC);
+        idx.appendColumn("apple", 0, IndexOrder.ASC);
+        idx.appendColumn("visible", 0, IndexOrder.ASC);
+        int bytes = IndexLimitGuard.estimateKeyBytes(idx.getColumnSpecs(), FlagIndexEntity.class);
+        // 1 + 4 + 1 + 4 = 10，远低于 3072；旧逻辑会误算 4*255*4=4080
+        assertEquals(10, bytes);
+        assertTrue(bytes < 3072);
+
+        System.setProperty(IndexTableSettings.PROP_SKIP_ON_LIMIT_VIOLATION, "true");
+        List<IndexInfo> list = new ArrayList<>();
+        list.add(idx);
+        IndexLimitGuard.guard(list, "shop_goods_basic", FlagIndexEntity.class);
+        assertFalse(idx.isSkipEmit());
+    }
+
+    @Test
     void classifyAddFailureHumanHints() {
         assertTrue(IndexLimitGuard.classifyAddFailure("ERROR 1070 (42000): Too many key parts").contains("列数"));
         assertTrue(IndexLimitGuard.classifyAddFailure("Specified key was too long for this key").contains("键长"));
@@ -233,6 +256,19 @@ class IndexLimitGuardTest {
         private String c;
         @Column(type = "varchar", length = 255)
         private String d;
+    }
+
+    /** 复现 GoodsBasicEntity 标志位索引：@Column 未写 type，默认 VARCHAR。 */
+    @Table(value = "t_flag_idx")
+    static class FlagIndexEntity {
+        @Column(defaultValue = "0")
+        private boolean deleted;
+        @Column(defaultValue = "0")
+        private int status;
+        @Column(defaultValue = "0")
+        private boolean apple;
+        @Column(defaultValue = "0")
+        private int visible;
     }
 
     @Table(value = "t_unique_blank")
