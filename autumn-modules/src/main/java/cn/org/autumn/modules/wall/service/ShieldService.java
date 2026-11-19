@@ -180,16 +180,28 @@ public class ShieldService extends ModuleService<ShieldDao, ShieldEntity> implem
     }
 
     public boolean toggleEnable() {
+        return setEnable(!getEnable());
+    }
+
+    /**
+     * 运维显式开关：写库并刷新内存 uri 集（不走 {@link #enable()} 的 visit 窗口门槛）。
+     */
+    public boolean setEnable(boolean enable) {
         ShieldEntity shield = baseMapper.get();
         if (shield == null) {
             create();
             shield = baseMapper.get();
         }
-        boolean newEnable = !shield.isEnable();
-        shield.setEnable(newEnable);
+        if (shield.getAuto() < 1000) {
+            shield.setAuto(10000);
+        }
+        shield.setEnable(enable);
         updateById(shield);
+        if (enable) {
+            attack = true;
+        }
         uris = baseMapper.gets();
-        return newEnable;
+        return enable;
     }
 
     public boolean getEnable() {

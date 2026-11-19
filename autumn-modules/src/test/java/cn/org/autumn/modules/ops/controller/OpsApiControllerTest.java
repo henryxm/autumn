@@ -13,9 +13,14 @@ import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
+import cn.org.autumn.modules.wall.entity.JumpEntity;
+import cn.org.autumn.modules.wall.entity.ShieldEntity;
 import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.modules.wall.service.IpBlackService;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.JumpService;
+import cn.org.autumn.modules.wall.service.ShieldService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import cn.org.autumn.ops.AutumnOpsProbe;
 import cn.org.autumn.utils.PageUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +45,8 @@ class OpsApiControllerTest {
     private IpAdminWhiteService ipAdminWhiteService;
     private IpWhiteService ipWhiteService;
     private IpBlackService ipBlackService;
+    private ShieldService shieldService;
+    private JumpService jumpService;
     private AdminAccessGuard adminAccessGuard;
     private OpsRuntimeSnapshotService opsRuntimeSnapshotService;
 
@@ -52,6 +59,8 @@ class OpsApiControllerTest {
         ipAdminWhiteService = mock(IpAdminWhiteService.class);
         ipWhiteService = mock(IpWhiteService.class);
         ipBlackService = mock(IpBlackService.class);
+        shieldService = mock(ShieldService.class);
+        jumpService = mock(JumpService.class);
         adminAccessGuard = mock(AdminAccessGuard.class);
         opsRuntimeSnapshotService = mock(OpsRuntimeSnapshotService.class);
         ReflectionTestUtils.setField(controller, "opsCertService", opsCertService);
@@ -60,6 +69,8 @@ class OpsApiControllerTest {
         ReflectionTestUtils.setField(controller, "ipAdminWhiteService", ipAdminWhiteService);
         ReflectionTestUtils.setField(controller, "ipWhiteService", ipWhiteService);
         ReflectionTestUtils.setField(controller, "ipBlackService", ipBlackService);
+        ReflectionTestUtils.setField(controller, "shieldService", shieldService);
+        ReflectionTestUtils.setField(controller, "jumpService", jumpService);
         ReflectionTestUtils.setField(controller, "adminAccessGuard", adminAccessGuard);
         ReflectionTestUtils.setField(controller, "opsRuntimeSnapshotService", opsRuntimeSnapshotService);
     }
@@ -302,6 +313,23 @@ class OpsApiControllerTest {
     }
 
     @Test
+    void currentIp_returnsMembershipFlags() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setRemoteAddr("203.0.113.50");
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+        when(ipAdminWhiteService.getByIp("203.0.113.50")).thenReturn(new IpAdminWhiteEntity());
+        when(ipWhiteService.getByIp("203.0.113.50")).thenReturn(null);
+
+        Response<Map<String, Object>> res = controller.currentIp(req);
+        assertEquals("203.0.113.50", res.getData().get("ip"));
+        assertEquals(true, res.getData().get("inAdmin"));
+        assertEquals(false, res.getData().get("inWhite"));
+    }
+
+    @Test
     void ipWhiteAdd_claimCurrent() {
         OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
                 "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
@@ -402,6 +430,58 @@ class OpsApiControllerTest {
         assertEquals(true, set.getData().get("success"));
         assertEquals(2000, set.getData().get("firewallCount"));
         verify(ipBlackService).setFirewallCount(2000);
+    }
+
+    @Test
+    void shieldSave_andStatus_requireSession() {
+        MockHttpServletRequest bare = new MockHttpServletRequest();
+        assertThrows(AException.class, () -> controller.shieldList(Map.of(), bare));
+
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+        when(shieldService.getOne(any(QueryWrapper.class), eq(false))).thenReturn(null);
+        when(shieldService.save(any(ShieldEntity.class))).thenAnswer(inv -> {
+            ShieldEntity e = inv.getArgument(0);
+            e.setId(9L);
+            return true;
+        });
+        when(shieldService.getEnable()).thenReturn(true);
+
+        Response<Map<String, Object>> saved = controller.shieldSave(
+                Map.of("uri", "/api/test", "enable", true, "auto", 10000), req);
+        assertEquals("/api/test", saved.getData().get("uri"));
+        verify(shieldService).clear();
+
+        Response<Map<String, Object>> status = controller.shieldStatus(req);
+        assertEquals(true, status.getData().get("enable"));
+        assertTrue(status.getData().containsKey("attack"));
+        assertTrue(status.getData().containsKey("print"));
+    }
+
+    @Test
+    void jumpSave_rejectsBlank() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        assertThrows(AException.class, () -> controller.jumpSave(
+                Map.of("host", "a.com", "uri", "/", "url", ""), req));
+
+        when(jumpService.getOne(any(QueryWrapper.class), eq(false))).thenReturn(null);
+        when(jumpService.save(any(JumpEntity.class))).thenAnswer(inv -> {
+            JumpEntity e = inv.getArgument(0);
+            e.setId(3L);
+            return true;
+        });
+        Response<Map<String, Object>> res = controller.jumpSave(
+                Map.of("host", "a.com", "uri", "/", "url", "https://x"), req);
+        assertEquals("a.com", res.getData().get("host"));
+        verify(jumpService).clear();
     }
 
     @Test

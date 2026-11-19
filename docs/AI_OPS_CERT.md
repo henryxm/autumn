@@ -85,7 +85,7 @@ probe(T0) → enroll|claim(T1) → challenge → session(T2) → 管理 API(T3)
 reset / wall opscert/reset (T4，不依赖 ops session)
 ```
 
-### 4.1 完整 API 鉴权矩阵（`POST /ops/api/v1/…`，共 29）
+### 4.1 完整 API 鉴权矩阵（`POST /ops/api/v1/…`，共 40）
 
 列说明：**鉴权** = Controller/Service 实际校验；**附加** = clearToken 等；**敏感响应** = 须防经弱鉴权泄露；**结论** = 安全评审口径。
 
@@ -99,7 +99,7 @@ reset / wall opscert/reset (T4，不依赖 ops session)
 | 6 | `/adminip/add` | T3 | session | 可 `claimCurrent` | `ip`/成功标志 | 高 | **必须会话** |
 | 7 | `/adminip/remove` | T3 | session | 删**当前访问 IP** 时 `assertClearToken` | `ip` | 高 | 会话 + 条件 clearToken |
 | 8 | `/adminip/setForbidden` | T3 | session | — | 状态 | 高 | **必须会话** |
-| 9 | `/currentIp` | T3 | session | — | 当前访问 IP | 低 | **必须会话** |
+| 9 | `/currentIp` | T3 | session | — | `ip` + **`inAdmin`/`inWhite`**（`getByIp` 是否存在，含禁用行） | 低 | **必须会话**；供 App 隐藏「加入当前 IP」CTA |
 | 10 | `/ipwhite/list` | T3 | session | — | 用户白名单列表 | 中高 | **必须会话** |
 | 11 | `/ipwhite/add` | T3 | session | 可 `claimCurrent` | `ip` | 中高 | **必须会话** |
 | 12 | `/ipwhite/remove` | T3 | session | 删当前 IP 时 clearToken | `ip` | 中高 | 会话 + 条件 clearToken |
@@ -110,6 +110,18 @@ reset / wall opscert/reset (T4，不依赖 ops session)
 | 17 | `/ipblack/setAvailable` | T3 | session | 拒哨兵 | `available`（0=生效） | 中高 | **必须会话** |
 | 18 | `/ipblack/firewallCount/get` | T3 | session | — | `firewallCount` | 中 | **必须会话** |
 | 19 | `/ipblack/firewallCount/set` | T3 | session | 下限 500 | `firewallCount` | 中 | **必须会话** |
+| 19a | `/shield/list` | T3 | session | — | `wall_shield` 分页 `id/uri/enable/auto` | 中高 | **必须会话** |
+| 19b | `/shield/save` | T3 | session | uri 唯一；auto≥1000 | 规则行 | 中高 | **必须会话**；写后 `ShieldService.clear()` |
+| 19c | `/shield/update` | T3 | session | — | 规则行 | 中高 | **必须会话**；写后 clear |
+| 19d | `/shield/delete` | T3 | session | body.`ids[]` | `success` | 中高 | **必须会话**；写后 clear |
+| 19e | `/shield/status` | T3 | session | — | `attack`/`print`/`enable` | 中 | **必须会话** |
+| 19f | `/shield/setAttack` | T3 | session | body.`attack` | 同 status | 中高 | **必须会话** |
+| 19g | `/shield/setPrint` | T3 | session | body.`print` | 同 status | 中 | **必须会话** |
+| 19h | `/shield/setEnable` | T3 | session | body.`enable`；**写库**（非 visit 门槛 `enable()`） | 同 status | 中高 | **必须会话** |
+| 19i | `/jump/list` | T3 | session | — | `wall_jump` 分页 `id/host/uri/url/enable` | 中高 | **必须会话** |
+| 19j | `/jump/save` | T3 | session | host+uri 唯一 | 规则行 | 中高 | **必须会话**；写后 `JumpService.clear()` |
+| 19k | `/jump/update` | T3 | session | — | 规则行 | 中高 | **必须会话**；写后 clear |
+| 19l | `/jump/delete` | T3 | session | body.`ids[]` | `success` | 中高 | **必须会话**；写后 clear |
 | 20 | `/gate/get` | T3 | session | — | `adminIpEnable`/`discoverEnabled`/`clearTokenConfigured`（布尔，**非明文**） | 低中 | **必须会话**；禁止下发 clearToken 明文 |
 | 21 | `/runtime/snapshot` | T3 | session | — | 主机/磁盘/库/路径/防火墙样本/Redis/访问量等 | **高** | **必须会话**；禁止降到 Probe |
 | 22 | `/gate/verifyClearToken` | T3 | session + `assertClearToken` | — | `valid` | 低（可爆破） | 会话 + 正确令牌 |
@@ -218,8 +230,8 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 ## 7. 客户端
 
 - **真源**：独立仓 [`autumn-app`](https://git.minclouds.com/henryxm/autumn-app.git)（本地常并列于 `../autumn-app`）
-  - `packages/autumn_ops` — 协议 lib（probe/enroll/session/adminip/gate/ipwhite/ipblack、`AutumnOpsPayload`）
-  - `packages/autumn_ops_ui` — Material 多站点列表/添加/管理 / Gate
+  - `packages/autumn_ops` — 协议 lib（probe/enroll/session/adminip/gate/ipwhite/ipblack/shield/jump、`AutumnOpsPayload`）
+  - `packages/autumn_ops_ui` — Material 多站点列表/添加/管理（含盾牌、跳转 Tab）/ Gate
   - `shell` — 独立 Flutter 启动壳（打包运行）
 - **超然信 Flutter**：挂载 `AutumnOpsHost`；会话内运维密钥共享走 IM **`AutumnOps`**（见 IM `IM_CLIENT_AUTUMN_OPS.md`）；发现 URL / VC 进 Gate。
 - 协议字段以本文为准。

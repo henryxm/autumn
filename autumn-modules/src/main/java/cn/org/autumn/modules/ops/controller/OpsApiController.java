@@ -13,9 +13,14 @@ import cn.org.autumn.modules.sys.support.AdminAccessGuard;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
+import cn.org.autumn.modules.wall.entity.JumpEntity;
+import cn.org.autumn.modules.wall.entity.ShieldEntity;
 import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
 import cn.org.autumn.modules.wall.service.IpBlackService;
 import cn.org.autumn.modules.wall.service.IpWhiteService;
+import cn.org.autumn.modules.wall.service.JumpService;
+import cn.org.autumn.modules.wall.service.ShieldService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import cn.org.autumn.ops.AutumnOpsProbe;
 import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.utils.PageUtils;
@@ -25,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +61,12 @@ public class OpsApiController {
 
     @Autowired
     private IpBlackService ipBlackService;
+
+    @Autowired
+    private ShieldService shieldService;
+
+    @Autowired
+    private JumpService jumpService;
 
     @Autowired
     private AdminAccessGuard adminAccessGuard;
@@ -198,7 +210,12 @@ public class OpsApiController {
     @PostMapping("/currentIp")
     public Response<Map<String, Object>> currentIp(HttpServletRequest request) {
         requireOpsSession(request);
-        return Response.ok(Map.of("ip", StringUtils.defaultString(IPUtils.getIp(request))));
+        String ip = StringUtils.defaultString(IPUtils.getIp(request));
+        Map<String, Object> data = new HashMap<>();
+        data.put("ip", ip);
+        data.put("inAdmin", StringUtils.isNotBlank(ip) && ipAdminWhiteService.getByIp(ip) != null);
+        data.put("inWhite", StringUtils.isNotBlank(ip) && ipWhiteService.getByIp(ip) != null);
+        return Response.ok(data);
     }
 
     @PostMapping("/ipwhite/list")
@@ -368,6 +385,234 @@ public class OpsApiController {
         adminAccessGuard.auditWithIp(request, "ops.ipblack.firewallCount",
                 "count=" + ipBlackService.getFirewallCount() + " certId=" + session.getCertId());
         return Response.ok(Map.of("firewallCount", ipBlackService.getFirewallCount(), "success", true));
+    }
+
+    // —— 盾牌（wall_shield + 运行时开关）——
+
+    @PostMapping("/shield/list")
+    public Response<Map<String, Object>> shieldList(@RequestBody(required = false) Map<String, Object> body,
+                                                    HttpServletRequest request) {
+        requireOpsSession(request);
+        PageUtils page = shieldService.queryPage(pageParams(body));
+        List<Map<String, Object>> rows = page.getList().stream().map(o -> {
+            ShieldEntity e = (ShieldEntity) o;
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", e.getId());
+            m.put("uri", e.getUri());
+            m.put("enable", e.isEnable());
+            m.put("auto", e.getAuto());
+            return m;
+        }).collect(Collectors.toList());
+        return Response.ok(pageData(page, rows));
+    }
+
+    @PostMapping("/shield/save")
+    public Response<Map<String, Object>> shieldSave(@RequestBody Map<String, Object> body,
+                                                    HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        String uri = str(body, "uri");
+        if (StringUtils.isBlank(uri)) {
+            throw new AException("uri 不能为空", 400);
+        }
+        if (shieldService.getOne(new QueryWrapper<ShieldEntity>().eq("uri", uri), false) != null) {
+            throw new AException("该资源已存在", 409);
+        }
+        int auto = parsePositiveInt(body == null ? null : body.get("auto"), 10000);
+        if (auto < 1000) {
+            throw new AException("auto 须不小于 1000", 400);
+        }
+        ShieldEntity entity = new ShieldEntity();
+        entity.setUri(uri);
+        entity.setEnable(boolVal(body, "enable", true));
+        entity.setAuto(auto);
+        shieldService.save(entity);
+        shieldService.clear();
+        adminAccessGuard.auditWithIp(request, "ops.shield.save",
+                "uri=" + uri + " certId=" + session.getCertId());
+        return Response.ok(shieldRow(entity));
+    }
+
+    @PostMapping("/shield/update")
+    public Response<Map<String, Object>> shieldUpdate(@RequestBody Map<String, Object> body,
+                                                      HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        Long id = requireLong(body, "id");
+        ShieldEntity entity = shieldService.getById(id);
+        if (entity == null) {
+            throw new AException("盾牌规则不存在", 404);
+        }
+        String uri = str(body, "uri");
+        if (StringUtils.isNotBlank(uri) && !uri.equals(entity.getUri())) {
+            ShieldEntity dup = shieldService.getOne(new QueryWrapper<ShieldEntity>().eq("uri", uri), false);
+            if (dup != null && !dup.getId().equals(id)) {
+                throw new AException("该资源已存在", 409);
+            }
+            entity.setUri(uri);
+        }
+        if (body != null && body.containsKey("enable")) {
+            entity.setEnable(boolVal(body, "enable", entity.isEnable()));
+        }
+        if (body != null && body.containsKey("auto")) {
+            int auto = parsePositiveInt(body.get("auto"), entity.getAuto());
+            if (auto < 1000) {
+                throw new AException("auto 须不小于 1000", 400);
+            }
+            entity.setAuto(auto);
+        }
+        shieldService.updateById(entity);
+        shieldService.clear();
+        adminAccessGuard.auditWithIp(request, "ops.shield.update",
+                "id=" + id + " certId=" + session.getCertId());
+        return Response.ok(shieldRow(entity));
+    }
+
+    @PostMapping("/shield/delete")
+    public Response<Map<String, Object>> shieldDelete(@RequestBody Map<String, Object> body,
+                                                      HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        List<Long> ids = requireIds(body);
+        shieldService.removeBatchByIds(ids);
+        shieldService.clear();
+        adminAccessGuard.auditWithIp(request, "ops.shield.delete",
+                "ids=" + ids + " certId=" + session.getCertId());
+        return Response.ok(Map.of("success", true));
+    }
+
+    @PostMapping("/shield/status")
+    public Response<Map<String, Object>> shieldStatus(HttpServletRequest request) {
+        requireOpsSession(request);
+        Map<String, Object> data = new HashMap<>();
+        data.put("attack", ShieldService.getAttack());
+        data.put("print", ShieldService.getPrint());
+        data.put("enable", shieldService.getEnable());
+        return Response.ok(data);
+    }
+
+    @PostMapping("/shield/setAttack")
+    public Response<Map<String, Object>> shieldSetAttack(@RequestBody Map<String, Object> body,
+                                                         HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        boolean attack = requireBool(body, "attack");
+        ShieldService.setAttack(attack);
+        adminAccessGuard.auditWithIp(request, "ops.shield.setAttack",
+                "attack=" + attack + " certId=" + session.getCertId());
+        return shieldStatus(request);
+    }
+
+    @PostMapping("/shield/setPrint")
+    public Response<Map<String, Object>> shieldSetPrint(@RequestBody Map<String, Object> body,
+                                                        HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        boolean print = requireBool(body, "print");
+        ShieldService.setPrint(print);
+        adminAccessGuard.auditWithIp(request, "ops.shield.setPrint",
+                "print=" + print + " certId=" + session.getCertId());
+        return shieldStatus(request);
+    }
+
+    @PostMapping("/shield/setEnable")
+    public Response<Map<String, Object>> shieldSetEnable(@RequestBody Map<String, Object> body,
+                                                         HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        boolean enable = requireBool(body, "enable");
+        shieldService.setEnable(enable);
+        adminAccessGuard.auditWithIp(request, "ops.shield.setEnable",
+                "enable=" + enable + " certId=" + session.getCertId());
+        return shieldStatus(request);
+    }
+
+    // —— 跳转（wall_jump）——
+
+    @PostMapping("/jump/list")
+    public Response<Map<String, Object>> jumpList(@RequestBody(required = false) Map<String, Object> body,
+                                                  HttpServletRequest request) {
+        requireOpsSession(request);
+        PageUtils page = jumpService.queryPage(pageParams(body));
+        List<Map<String, Object>> rows = page.getList().stream().map(o -> {
+            JumpEntity e = (JumpEntity) o;
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", e.getId());
+            m.put("host", e.getHost());
+            m.put("uri", e.getUri());
+            m.put("url", e.getUrl());
+            m.put("enable", e.isEnable());
+            return m;
+        }).collect(Collectors.toList());
+        return Response.ok(pageData(page, rows));
+    }
+
+    @PostMapping("/jump/save")
+    public Response<Map<String, Object>> jumpSave(@RequestBody Map<String, Object> body,
+                                                  HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        String host = str(body, "host");
+        String uri = str(body, "uri");
+        String url = str(body, "url");
+        if (StringUtils.isBlank(host) || StringUtils.isBlank(uri) || StringUtils.isBlank(url)) {
+            throw new AException("host、uri、url 均不能为空", 400);
+        }
+        if (jumpService.getOne(new QueryWrapper<JumpEntity>()
+                .eq("host", host).eq("uri", uri), false) != null) {
+            throw new AException("该域名与资源组合已存在", 409);
+        }
+        JumpEntity entity = new JumpEntity();
+        entity.setHost(host);
+        entity.setUri(uri);
+        entity.setUrl(url);
+        entity.setEnable(boolVal(body, "enable", true));
+        jumpService.save(entity);
+        jumpService.clear();
+        adminAccessGuard.auditWithIp(request, "ops.jump.save",
+                "host=" + host + " uri=" + uri + " certId=" + session.getCertId());
+        return Response.ok(jumpRow(entity));
+    }
+
+    @PostMapping("/jump/update")
+    public Response<Map<String, Object>> jumpUpdate(@RequestBody Map<String, Object> body,
+                                                    HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        Long id = requireLong(body, "id");
+        JumpEntity entity = jumpService.getById(id);
+        if (entity == null) {
+            throw new AException("跳转规则不存在", 404);
+        }
+        String host = StringUtils.isNotBlank(str(body, "host")) ? str(body, "host") : entity.getHost();
+        String uri = StringUtils.isNotBlank(str(body, "uri")) ? str(body, "uri") : entity.getUri();
+        if (!host.equals(entity.getHost()) || !uri.equals(entity.getUri())) {
+            JumpEntity dup = jumpService.getOne(new QueryWrapper<JumpEntity>()
+                    .eq("host", host).eq("uri", uri), false);
+            if (dup != null && !dup.getId().equals(id)) {
+                throw new AException("该域名与资源组合已存在", 409);
+            }
+        }
+        entity.setHost(host);
+        entity.setUri(uri);
+        if (StringUtils.isNotBlank(str(body, "url"))) {
+            entity.setUrl(str(body, "url"));
+        }
+        if (body != null && body.containsKey("enable")) {
+            entity.setEnable(boolVal(body, "enable", entity.isEnable()));
+        }
+        if (StringUtils.isBlank(entity.getUrl())) {
+            throw new AException("url 不能为空", 400);
+        }
+        jumpService.updateById(entity);
+        jumpService.clear();
+        adminAccessGuard.auditWithIp(request, "ops.jump.update",
+                "id=" + id + " certId=" + session.getCertId());
+        return Response.ok(jumpRow(entity));
+    }
+
+    @PostMapping("/jump/delete")
+    public Response<Map<String, Object>> jumpDelete(@RequestBody Map<String, Object> body,
+                                                    HttpServletRequest request) {
+        OpsSessionService.OpsSession session = requireOpsSession(request);
+        List<Long> ids = requireIds(body);
+        jumpService.removeBatchByIds(ids);
+        jumpService.clear();
+        adminAccessGuard.auditWithIp(request, "ops.jump.delete",
+                "ids=" + ids + " certId=" + session.getCertId());
+        return Response.ok(Map.of("success", true));
     }
 
     @PostMapping("/gate/get")
@@ -727,5 +972,101 @@ public class OpsApiController {
             return "";
         }
         return String.valueOf(body.get(key)).trim();
+    }
+
+    private static Map<String, Object> shieldRow(ShieldEntity e) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", e.getId());
+        m.put("uri", e.getUri());
+        m.put("enable", e.isEnable());
+        m.put("auto", e.getAuto());
+        m.put("success", true);
+        return m;
+    }
+
+    private static Map<String, Object> jumpRow(JumpEntity e) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", e.getId());
+        m.put("host", e.getHost());
+        m.put("uri", e.getUri());
+        m.put("url", e.getUrl());
+        m.put("enable", e.isEnable());
+        m.put("success", true);
+        return m;
+    }
+
+    private static boolean boolVal(Map<String, Object> body, String key, boolean defaultValue) {
+        if (body == null || !body.containsKey(key) || body.get(key) == null) {
+            return defaultValue;
+        }
+        Object raw = body.get(key);
+        if (raw instanceof Boolean) {
+            return (Boolean) raw;
+        }
+        if (raw instanceof Number) {
+            return ((Number) raw).intValue() != 0;
+        }
+        String s = String.valueOf(raw).trim();
+        if ("true".equalsIgnoreCase(s) || "1".equals(s)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(s) || "0".equals(s)) {
+            return false;
+        }
+        return defaultValue;
+    }
+
+    private static boolean requireBool(Map<String, Object> body, String key) {
+        if (body == null || !body.containsKey(key) || body.get(key) == null) {
+            throw new AException(key + " 不能为空", 400);
+        }
+        return boolVal(body, key, false);
+    }
+
+    private static Long requireLong(Map<String, Object> body, String key) {
+        if (body == null || body.get(key) == null) {
+            throw new AException(key + " 不能为空", 400);
+        }
+        Object raw = body.get(key);
+        try {
+            if (raw instanceof Number) {
+                return ((Number) raw).longValue();
+            }
+            return Long.parseLong(String.valueOf(raw).trim());
+        } catch (NumberFormatException e) {
+            throw new AException(key + " 须为数字", 400);
+        }
+    }
+
+    private static List<Long> requireIds(Map<String, Object> body) {
+        if (body == null || body.get("ids") == null) {
+            throw new AException("ids 不能为空", 400);
+        }
+        Object raw = body.get("ids");
+        List<Long> ids = new ArrayList<>();
+        if (raw instanceof List<?> list) {
+            for (Object o : list) {
+                if (o == null) {
+                    continue;
+                }
+                if (o instanceof Number) {
+                    ids.add(((Number) o).longValue());
+                } else {
+                    try {
+                        ids.add(Long.parseLong(String.valueOf(o).trim()));
+                    } catch (NumberFormatException e) {
+                        throw new AException("ids 须为数字数组", 400);
+                    }
+                }
+            }
+        } else if (raw instanceof Number) {
+            ids.add(((Number) raw).longValue());
+        } else {
+            throw new AException("ids 须为数组", 400);
+        }
+        if (ids.isEmpty()) {
+            throw new AException("ids 不能为空", 400);
+        }
+        return ids;
     }
 }
