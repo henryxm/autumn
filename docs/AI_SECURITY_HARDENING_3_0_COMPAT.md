@@ -175,10 +175,13 @@
 
 ### 2.2.1 管理员引导口令（随机初始口令）
 
+> 运维叙事与启动日志三类密钥对照见根 **`README.md`**「首次启动：控制台密钥一览」（与 `OpsEnroll` / `AdminIpBootstrap` 并列）。
+
 | 概念 | 说明 |
 |------|------|
 | 引导态口令 | 未配置 `system.password` / Env `systemPassword` 时，首次建 admin 生成的随机口令 |
 | 配置口令 | Env/配置显式给定 → **不**写恢复文件、**不**置改密待办 |
+| 老库已有 admin | **不**重发引导口令；沿用库内哈希；旧 SHA-256×16 登录可验并惰性升级 PBKDF2（见 D-01） |
 | 改密待办 | `SECURITY_AUTH_CONFIG.adminBootstrapPending`；驱动管理端提示条 |
 
 **生命周期**
@@ -347,7 +350,7 @@
 
 - [ ] **`POST /wall/api/ipwhite/add`**（用户防拉黑名单）：未登录/非超管（及管理 IP 校验开启且未加白）→ 不写库；删当前 IP 须头 `x-clear-authentication` = clearToken  
 - [ ] **管理 IP**：`wall_ip_admin_white` 与 `wall_ip_white` 表隔离；运维/gen/`requireOpsAdmin` 走 `IpAdminWhiteService.checkAdmin`（受 `adminIpEnable` 控制），不跟随 `WallDefault.ipWhiteEnable`；**不从用户白名单迁移/回退**，空表初始化；用户 `isWhite` **逻辑继承**管理名单（管理 IP 默认免防火墙拉黑）  
-- [ ] **管理 IP 引导**：`adminIpEnable=true` 且空表时启动打印 `AdminIpBootstrap secret=`（明文一次）；内存只存 hash；`POST /wall/api/ipadminwhite/bootstrap` 认领当前 IP 后立即清 hash；二次同一密钥失败；名单非空后 bootstrap 拒绝；客户端 IP 解析与 `IPUtils.getIp` 统一（XFF 首 hop + trim）  
+- [ ] **管理 IP 引导**：管理白名单**空表**时启动打印 `AdminIpBootstrap secret=`（明文一次；与是否已开 `adminIpEnable` 无关）；内存只存 hash；`POST /wall/api/ipadminwhite/bootstrap` 认领当前 IP 后立即清 hash；二次同一密钥失败；名单非空后 bootstrap 拒绝；客户端 IP 解析与 `IPUtils.getIp` 统一（XFF 首 hop + trim）  
 - [ ] **`wall.html`**：超管可进页；仅 `adminIpEnable=true` 且 IP 未加白时**不直接展示内容**，居中输入临时安全密码（引导态=启动密钥，否则=`clearToken`）→ `POST /wall/api/ipadminwhite/unlock` 认领当前 IP 后再显示；POST 带 CSRF；认领后增删管理 IP 须已在管理名单；用户白名单区块文案区分「防拉黑」
 - [ ] **`/sys/node/*`（`ProfileController`）**：未登录/非超管（及管理 IP 校验开启且未加白）→ 403（`GEN_MODULES` 含 `node`，切面强制）
 - [ ] **install 向导**：`autumn.install.mode=true` 时可无管理 IP；切面织入 install 包但不强制 IP（首装无白名单）  

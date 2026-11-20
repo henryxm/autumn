@@ -9,7 +9,7 @@
 - **与账号密码登录独立**：证书通道只负责管理 IP 白名单与 `adminIpEnable` 等高敏感运维开关；日常后台菜单/gen CRUD 仍须用户名密码（且在授权 IP 下）。证书 = 进门（IP），账号 = 进房间（身份）。
 - **与业务传输加密独立**：禁止复用 `/rsa/api/v1` 会话与 EncryptKey。
 - **单机与集群同一份秘钥**：服务端 RSA、已入驻客户端公钥、OpsEnroll 校验材料均在共享 `SECURITY_OPS_CERT_CONFIG`（sys_config）；禁止各节点各执一份。
-- 入驻一次性：日志 `OpsEnroll secret=`（与 `AdminIpBootstrap secret=` **独立**）；明文不落库。
+- 入驻一次性：日志 `OpsEnroll secret=`（与 **`AdminIpBootstrap secret=`**、**管理员引导口令** `Admin bootstrap password generated` **三者独立**）；明文不落库。对照根 `README.md`「首次启动：控制台密钥一览」。
 - 客户端：**多站点列表**（多个 Autumn 后台域名各自探测/换证/管理）。
 
 ## 2. 密钥与存储
@@ -229,7 +229,7 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 
 ## 7. 客户端
 
-- **真源**：独立仓 [`autumn-app`](https://git.minclouds.com/henryxm/autumn-app.git)（本地常并列于 `../autumn-app`）
+- **真源**：独立仓 [`autumn-app`](https://github.com/henryxm/autumn-app.git)（本地常并列于 `../autumn-app`）
   - `packages/autumn_ops` — 协议 lib（probe/enroll/session/adminip/gate/ipwhite/ipblack/shield/jump、`AutumnOpsPayload`）
   - `packages/autumn_ops_ui` — Material 多站点列表/添加/管理（含盾牌、跳转 Tab）/ Gate
   - `shell` — 独立 Flutter 启动壳（打包运行）
