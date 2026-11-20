@@ -21,6 +21,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import com.google.gson.JsonObject;
+import java.util.List;
 
 /** QRC Webhook 投递：扫码 {@code qrc.scanned} 与确认 {@code qrc.authorized} 共用签名与 HTTP 投递。 */
 @Slf4j
@@ -67,7 +69,7 @@ public class QrcWebhookDeliveryService {
             log.warn("QRC webhook skipped: blank URL ticket={} event={} delivery={} clientId={}", ticket.getUuid(), event, TicketPayloads.get(ticket, "delivery"), TicketPayloads.get(ticket, "clientId"));
             return;
         }
-        String ssrf = OutboundUrlSafety.rejectReasonPublicHostsOk(webhook, java.util.List.of(), true);
+        String ssrf = OutboundUrlSafety.rejectReasonPublicHostsOk(webhook, List.of(), true);
         if (ssrf != null) {
             log.warn("QRC webhook SSRF rejected ticket={} event={} reason={} url={}", ticket.getUuid(), event, ssrf, webhook);
             return;
@@ -112,7 +114,7 @@ public class QrcWebhookDeliveryService {
             return true;
         }
         try {
-            com.google.gson.JsonObject json = gson.fromJson(body.trim(), com.google.gson.JsonObject.class);
+            JsonObject json = gson.fromJson(body.trim(), JsonObject.class);
             if (json != null && json.has("code") && !json.get("code").isJsonNull()) {
                 return json.get("code").getAsInt() == 0;
             }

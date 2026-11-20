@@ -75,6 +75,7 @@ import java.util.*;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.core.env.Environment;
 
 @Slf4j
 @Service
@@ -151,7 +152,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     private boolean redisOpen;
 
     @Autowired(required = false)
-    private org.springframework.core.env.Environment environment;
+    private Environment environment;
 
     @Autowired
     DomainFactory domainFactory;

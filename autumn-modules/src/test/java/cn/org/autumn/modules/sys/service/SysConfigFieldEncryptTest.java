@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import cn.org.autumn.model.RobotQuotaConfig;
 
 /**
  * SysConfig paramValue：双读（明文/ENC$）、写密文、API/缓存侧明文。
@@ -188,16 +189,16 @@ public class SysConfigFieldEncryptTest {
         dbRow.set(copy(cipher));
         ReflectionTestUtils.setField(service, "map", new ConcurrentHashMap<String, SysConfigEntity>());
 
-        cn.org.autumn.model.RobotQuotaConfig cfg =
-                service.getObject("ROBOT_QUOTA_CONFIG", cn.org.autumn.model.RobotQuotaConfig.class);
+        RobotQuotaConfig cfg =
+                service.getObject("ROBOT_QUOTA_CONFIG", RobotQuotaConfig.class);
         Assertions.assertNotNull(cfg);
         Assertions.assertEquals(9, cfg.getMaxRobotsPerUser());
 
         dbRow.set(row("BAD_JSON_KEY", "ENC$v1$not-valid-cipher-payload"));
         ReflectionTestUtils.setField(service, "map", new ConcurrentHashMap<String, SysConfigEntity>());
         // 无法解密/非 JSON 时回落默认对象，不抛异常拖垮启动
-        cn.org.autumn.model.RobotQuotaConfig fallback =
-                service.getObject("BAD_JSON_KEY", cn.org.autumn.model.RobotQuotaConfig.class);
+        RobotQuotaConfig fallback =
+                service.getObject("BAD_JSON_KEY", RobotQuotaConfig.class);
         Assertions.assertNotNull(fallback);
         Assertions.assertEquals(5, fallback.getMaxRobotsPerUser());
     }
@@ -242,20 +243,20 @@ public class SysConfigFieldEncryptTest {
 
     @Test
     public void jsonOrNull_blankReturnsNull_valueParsesOnceCached() {
-        Assertions.assertNull(service.jsonOrNull("MISSING_JSON", cn.org.autumn.model.RobotQuotaConfig.class));
+        Assertions.assertNull(service.jsonOrNull("MISSING_JSON", RobotQuotaConfig.class));
 
         dbRow.set(row("QUOTA_JSON", "{\"maxRobotsPerUser\":7}"));
         ReflectionTestUtils.setField(service, "map", new ConcurrentHashMap<String, SysConfigEntity>());
 
-        cn.org.autumn.model.RobotQuotaConfig first =
-                service.jsonOrNull("QUOTA_JSON", cn.org.autumn.model.RobotQuotaConfig.class);
+        RobotQuotaConfig first =
+                service.jsonOrNull("QUOTA_JSON", RobotQuotaConfig.class);
         Assertions.assertNotNull(first);
         Assertions.assertEquals(7, first.getMaxRobotsPerUser());
 
         // map 已缓存明文；改 db 不应影响已解析的 JSON 缓存引用
         dbRow.set(row("QUOTA_JSON", "{\"maxRobotsPerUser\":99}"));
-        cn.org.autumn.model.RobotQuotaConfig cached =
-                service.json("QUOTA_JSON", cn.org.autumn.model.RobotQuotaConfig.class);
+        RobotQuotaConfig cached =
+                service.json("QUOTA_JSON", RobotQuotaConfig.class);
         Assertions.assertSame(first, cached);
         Assertions.assertEquals(7, cached.getMaxRobotsPerUser());
     }
@@ -265,15 +266,15 @@ public class SysConfigFieldEncryptTest {
         dbRow.set(row("QUOTA_INV", "{\"maxRobotsPerUser\":3}"));
         ReflectionTestUtils.setField(service, "map", new ConcurrentHashMap<String, SysConfigEntity>());
 
-        cn.org.autumn.model.RobotQuotaConfig before =
-                service.json("QUOTA_INV", cn.org.autumn.model.RobotQuotaConfig.class);
+        RobotQuotaConfig before =
+                service.json("QUOTA_INV", RobotQuotaConfig.class);
         Assertions.assertEquals(3, before.getMaxRobotsPerUser());
 
         dbRow.set(row("QUOTA_INV", "{\"maxRobotsPerUser\":11}"));
         service.invalidateLocalCache("QUOTA_INV");
 
-        cn.org.autumn.model.RobotQuotaConfig after =
-                service.json("QUOTA_INV", cn.org.autumn.model.RobotQuotaConfig.class);
+        RobotQuotaConfig after =
+                service.json("QUOTA_INV", RobotQuotaConfig.class);
         Assertions.assertEquals(11, after.getMaxRobotsPerUser());
         Assertions.assertNotSame(before, after);
     }

@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import cn.org.autumn.utils.IPUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 支付密码、手势与生物识别<strong>开放 API</strong>（面向 App / H5 / 业务网关）。
@@ -403,8 +405,8 @@ public class PayCredentialApiController {
         try {
             PayTrustedIpRequest data = data(request);
             String ip = data.getIp();
-            if (org.apache.commons.lang3.StringUtils.isBlank(ip))
-                ip = cn.org.autumn.utils.IPUtils.getIp(servlet);
+            if (StringUtils.isBlank(ip))
+                ip = IPUtils.getIp(servlet);
             payUserTrustedIpService.trust(requireUser(context), ip, data.getLocationLabel());
             return Response.ok();
         } catch (Exception e) {
@@ -455,7 +457,7 @@ public class PayCredentialApiController {
             throw new CodeException("请登录", -10000);
         if (context.isRobot())
             throw new CodeException("请使用用户令牌", -10000);
-        if (org.apache.commons.lang3.StringUtils.isBlank(context.getUuid()))
+        if (StringUtils.isBlank(context.getUuid()))
             throw new CodeException("用户不可用", -10000);
         return context.getUuid();
     }

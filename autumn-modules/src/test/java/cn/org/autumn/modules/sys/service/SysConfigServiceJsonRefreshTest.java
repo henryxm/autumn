@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.google.gson.JsonElement;
 
 class SysConfigServiceJsonRefreshTest {
 
@@ -65,7 +66,7 @@ class SysConfigServiceJsonRefreshTest {
         JsonObject defaults = JsonTypeConfigRefresher.buildDefaultConfigJson(clazz, clazz.newInstance(), JsonTypeConfigRefresher.refreshGson());
         JsonTypeConfigRefresher.MergeResult result = JsonTypeConfigRefresher.mergeMissingFields(className, "{}");
         JsonObject merged = JsonParser.parseString(result.getJson()).getAsJsonObject();
-        for (Map.Entry<String, com.google.gson.JsonElement> entry : defaults.entrySet()) {
+        for (Map.Entry<String, JsonElement> entry : defaults.entrySet()) {
             assertTrue(merged.has(entry.getKey()), () -> className + " missing key " + entry.getKey());
         }
         assertTrue(result.isChanged());

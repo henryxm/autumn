@@ -14,6 +14,7 @@ import org.springframework.boot.context.metrics.buffering.BufferingApplicationSt
 import org.springframework.boot.context.metrics.buffering.StartupTimeline;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.core.metrics.StartupStep;
 
 /**
  * Autumn 应用入口封装：首次 {@link SpringApplication#run}，并在 {@code autumn.install.mode=true} 时
@@ -94,7 +95,7 @@ public final class AutumnSpringApplication {
             }
             String name = event.getStartupStep().getName();
             String beanTag = null;
-            for (org.springframework.core.metrics.StartupStep.Tag tag : event.getStartupStep().getTags()) {
+            for (StartupStep.Tag tag : event.getStartupStep().getTags()) {
                 if ("beanName".equals(tag.getKey())) {
                     beanTag = tag.getValue();
                     break;

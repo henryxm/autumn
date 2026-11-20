@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * 角色组：描述可共存的角色集合（文档与校验辅助，非强制枚举）。
@@ -56,11 +58,11 @@ public class ServerRoleGroups {
     /**
      * 规范化写入值：含 ALL → 仅 ALL；去空白、大写、去重保序。
      */
-    public static java.util.List<String> normalize(java.util.Collection<String> raw) {
+    public static List<String> normalize(Collection<String> raw) {
         if (raw == null || raw.isEmpty()) {
-            return java.util.List.of();
+            return List.of();
         }
-        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
+        LinkedHashSet<String> set = new LinkedHashSet<>();
         boolean all = false;
         for (String r : raw) {
             if (StringUtils.isBlank(r)) {
@@ -74,8 +76,8 @@ public class ServerRoleGroups {
             set.add(c);
         }
         if (all) {
-            return java.util.List.of(ServerRole.CODE_ALL);
+            return List.of(ServerRole.CODE_ALL);
         }
-        return java.util.List.copyOf(set);
+        return List.copyOf(set);
     }
 }

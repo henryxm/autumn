@@ -21,6 +21,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.HashMap;
 
 @Slf4j
 public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQueueService<M, T> {
@@ -2582,7 +2583,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
      * @return 字段值 Map，key 为字段名，value 为字段值
      */
     private Map<String, Object> extractFieldValues(Object key, Class<?> clazz, String[] fieldNames) {
-        Map<String, Object> fieldValues = new java.util.HashMap<>();
+        Map<String, Object> fieldValues = new HashMap<>();
         // 如果 key 是 Map，直接使用
         if (key instanceof Map) {
             @SuppressWarnings("unchecked")

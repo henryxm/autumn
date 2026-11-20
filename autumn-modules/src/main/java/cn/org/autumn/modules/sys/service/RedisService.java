@@ -22,6 +22,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.core.ZSetOperations;
 
 /**
  * Redis 运维管理。禁止使用阻塞型 {@code KEYS} 全量扫描：键多时会打满 Redis 与应用 CPU，
@@ -422,13 +423,13 @@ public class RedisService {
 
     private Object getZSetValue(String key) {
         try {
-            Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<Object>> zset =
+            Set<ZSetOperations.TypedTuple<Object>> zset =
                     redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
             if (zset == null || zset.isEmpty()) {
                 return new ArrayList<>();
             }
             List<Map<String, Object>> result = new ArrayList<>();
-            for (org.springframework.data.redis.core.ZSetOperations.TypedTuple<Object> tuple : zset) {
+            for (ZSetOperations.TypedTuple<Object> tuple : zset) {
                 Map<String, Object> tupleMap = new HashMap<>();
                 Object value = tuple.getValue();
                 if (value instanceof byte[]) {
@@ -442,13 +443,13 @@ public class RedisService {
             return result;
         } catch (Exception e) {
             try {
-                Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<String>> zset =
+                Set<ZSetOperations.TypedTuple<String>> zset =
                         stringRedisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
                 if (zset == null || zset.isEmpty()) {
                     return new ArrayList<>();
                 }
                 List<Map<String, Object>> result = new ArrayList<>();
-                for (org.springframework.data.redis.core.ZSetOperations.TypedTuple<String> tuple : zset) {
+                for (ZSetOperations.TypedTuple<String> tuple : zset) {
                     Map<String, Object> tupleMap = new HashMap<>();
                     tupleMap.put("value", tryParseJson(tuple.getValue()));
                     tupleMap.put("score", tuple.getScore());

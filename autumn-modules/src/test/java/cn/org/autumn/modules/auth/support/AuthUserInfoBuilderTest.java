@@ -8,6 +8,8 @@ import cn.org.autumn.modules.usr.entity.UserProfileEntity;
 import cn.org.autumn.opl.model.OpenUserInfoSnapshot;
 import org.junit.Assert;
 import org.junit.Test;
+import cn.org.autumn.auth.model.AuthUserInfo;
+import cn.org.autumn.modules.usr.dto.UserProfile;
 
 public class AuthUserInfoBuilderTest {
 
@@ -25,7 +27,7 @@ public class AuthUserInfoBuilderTest {
         profile.setNickname("nick");
         profile.setUsername("user1");
         AuthScopeSet granted = AuthScopeSet.of("basic").expand(catalog, AuthTrack.OAUTH);
-        cn.org.autumn.auth.model.AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, user, profile, null, null);
+        AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, user, profile, null, null);
         Assert.assertEquals("u1", info.getUuid());
         Assert.assertEquals("nick", info.getNickname());
         Assert.assertEquals("icon.png", info.getIcon());
@@ -40,7 +42,7 @@ public class AuthUserInfoBuilderTest {
         profile.setUuid("u1");
         profile.setNickname("nick");
         AuthScopeSet granted = AuthScopeSet.of("identity");
-        cn.org.autumn.auth.model.AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, null, profile, null, null);
+        AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, null, profile, null, null);
         Assert.assertEquals("u1", info.getUuid());
         Assert.assertNull(info.getNickname());
     }
@@ -52,7 +54,7 @@ public class AuthUserInfoBuilderTest {
         user.setUuid("u1");
         user.setEmail("user@example.com");
         AuthScopeSet granted = AuthScopeSet.of("openid", "email");
-        cn.org.autumn.auth.model.AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OPL, granted, user, null, "oid1", null);
+        AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OPL, granted, user, null, "oid1", null);
         OpenUserInfoSnapshot snapshot = AuthUserInfoBuilder.toOpenUserInfo(info);
         Assert.assertEquals("oid1", snapshot.getOpenId());
         Assert.assertEquals("user@example.com", snapshot.getEmail());
@@ -64,7 +66,7 @@ public class AuthUserInfoBuilderTest {
         SysUserEntity user = new SysUserEntity();
         user.setEmail("user@example.com");
         AuthScopeSet granted = AuthScopeSet.of("openid");
-        cn.org.autumn.auth.model.AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OPL, granted, user, null, "oid1", null);
+        AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OPL, granted, user, null, "oid1", null);
         OpenUserInfoSnapshot snapshot = AuthUserInfoBuilder.toOpenUserInfo(info);
         Assert.assertNull(snapshot.getEmail());
     }
@@ -76,7 +78,7 @@ public class AuthUserInfoBuilderTest {
         user.setUuid("u1");
         user.setVerify(1);
         AuthScopeSet granted = AuthScopeSet.of("basic").expand(catalog, AuthTrack.OAUTH);
-        cn.org.autumn.auth.model.AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, user, null, null, null);
+        AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, user, null, null, null);
         Assert.assertNull(info.getVerified());
     }
 
@@ -87,18 +89,18 @@ public class AuthUserInfoBuilderTest {
         user.setUuid("u1");
         user.setVerify(1);
         AuthScopeSet granted = AuthScopeSet.of("identity", "verified");
-        cn.org.autumn.auth.model.AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, user, null, null, null);
+        AuthUserInfo info = AuthUserInfoBuilder.build(catalog, AuthTrack.OAUTH, granted, user, null, null, null);
         Assert.assertEquals(Integer.valueOf(1), info.getVerified());
     }
 
     @Test
     public void toUserProfileCopiesVerifiedAndMobile() {
-        cn.org.autumn.auth.model.AuthUserInfo info = new cn.org.autumn.auth.model.AuthUserInfo();
+        AuthUserInfo info = new AuthUserInfo();
         info.setUuid("u1");
         info.setNickname("nick");
         info.setMobile("13800000000");
         info.setVerified(1);
-        cn.org.autumn.modules.usr.dto.UserProfile profile = AuthUserInfoBuilder.toUserProfile(info);
+        UserProfile profile = AuthUserInfoBuilder.toUserProfile(info);
         Assert.assertEquals("u1", profile.getUuid());
         Assert.assertEquals("nick", profile.getNickname());
         Assert.assertEquals("13800000000", profile.getMobile());

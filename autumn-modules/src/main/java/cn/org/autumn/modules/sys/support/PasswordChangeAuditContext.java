@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.sys.support;
 
 import org.apache.commons.lang3.StringUtils;
+import java.util.concurrent.Callable;
 
 /**
  * 口令写库路径的审计上下文（ThreadLocal）：供 {@code SysUserService#save} 等嵌套调用带上 channel/operator。
@@ -30,7 +31,7 @@ public final class PasswordChangeAuditContext {
         }
     }
 
-    public static <T> T call(String channel, String operatorUserUuid, java.util.concurrent.Callable<T> action) {
+    public static <T> T call(String channel, String operatorUserUuid, Callable<T> action) {
         String prevChannel = CHANNEL.get();
         String prevOperator = OPERATOR.get();
         try {

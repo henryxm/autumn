@@ -10,6 +10,8 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import cn.org.autumn.table.data.index.IndexColumnSpec;
+import cn.org.autumn.table.data.index.IndexDialectCapability;
 
 /**
  * 内嵌 H2 + {@code MODE=MySQL}：剥离 MySQL 表级 DDL、索引 {@code USING}、前缀长度等 H2 不支持的语法。
@@ -28,8 +30,8 @@ public final class H2MysqlCompatSchemaSql extends MysqlSchemaSql {
         StringBuilder stringBuilder = new StringBuilder();
         Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
-            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
-                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.H2, ii.getValue());
+            IndexInfo indexInfo = IndexDialectCapability.forEmit(
+                    IndexDialectCapability.Family.H2, ii.getValue());
             if (indexInfo == null) {
                 continue;
             }
@@ -41,13 +43,13 @@ public final class H2MysqlCompatSchemaSql extends MysqlSchemaSql {
             String idxName = "ix_" + h2IndexTablePrefix(ii.getKey().getName()) + "_" + indexInfo.getName();
             stringBuilder.append("`").append(idxName).append("` (");
             // H2：保留列序与 ASC/DESC，忽略 MySQL 前缀长度
-            java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> specs = indexInfo.getColumnSpecs();
+            List<IndexColumnSpec> specs = indexInfo.getColumnSpecs();
             if (specs != null && !specs.isEmpty()) {
                 for (int i = 0; i < specs.size(); i++) {
                     if (i > 0) {
                         stringBuilder.append(",");
                     }
-                    cn.org.autumn.table.data.index.IndexColumnSpec spec = specs.get(i);
+                    IndexColumnSpec spec = specs.get(i);
                     if (spec.isExpression()) {
                         stringBuilder.append("(").append(spec.getExpression()).append(")");
                     } else {

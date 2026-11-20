@@ -36,6 +36,7 @@ import org.springframework.web.client.RestTemplate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import cn.org.autumn.modules.qrc.dto.CreateContext;
 
 /**
  * OAuth 授权页 loginTab 记忆：账号登录 redirect 与扫码 exchange 后会话态下的授权页配置。
@@ -104,7 +105,7 @@ public class OAuthAuthorizeTabIntegrationTest extends IntegrationTest {
         payload.put("state", "qr-tab");
         payload.put("callback", "");
 
-        cn.org.autumn.modules.qrc.dto.CreateContext ctx = new cn.org.autumn.modules.qrc.dto.CreateContext();
+        CreateContext ctx = new CreateContext();
         ctx.setIntent(Intent.OAUTH_AUTHORIZE);
         ctx.setClientId(clientId);
         ctx.setPayload(payload);

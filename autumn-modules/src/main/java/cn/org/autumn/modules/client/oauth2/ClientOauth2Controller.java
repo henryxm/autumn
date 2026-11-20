@@ -37,6 +37,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.net.URLEncoder;
 
 /** OAuth2 RP 浏览器入口：B1 授权回调、绑定选择页、冲突页。 */
 @Controller
@@ -225,7 +226,7 @@ public class ClientOauth2Controller {
 
     private static String encodeCallback(String callback) {
         try {
-            return java.net.URLEncoder.encode(callback, "UTF-8");
+            return URLEncoder.encode(callback, "UTF-8");
         } catch (Exception e) {
             return callback;
         }

@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.List;
 
 @Slf4j
 @Getter
@@ -455,7 +456,7 @@ public class TableInfo {
             }
             // 同步 columnSpecs，避免 fields 与 specs 漂移
             if (ii.getColumnSpecs() != null && !ii.getColumnSpecs().isEmpty()) {
-                java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> kept = new ArrayList<>();
+                List<cn.org.autumn.table.data.index.IndexColumnSpec> kept = new ArrayList<>();
                 for (cn.org.autumn.table.data.index.IndexColumnSpec spec : ii.getColumnSpecs()) {
                     if (spec.isExpression() || !columnMarkedIsUnique(spec.getColumn(), isUniqueColumnNames)) {
                         kept.add(spec);

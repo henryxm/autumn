@@ -13,6 +13,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import cn.org.autumn.table.data.index.IndexColumnSpec;
+import cn.org.autumn.table.data.index.IndexDialectCapability;
 
 /**
  * 双引号标识符系（SQLite / H2 / HSQLDB / DB2 / Derby / Firebird / Informix）的 DDL 生成。
@@ -105,14 +107,14 @@ public final class AnsiDoubleQuotedDdlGenerator {
             sb.append(")");
             all.append(sb);
             if (tableInfo.getIndexInfos() != null) {
-                cn.org.autumn.table.data.index.IndexDialectCapability.Family family =
+                IndexDialectCapability.Family family =
                         dialect == AnsiDialect.SQLITE
-                                ? cn.org.autumn.table.data.index.IndexDialectCapability.Family.SQLITE
+                                ? IndexDialectCapability.Family.SQLITE
                                 : (dialect == AnsiDialect.H2
-                                ? cn.org.autumn.table.data.index.IndexDialectCapability.Family.H2
-                                : cn.org.autumn.table.data.index.IndexDialectCapability.Family.ANSI);
+                                ? IndexDialectCapability.Family.H2
+                                : IndexDialectCapability.Family.ANSI);
                 for (IndexInfo raw : tableInfo.getIndexInfos()) {
-                    IndexInfo idx = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(family, raw);
+                    IndexInfo idx = IndexDialectCapability.forEmit(family, raw);
                     if (idx == null || StringUtils.isBlank(idx.getName())) {
                         continue;
                     }
@@ -339,13 +341,13 @@ public final class AnsiDoubleQuotedDdlGenerator {
         }
         for (Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
             TableInfo table = ii.getKey();
-            cn.org.autumn.table.data.index.IndexDialectCapability.Family family =
+            IndexDialectCapability.Family family =
                     dialect == AnsiDialect.SQLITE
-                            ? cn.org.autumn.table.data.index.IndexDialectCapability.Family.SQLITE
+                            ? IndexDialectCapability.Family.SQLITE
                             : (dialect == AnsiDialect.H2
-                            ? cn.org.autumn.table.data.index.IndexDialectCapability.Family.H2
-                            : cn.org.autumn.table.data.index.IndexDialectCapability.Family.ANSI);
-            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(family, ii.getValue());
+                            ? IndexDialectCapability.Family.H2
+                            : IndexDialectCapability.Family.ANSI);
+            IndexInfo indexInfo = IndexDialectCapability.forEmit(family, ii.getValue());
             if (indexInfo == null) {
                 continue;
             }
@@ -365,7 +367,7 @@ public final class AnsiDoubleQuotedDdlGenerator {
                     .append(" ON ").append(qi(table.getName())).append(" (");
             appendIndexColumns(sb, indexInfo);
             sb.append(")");
-            if (org.apache.commons.lang3.StringUtils.isNotBlank(indexInfo.getWherePredicate())
+            if (StringUtils.isNotBlank(indexInfo.getWherePredicate())
                     && (dialect == AnsiDialect.SQLITE || dialect == AnsiDialect.H2)) {
                 sb.append(" WHERE ").append(indexInfo.getWherePredicate());
             }
@@ -376,13 +378,13 @@ public final class AnsiDoubleQuotedDdlGenerator {
 
     /** 有序列 + ASC/DESC；忽略 MySQL 前缀。 */
     private static void appendIndexColumns(StringBuilder sb, IndexInfo indexInfo) {
-        java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> specs = indexInfo.getColumnSpecs();
+        List<IndexColumnSpec> specs = indexInfo.getColumnSpecs();
         if (specs != null && !specs.isEmpty()) {
             for (int i = 0; i < specs.size(); i++) {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                cn.org.autumn.table.data.index.IndexColumnSpec spec = specs.get(i);
+                IndexColumnSpec spec = specs.get(i);
                 if (spec.isExpression()) {
                     sb.append("(").append(spec.getExpression()).append(")");
                 } else {

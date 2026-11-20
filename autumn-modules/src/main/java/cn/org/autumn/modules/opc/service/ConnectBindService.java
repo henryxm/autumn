@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 
 @Service
 public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBindEntity> implements AccountHandler {
@@ -170,7 +171,7 @@ public class ConnectBindService extends ModuleService<ConnectBindDao, ConnectBin
         if (obj == null || StringUtils.isBlank(obj.getUuid())) {
             return;
         }
-        List<ConnectBindEntity> binds = baseMapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ConnectBindEntity>().eq("user", obj.getUuid()));
+        List<ConnectBindEntity> binds = baseMapper.selectList(new QueryWrapper<ConnectBindEntity>().eq("user", obj.getUuid()));
         if (binds == null || binds.isEmpty()) {
             return;
         }

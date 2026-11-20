@@ -21,6 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.LinkedHashMap;
 
 class IndexInfoOrderTest {
 
@@ -45,7 +49,7 @@ class IndexInfoOrderTest {
         String tags;
         boolean enabled;
         String status;
-        java.util.Date livingAt;
+        Date livingAt;
         Long id;
     }
 
@@ -224,9 +228,9 @@ class IndexInfoOrderTest {
         IndexInfo idx = find(ti, "user_side");
         assertEquals("user", idx.getColumnSpecs().get(0).getColumn());
         assertEquals("side", idx.getColumnSpecs().get(1).getColumn());
-        assertTrue(idx.getFields() instanceof java.util.LinkedHashMap);
-        List<String> keys = new java.util.ArrayList<>(idx.getFields().keySet());
-        assertEquals(java.util.Arrays.asList("user", "side"), keys);
+        assertTrue(idx.getFields() instanceof LinkedHashMap);
+        List<String> keys = new ArrayList<>(idx.getFields().keySet());
+        assertEquals(Arrays.asList("user", "side"), keys);
     }
 
     @Test
@@ -339,7 +343,7 @@ class IndexInfoOrderTest {
         IndexDdlFragments.appendMysqlColumns(sb, tags);
         assertEquals("`tags` ASC,`enabled` ASC", sb.toString());
         IndexInfo del = find(ti, "deletedenableduser");
-        assertEquals(java.util.Arrays.asList("deleted", "enabled", "user"),
+        assertEquals(Arrays.asList("deleted", "enabled", "user"),
                 del.getColumnSpecs().stream().map(IndexColumnSpec::getColumn).toList());
     }
 
@@ -402,7 +406,7 @@ class IndexInfoOrderTest {
 
         @Column(comment = "开播时间")
         @Index(order = IndexOrder.DESC)
-        java.util.Date livingAt;
+        Date livingAt;
     }
 
     private static IndexInfo find(TableInfo ti, String name) {

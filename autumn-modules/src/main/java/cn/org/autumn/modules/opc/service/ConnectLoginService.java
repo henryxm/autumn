@@ -18,6 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 
 /** OPC OAuth 回调编排：换 token、拉 userInfo、绑定本地用户并登录。 */
 @Service
@@ -110,7 +111,7 @@ public class ConnectLoginService {
         }
         ConnectAppEntity app = StringUtils.isNotBlank(pending.getAppId()) ? connectAppService.getByAppId(pending.getAppId()) : null;
         if (app == null && StringUtils.isNotBlank(pending.getConnectAppUuid())) {
-            app = connectAppService.selectOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ConnectAppEntity>().eq("uuid", pending.getConnectAppUuid()));
+            app = connectAppService.selectOne(new QueryWrapper<ConnectAppEntity>().eq("uuid", pending.getConnectAppUuid()));
         }
         if (app == null) {
             throw new IllegalStateException("接入应用不存在");

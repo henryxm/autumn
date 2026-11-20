@@ -11,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import cn.org.autumn.modules.client.entity.WebOauthCombineEntity;
 
 public class WebOauthBindSupportTest {
 
@@ -43,7 +44,7 @@ public class WebOauthBindSupportTest {
     @Test
     public void sameInstanceDefaultsLegacy() {
         WebAuthenticationEntity webAuth = webAuth(null);
-        Mockito.when(webOauthCombineService.getByClientId("same-host")).thenReturn(new cn.org.autumn.modules.client.entity.WebOauthCombineEntity());
+        Mockito.when(webOauthCombineService.getByClientId("same-host")).thenReturn(new WebOauthCombineEntity());
         Assert.assertEquals(OAuth2HttpClient.UserInfoDelivery.LEGACY, webOauthBindSupport.resolveUserInfoDelivery(webAuth, request));
     }
 

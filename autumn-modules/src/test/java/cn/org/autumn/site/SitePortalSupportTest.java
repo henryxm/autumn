@@ -19,6 +19,11 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.Mockito.when;
+import cn.org.autumn.model.SitePortalBranding;
+import cn.org.autumn.model.SitePortalChaoranxin;
+import cn.org.autumn.model.SitePortalLegalLinks;
+import java.util.Collections;
+import org.springframework.ui.ExtendedModelMap;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SitePortalSupportTest {
@@ -61,7 +66,7 @@ public class SitePortalSupportTest {
         item.setType(ComplianceFilingType.icp.name());
         item.setNumber("蜀ICP备2021014482号-17");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        assertEquals(ComplianceFilingType.DEFAULT_ICP_URL, support.resolveFilings(request, java.util.Collections.singletonList(item)).get(0).getUrl());
+        assertEquals(ComplianceFilingType.DEFAULT_ICP_URL, support.resolveFilings(request, Collections.singletonList(item)).get(0).getUrl());
     }
 
     @Test
@@ -83,7 +88,7 @@ public class SitePortalSupportTest {
     @Test
     public void applyToModelResolvesRelativeLogoUrlWithContextPath() {
         SitePortalConfig config = new SitePortalConfig();
-        cn.org.autumn.model.SitePortalBranding branding = new cn.org.autumn.model.SitePortalBranding();
+        SitePortalBranding branding = new SitePortalBranding();
         branding.setSiteName("Demo");
         branding.setLogoUrl("/statics/img/logo.png");
         config.setBranding(branding);
@@ -92,12 +97,12 @@ public class SitePortalSupportTest {
         when(sysConfigService.getSitePortalConfig()).thenReturn(config);
         when(sysConfigService.getLoadingTheme()).thenReturn(theme);
         when(sysConfigService.getLoadingBrand()).thenReturn("Demo");
-        when(siteLegalLinksFactory.resolve(config)).thenReturn(new cn.org.autumn.model.SitePortalLegalLinks());
+        when(siteLegalLinksFactory.resolve(config)).thenReturn(new SitePortalLegalLinks());
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setContextPath("/ctx");
-        org.springframework.ui.ExtendedModelMap model = new org.springframework.ui.ExtendedModelMap();
+        ExtendedModelMap model = new ExtendedModelMap();
         support.applyToModel(request, model);
-        cn.org.autumn.model.SitePortalBranding applied = (cn.org.autumn.model.SitePortalBranding) model.get("siteBranding");
+        SitePortalBranding applied = (SitePortalBranding) model.get("siteBranding");
         assertEquals("/ctx/statics/img/logo.png", applied.getLogoUrl());
         assertEquals("Demo", model.get("siteName"));
     }
@@ -110,8 +115,8 @@ public class SitePortalSupportTest {
         item.setNumber("川B2-20231966");
         item.setSuffix("号");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        assertEquals("增值电信业务经营许可证:", support.resolveFilings(request, java.util.Collections.singletonList(item)).get(0).getPrefix());
-        assertEquals("号", support.resolveFilings(request, java.util.Collections.singletonList(item)).get(0).getSuffix());
+        assertEquals("增值电信业务经营许可证:", support.resolveFilings(request, Collections.singletonList(item)).get(0).getPrefix());
+        assertEquals("号", support.resolveFilings(request, Collections.singletonList(item)).get(0).getSuffix());
     }
 
     @Test
@@ -121,7 +126,7 @@ public class SitePortalSupportTest {
         item.setNumber("川公网安备51010802000202号");
         MockHttpServletRequest request = new MockHttpServletRequest();
         String resolved = support.resolveFilingUrl(item);
-        assertEquals(resolved, support.resolveFilings(request, java.util.Collections.singletonList(item)).get(0).getUrl());
+        assertEquals(resolved, support.resolveFilings(request, Collections.singletonList(item)).get(0).getUrl());
     }
 
     @Test
@@ -144,11 +149,11 @@ public class SitePortalSupportTest {
     @Test
     public void applyDiscoverPublicModelExposesOnlyPublicFields() {
         SitePortalConfig config = new SitePortalConfig();
-        cn.org.autumn.model.SitePortalBranding branding = new cn.org.autumn.model.SitePortalBranding();
+        SitePortalBranding branding = new SitePortalBranding();
         branding.setSiteName("示例站");
         branding.setLogoUrl("/statics/img/logo.png");
         config.setBranding(branding);
-        cn.org.autumn.model.SitePortalChaoranxin cx = new cn.org.autumn.model.SitePortalChaoranxin();
+        SitePortalChaoranxin cx = new SitePortalChaoranxin();
         cx.setOfficialUrl("https://chaoran.xin/");
         cx.setInstallQrUrl("https://chaoran.xin/download");
         config.setChaoranxin(cx);
@@ -163,7 +168,7 @@ public class SitePortalSupportTest {
         request.setServerName("ops.example.com");
         request.setServerPort(443);
         request.setContextPath("");
-        org.springframework.ui.ExtendedModelMap model = new org.springframework.ui.ExtendedModelMap();
+        ExtendedModelMap model = new ExtendedModelMap();
         support.applyDiscoverPublicModel(request, model);
         assertEquals("示例站", model.get("siteName"));
         assertEquals("/statics/img/logo.png", model.get("logoUrl"));

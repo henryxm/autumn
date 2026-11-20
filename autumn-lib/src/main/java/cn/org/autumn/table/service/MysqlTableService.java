@@ -26,6 +26,13 @@ import cn.org.autumn.table.utils.ClassTools;
 import cn.org.autumn.table.utils.TableCharsetUtils;
 
 import static cn.org.autumn.table.data.InitType.*;
+import cn.org.autumn.table.annotation.IndexOrder;
+import cn.org.autumn.table.data.index.IndexDialectCapability;
+import cn.org.autumn.table.data.index.IndexDiffEngine;
+import cn.org.autumn.table.data.index.IndexLimitGuard;
+import cn.org.autumn.table.data.index.IndexRebuildTask;
+import cn.org.autumn.table.data.index.IndexTableSettings;
+import jakarta.annotation.PostConstruct;
 
 @Slf4j
 @Transactional
@@ -97,21 +104,21 @@ public class MysqlTableService {
     /** 单次 createMysqlTable 内的批量元数据快照；无则回退逐表查询。 */
     private final ThreadLocal<SchemaSyncMetadata> schemaSyncMeta = new ThreadLocal<>();
 
-    @jakarta.annotation.PostConstruct
+    @PostConstruct
     public void applyIndexTableSettings() {
-        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_REBUILD_ON_ORDER_MISMATCH,
+        System.setProperty(IndexTableSettings.PROP_REBUILD_ON_ORDER_MISMATCH,
                 Boolean.toString(rebuildIndexOnOrderMismatch));
-        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_MAX_COLUMNS_PER_INDEX,
+        System.setProperty(IndexTableSettings.PROP_MAX_COLUMNS_PER_INDEX,
                 Integer.toString(indexMaxColumnsPerIndex));
-        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_MAX_PER_TABLE,
+        System.setProperty(IndexTableSettings.PROP_MAX_PER_TABLE,
                 Integer.toString(indexMaxPerTable));
-        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_MAX_KEY_BYTES,
+        System.setProperty(IndexTableSettings.PROP_MAX_KEY_BYTES,
                 Integer.toString(indexMaxKeyBytes));
-        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_SKIP_ON_LIMIT_VIOLATION,
+        System.setProperty(IndexTableSettings.PROP_SKIP_ON_LIMIT_VIOLATION,
                 Boolean.toString(indexSkipOnLimitViolation));
-        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_WARN_UNIQUE_BLANK_DEFAULT,
+        System.setProperty(IndexTableSettings.PROP_WARN_UNIQUE_BLANK_DEFAULT,
                 Boolean.toString(indexWarnUniqueBlankDefault));
-        System.setProperty(cn.org.autumn.table.data.index.IndexTableSettings.PROP_MAX_NAME_LENGTH,
+        System.setProperty(IndexTableSettings.PROP_MAX_NAME_LENGTH,
                 Integer.toString(indexMaxNameLength));
     }
 
@@ -212,7 +219,7 @@ public class MysqlTableService {
             Map<TableInfo, List<Object>> addIndexTableMap = new HashMap<>();
             Map<TableInfo, List<Object>> removeIndexTableMap = new HashMap<>();
             // 同名索引重建（列序/定义）：逐条 DROP+ADD，与纯新增/删除分离
-            List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks = new ArrayList<>();
+            List<IndexRebuildTask> rebuildIndexTasks = new ArrayList<>();
             // 待 CONVERT TO 的表：须在删索引之后执行，避免 utf8→utf8mb4 时超长索引（3072）导致失败
             List<TableInfo> charsetSyncTables = new ArrayList<TableInfo>();
             // 构建出全部表的增删改的map
@@ -283,7 +290,7 @@ public class MysqlTableService {
                                       Map<TableInfo, List<Object>> dropUniqueTableMap,
                                       Map<TableInfo, List<Object>> addIndexTableMap,
                                       Map<TableInfo, List<Object>> removeIndexTableMap,
-                                      List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks,
+                                      List<IndexRebuildTask> rebuildIndexTasks,
                                       List<TableInfo> charsetSyncTables) {
         for (Class<?> clazz : classes) {
             try {
@@ -422,7 +429,7 @@ public class MysqlTableService {
                                                   Map<TableInfo, List<Object>> dropUniqueTableMap,
                                                   Map<TableInfo, List<Object>> addIndexTableMap,
                                                   Map<TableInfo, List<Object>> removeIndexTableMap,
-                                                  List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks,
+                                                  List<IndexRebuildTask> rebuildIndexTasks,
                                                   TableInfo tableInfo,
                                                   List<Object> newFieldList,
                                                   List<Object> removeFieldList,
@@ -462,8 +469,8 @@ public class MysqlTableService {
             if (StringUtils.isBlank(keyName) || "PRIMARY".equalsIgnoreCase(keyName)) {
                 continue;
             }
-            cn.org.autumn.table.annotation.IndexOrder order =
-                    cn.org.autumn.table.annotation.IndexOrder.fromCollation(row.getCollation());
+            IndexOrder order =
+                    IndexOrder.fromCollation(row.getCollation());
             int prefix = row.getSubPartInt();
             String col = row.getColumnName();
             if (byName.containsKey(keyName)) {
@@ -495,7 +502,7 @@ public class MysqlTableService {
                                   List<Object> addIndexList,
                                   Map<TableInfo, List<Object>> removeIndexTableMap,
                                   List<Object> removeIndexList,
-                                  List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks) {
+                                  List<IndexRebuildTask> rebuildIndexTasks) {
         List<IndexInfo> indexInfos = table.getIndexInfosCombine();
         Collection<IndexInfo> dbIndexes = filter(indexRows(table.getName()));
         List<IndexInfo> remainingDb = new ArrayList<>(dbIndexes);
@@ -507,25 +514,25 @@ public class MysqlTableService {
                         table.getName(), entityIdx.getName());
                 continue;
             }
-            cn.org.autumn.table.data.index.IndexDiffEngine.PairOutcome outcome =
-                    cn.org.autumn.table.data.index.IndexDiffEngine.pair(table.getName(), entityIdx, remainingDb);
-            if (outcome.kind == cn.org.autumn.table.data.index.IndexDiffEngine.PairOutcome.Kind.AMBIGUOUS
-                    || outcome.kind == cn.org.autumn.table.data.index.IndexDiffEngine.PairOutcome.Kind.UNPAIRED) {
+            IndexDiffEngine.PairOutcome outcome =
+                    IndexDiffEngine.pair(table.getName(), entityIdx, remainingDb);
+            if (outcome.kind == IndexDiffEngine.PairOutcome.Kind.AMBIGUOUS
+                    || outcome.kind == IndexDiffEngine.PairOutcome.Kind.UNPAIRED) {
                 addIndexList.add(entityIdx);
                 continue;
             }
             IndexInfo dbIdx = outcome.dbIndex;
-            cn.org.autumn.table.data.index.IndexDiffEngine.removePaired(remainingDb, dbIdx);
+            IndexDiffEngine.removePaired(remainingDb, dbIdx);
             pairedDb.add(dbIdx);
-            cn.org.autumn.table.data.index.IndexRebuildTask.Reason reason =
-                    cn.org.autumn.table.data.index.IndexDiffEngine.classifyAfterPair(
+            IndexRebuildTask.Reason reason =
+                    IndexDiffEngine.classifyAfterPair(
                             table.getName(), entityIdx, dbIdx);
             if (reason == null) {
                 continue;
             }
             // NAME → 优先 RENAME；ORDER/DEFINITION → 成对 DROP+ADD
             if (rebuildIndexTasks != null) {
-                rebuildIndexTasks.add(new cn.org.autumn.table.data.index.IndexRebuildTask(
+                rebuildIndexTasks.add(new IndexRebuildTask(
                         table, dbIdx, entityIdx, reason));
             } else {
                 removeIndexList.add(dbIdx);
@@ -538,7 +545,7 @@ public class MysqlTableService {
             if (pairedDb.contains(dbIdx)) {
                 continue;
             }
-            if (cn.org.autumn.table.data.index.IndexDiffEngine.nameMatchesAny(table.getName(), dbIdx, indexInfos)) {
+            if (IndexDiffEngine.nameMatchesAny(table.getName(), dbIdx, indexInfos)) {
                 continue;
             }
             removeIndexList.add(dbIdx);
@@ -1046,7 +1053,7 @@ public class MysqlTableService {
                                               Map<TableInfo, List<Object>> dropUniqueTableMap,
                                               Map<TableInfo, List<Object>> addIndexTableMap,
                                               Map<TableInfo, List<Object>> removeIndexTableMap,
-                                              List<cn.org.autumn.table.data.index.IndexRebuildTask> rebuildIndexTasks,
+                                              List<IndexRebuildTask> rebuildIndexTasks,
                                               List<TableInfo> charsetSyncTables) {
         // 1. 创建表
         createTableByMap(newTableMap);
@@ -1078,27 +1085,27 @@ public class MysqlTableService {
      * 执行索引升级：NAME 优先 RENAME，否则（或失败时）DROP+ADD；ORDER/DEFINITION 成对 DROP+ADD。
      * 无任务则静默返回。成功时最多一条 INFO 汇总；明细为 debug；失败仍 WARN。
      */
-    private void rebuildIndexes(List<cn.org.autumn.table.data.index.IndexRebuildTask> tasks) {
+    private void rebuildIndexes(List<IndexRebuildTask> tasks) {
         if (tasks == null || tasks.isEmpty()) {
             return;
         }
         int orderCount = 0;
         int nameCount = 0;
-        for (cn.org.autumn.table.data.index.IndexRebuildTask t : tasks) {
-            if (t.getReason() == cn.org.autumn.table.data.index.IndexRebuildTask.Reason.ORDER) {
+        for (IndexRebuildTask t : tasks) {
+            if (t.getReason() == IndexRebuildTask.Reason.ORDER) {
                 orderCount++;
-            } else if (t.getReason() == cn.org.autumn.table.data.index.IndexRebuildTask.Reason.NAME) {
+            } else if (t.getReason() == IndexRebuildTask.Reason.NAME) {
                 nameCount++;
             }
         }
         log.debug("Index rebuild upgrade begin: count={} orderFixes={} nameRenames={}", tasks.size(), orderCount, nameCount);
         int ok = 0;
         int fail = 0;
-        for (cn.org.autumn.table.data.index.IndexRebuildTask task : tasks) {
+        for (IndexRebuildTask task : tasks) {
             String tableName = task.getTableName();
             String indexName = task.getIndexName();
-            String fromCols = cn.org.autumn.table.data.index.IndexDiffEngine.formatColumns(task.getDbIndex());
-            String toCols = cn.org.autumn.table.data.index.IndexDiffEngine.formatColumns(task.getEntityIndex());
+            String fromCols = IndexDiffEngine.formatColumns(task.getDbIndex());
+            String toCols = IndexDiffEngine.formatColumns(task.getEntityIndex());
             log.debug("Index rebuild start: reason={} table={} index={} fromName={} toName={} from=[{}] to=[{}]",
                     task.getReason(), tableName, indexName,
                     task.getDbIndex() == null ? "-" : task.getDbIndex().getName(),
@@ -1106,15 +1113,15 @@ public class MysqlTableService {
                     fromCols, toCols);
             long t0 = System.currentTimeMillis();
             // 无法发射时禁止 DROP，避免库侧索引被删后 ADD 失败导致「有定义无索引」
-            if (!cn.org.autumn.table.data.index.IndexDialectCapability.canEmit(
-                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.MYSQL,
+            if (!IndexDialectCapability.canEmit(
+                    IndexDialectCapability.Family.MYSQL,
                     task.getEntityIndex())) {
                 log.warn("Index rebuild skipped (cannot emit; keep DB index): table={} index={}",
                         tableName, indexName);
                 fail++;
                 continue;
             }
-            if (task.getReason() == cn.org.autumn.table.data.index.IndexRebuildTask.Reason.NAME) {
+            if (task.getReason() == IndexRebuildTask.Reason.NAME) {
                 if (tryRenameIndex(task)) {
                     ok++;
                     log.debug("Index rename ok: table={} from={} to={} elapsedMs={}", tableName,
@@ -1152,7 +1159,7 @@ public class MysqlTableService {
     }
 
     /** MySQL {@code RENAME INDEX}；其它方言或失败返回 false，由调用方 DROP+ADD。 */
-    private boolean tryRenameIndex(cn.org.autumn.table.data.index.IndexRebuildTask task) {
+    private boolean tryRenameIndex(IndexRebuildTask task) {
         if (task == null || task.getTable() == null || task.getDbIndex() == null || task.getEntityIndex() == null) {
             return false;
         }
@@ -1302,8 +1309,8 @@ public class MysqlTableService {
                     String idxName = obj instanceof IndexInfo ? ((IndexInfo) obj).getName() : String.valueOf(obj);
                     try {
                         if (obj instanceof IndexInfo
-                                && !cn.org.autumn.table.data.index.IndexDialectCapability.canEmit(
-                                cn.org.autumn.table.data.index.IndexDialectCapability.Family.MYSQL,
+                                && !IndexDialectCapability.canEmit(
+                                IndexDialectCapability.Family.MYSQL,
                                 (IndexInfo) obj)) {
                             log.debug("Index add skipped (cannot emit): table={} index={}",
                                     entry.getKey().getName(), idxName);
@@ -1313,7 +1320,7 @@ public class MysqlTableService {
                         log.debug("Index add ok: table={} index={}", entry.getKey().getName(), idxName);
                     } catch (Throwable e) {
                         String err = ddlError(e);
-                        String hint = cn.org.autumn.table.data.index.IndexLimitGuard.classifyAddFailure(err);
+                        String hint = IndexLimitGuard.classifyAddFailure(err);
                         if (StringUtils.isNotBlank(hint)) {
                             log.warn("Index add failed: table={} index={} reason={} error={}",
                                     entry.getKey().getName(), idxName, hint, err);

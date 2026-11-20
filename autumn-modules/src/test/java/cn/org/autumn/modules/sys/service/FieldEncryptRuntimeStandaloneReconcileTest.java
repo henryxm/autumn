@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.Mockito;
 
 /**
  * 单机启动：env=false 不冲掉 sys_config 一键开启的写开关。
@@ -35,7 +36,7 @@ class FieldEncryptRuntimeStandaloneReconcileTest {
         ReflectionTestUtils.setField(runtime, "sysConfigService", sysConfigService);
 
         when(sysConfigService.hasKey(anyString())).thenReturn(true);
-        org.mockito.Mockito.doAnswer(inv -> {
+        Mockito.doAnswer(inv -> {
             stored.set(inv.getArgument(1));
             return null;
         }).when(sysConfigService).updateValueByKey(anyString(), anyString());

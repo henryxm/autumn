@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import org.apache.commons.lang3.StringUtils;
+import java.util.Collection;
 
 /**
  * 不可变 scope 集合。
@@ -46,7 +47,7 @@ public final class AuthScopeSet implements Serializable {
         return new AuthScopeSet(set);
     }
 
-    public static AuthScopeSet fromCollection(java.util.Collection<String> codes) {
+    public static AuthScopeSet fromCollection(Collection<String> codes) {
         Set<String> set = new LinkedHashSet<>();
         if (codes != null) {
             for (String code : codes) {

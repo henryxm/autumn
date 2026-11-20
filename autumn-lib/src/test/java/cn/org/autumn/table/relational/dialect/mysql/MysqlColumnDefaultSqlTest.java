@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.math.BigDecimal;
+import java.util.Date;
 
 class MysqlColumnDefaultSqlTest {
 
@@ -21,10 +23,10 @@ class MysqlColumnDefaultSqlTest {
         String name;
 
         @Column(type = DataType.DATETIME, defaultValue = "CURRENT_TIMESTAMP")
-        java.util.Date created;
+        Date created;
 
         @Column(type = DataType.DECIMAL, length = 10, decimalLength = 2, defaultValue = "0.5")
-        java.math.BigDecimal amount;
+        BigDecimal amount;
 
         @Column(type = DataType.TEXT, defaultValue = "(JSON_ARRAY())")
         String expr;

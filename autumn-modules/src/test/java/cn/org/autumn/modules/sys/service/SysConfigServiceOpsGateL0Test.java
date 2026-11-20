@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import cn.org.autumn.crypto.FieldEncryptService;
 
 /**
  * SECURITY_OPS_CONFIG 门禁 L0：本机 volatile 快照 / 布尔位与失效同步。
@@ -142,8 +143,8 @@ class SysConfigServiceOpsGateL0Test {
         toSave.setWebShellEnabled(true);
 
         // updateValueByKey 需要 encrypt；空 encrypt 会 NPE。用可透传的 stub。
-        Object encrypt = mock(cn.org.autumn.crypto.FieldEncryptService.class);
-        when(((cn.org.autumn.crypto.FieldEncryptService) encrypt).encryptValue(anyString(), any()))
+        Object encrypt = mock(FieldEncryptService.class);
+        when(((FieldEncryptService) encrypt).encryptValue(anyString(), any()))
                 .thenAnswer(inv -> inv.getArgument(0));
         ReflectionTestUtils.setField(service, "encrypt", encrypt);
 

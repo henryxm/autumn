@@ -7,6 +7,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import org.springframework.util.StringUtils;
+import java.net.URLEncoder;
 
 /**
  * 处理 Servlet context-path，避免在子路径部署时把浏览器导航到站点根（误落到网关/其它应用 JSON 接口）。
@@ -152,7 +153,7 @@ public final class WebPathUtils {
 
     private static String encodeUrlParam(String value) {
         try {
-            return java.net.URLEncoder.encode(StringUtils.hasText(value) ? value.trim() : "", StandardCharsets.UTF_8.name());
+            return URLEncoder.encode(StringUtils.hasText(value) ? value.trim() : "", StandardCharsets.UTF_8.name());
         } catch (Exception e) {
             return value;
         }

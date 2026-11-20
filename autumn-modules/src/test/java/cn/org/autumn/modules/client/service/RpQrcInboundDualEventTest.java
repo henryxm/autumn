@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import cn.org.autumn.modules.client.model.ScanLoginCredentialContext;
 
 @ExtendWith(MockitoExtension.class)
 class RpQrcInboundDualEventTest {
@@ -130,7 +131,7 @@ class RpQrcInboundDualEventTest {
     }
 
     private void stubSecret() {
-        cn.org.autumn.modules.client.model.ScanLoginCredentialContext credential = new cn.org.autumn.modules.client.model.ScanLoginCredentialContext();
+        ScanLoginCredentialContext credential = new ScanLoginCredentialContext();
         credential.setClientSecret("secret");
         when(scanLoginCredentialService.require("oauth2_classic", "b-web")).thenReturn(credential);
     }

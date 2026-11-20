@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class OauthRpStateService {
@@ -77,7 +78,7 @@ public class OauthRpStateService {
     private void store(String state, String callback, String clientId) {
         String payload = encodePayload(callback, clientId);
         if (stringRedisTemplate != null) {
-            stringRedisTemplate.opsForValue().set(REDIS_PREFIX + state, payload, TTL_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
+            stringRedisTemplate.opsForValue().set(REDIS_PREFIX + state, payload, TTL_SECONDS, TimeUnit.SECONDS);
             return;
         }
         memory.put(state, new StateEntry(payload, System.currentTimeMillis() + TTL_SECONDS * 1000L));

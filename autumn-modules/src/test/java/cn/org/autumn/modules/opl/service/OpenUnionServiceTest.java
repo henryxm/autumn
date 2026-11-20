@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
+import java.util.concurrent.Callable;
 
 public class OpenUnionServiceTest {
 
@@ -30,9 +31,9 @@ public class OpenUnionServiceTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         ReflectionTestUtils.setField(openUnionService, "baseMapper", openUnionDao);
-        Mockito.when(distributedLockService.withLockUnchecked(Mockito.any(String.class), Mockito.any(java.util.concurrent.Callable.class)))
+        Mockito.when(distributedLockService.withLockUnchecked(Mockito.any(String.class), Mockito.any(Callable.class)))
                 .thenAnswer(invocation -> {
-                    java.util.concurrent.Callable<?> callable = (java.util.concurrent.Callable<?>) invocation.getArguments()[1];
+                    Callable<?> callable = (Callable<?>) invocation.getArguments()[1];
                     return callable.call();
                 });
     }

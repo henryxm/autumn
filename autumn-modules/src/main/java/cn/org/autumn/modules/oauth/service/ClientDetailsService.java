@@ -27,6 +27,7 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import org.springframework.data.redis.serializer.SerializationException;
 
 @Service
 @Slf4j
@@ -195,7 +196,7 @@ public class ClientDetailsService extends ModuleService<ClientDetailsDao, Client
 
     private static boolean isRedisDeserializationFailure(Throwable e) {
         for (Throwable x = e; x != null; x = x.getCause()) {
-            if (x instanceof org.springframework.data.redis.serializer.SerializationException)
+            if (x instanceof SerializationException)
                 return true;
             String name = x.getClass().getName();
             if (name.contains("SerializationException") || name.contains("InvalidClassException"))

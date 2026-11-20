@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 /**
  * 集群启动 bootstrap：env=false 不冲掉一键开启的 write-enabled=true。
@@ -40,7 +42,7 @@ class FieldEncryptRedisStoreBootstrapTest {
         ValueOperations<String, String> ops = mock(ValueOperations.class);
         when(template.opsForValue()).thenReturn(ops);
         when(ops.get(anyString())).thenAnswer(inv -> redis.get(inv.getArgument(0)));
-        org.mockito.Mockito.doAnswer(inv -> {
+        Mockito.doAnswer(inv -> {
             redis.put(inv.getArgument(0), inv.getArgument(1));
             return null;
         }).when(ops).set(anyString(), anyString());
@@ -53,8 +55,8 @@ class FieldEncryptRedisStoreBootstrapTest {
         when(configSource.resolveFromEnvironment()).thenReturn(resolved);
         when(resolved.getKeyBase64()).thenReturn(null);
         when(resolved.getHashKeyBase64()).thenReturn(null);
-        when(configSource.validKeyBase64(org.mockito.ArgumentMatchers.any())).thenReturn(null);
-        when(configSource.validHashBase64(org.mockito.ArgumentMatchers.any())).thenReturn(null);
+        when(configSource.validKeyBase64(ArgumentMatchers.any())).thenReturn(null);
+        when(configSource.validHashBase64(ArgumentMatchers.any())).thenReturn(null);
 
         ReflectionTestUtils.setField(store, "redisUtils", redisUtils);
         ReflectionTestUtils.setField(store, "stringRedisTemplate", template);

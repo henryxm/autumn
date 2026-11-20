@@ -25,6 +25,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ClassUtils;
+import cn.org.autumn.utils.SpringContextUtils;
+import java.util.function.Consumer;
+import org.springframework.aop.support.AopUtils;
 
 @Slf4j
 @Component
@@ -1163,8 +1166,8 @@ public class LoopJob extends Factory implements LoadFactory.Must {
         log.info("Server start with tag: {}", serverTag);
         // 一次 getBeansOfType(Job)，再按周期接口分流注册，避免 14 次全上下文扫描
         long t0 = System.currentTimeMillis();
-        Map<String, Job> allJobs = cn.org.autumn.utils.SpringContextUtils.getApplicationContext() != null
-                ? cn.org.autumn.utils.SpringContextUtils.getApplicationContext().getBeansOfType(Job.class)
+        Map<String, Job> allJobs = SpringContextUtils.getApplicationContext() != null
+                ? SpringContextUtils.getApplicationContext().getBeansOfType(Job.class)
                 : Collections.emptyMap();
         registerCategoryJobs(allJobs, OneSecond.class, "onOneSecond", LoopJob::onOneSecond);
         registerCategoryJobs(allJobs, ThreeSecond.class, "onThreeSecond", LoopJob::onThreeSecond);
@@ -1189,7 +1192,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
     private static <T extends Job> void registerCategoryJobs(Map<String, Job> allJobs,
                                                              Class<T> type,
                                                              String methodName,
-                                                             java.util.function.Consumer<T> registrar) {
+                                                             Consumer<T> registrar) {
         if (allJobs == null || allJobs.isEmpty()) {
             return;
         }
@@ -1210,7 +1213,7 @@ public class LoopJob extends Factory implements LoadFactory.Must {
 
     private static int resolveJobOrder(Job job, Class<?> type, String methodName) {
         Order order = null;
-        Class<?> clazz = org.springframework.aop.support.AopUtils.getTargetClass(job);
+        Class<?> clazz = AopUtils.getTargetClass(job);
         try {
             while (clazz != null && order == null && !Object.class.equals(clazz)) {
                 try {

@@ -27,6 +27,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 import static cn.org.autumn.modules.sys.service.SysMenuService.getSystemMenuKey;
+import org.springframework.util.ClassUtils;
 
 @Slf4j
 @DependsOn("springContextUtils")
@@ -49,7 +50,7 @@ public class ScheduleJobService extends ModuleService<ScheduleJobDao, ScheduleJo
             if (beanType == null) {
                 continue;
             }
-            Class<?> userClass = org.springframework.util.ClassUtils.getUserClass(beanType);
+            Class<?> userClass = ClassUtils.getUserClass(beanType);
             // 仅扫业务包，跳过 Spring/第三方 Bean 的反射遍历
             if (!userClass.getName().startsWith("cn.org.autumn.")) {
                 continue;

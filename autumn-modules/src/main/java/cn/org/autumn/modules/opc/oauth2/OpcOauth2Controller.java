@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
+import java.net.URLEncoder;
 
 /** OPC OAuth2 客户端入口：跳转远程 OPL 授权、处理回调。 */
 @Slf4j
@@ -259,7 +260,7 @@ public class OpcOauth2Controller {
 
     private static String encodeCallback(String callback) {
         try {
-            return java.net.URLEncoder.encode(callback, "UTF-8");
+            return URLEncoder.encode(callback, "UTF-8");
         } catch (Exception e) {
             return callback;
         }

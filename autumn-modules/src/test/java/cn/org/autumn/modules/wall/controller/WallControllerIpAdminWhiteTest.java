@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
 
 class WallControllerIpAdminWhiteTest {
 
@@ -78,7 +79,7 @@ class WallControllerIpAdminWhiteTest {
     @Test
     void userWhiteUnaffectedByAdminService() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        when(ipWhiteService.create("8.8.8.8", "手动添加", "手动添加")).thenReturn(new cn.org.autumn.modules.wall.entity.IpWhiteEntity());
+        when(ipWhiteService.create("8.8.8.8", "手动添加", "手动添加")).thenReturn(new IpWhiteEntity());
         controller.addIpWhite("8.8.8.8", request);
         verify(ipWhiteService).create("8.8.8.8", "手动添加", "手动添加");
         verify(ipAdminWhiteService, never()).create(anyString(), anyString(), anyString());

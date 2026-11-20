@@ -13,6 +13,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import java.util.List;
 
 class OpsRuntimeSnapshotServiceTest {
 
@@ -50,7 +51,7 @@ class OpsRuntimeSnapshotServiceTest {
         when(shieldService.getEnable()).thenReturn(true);
         when(shieldService.getVisitWindowSize()).thenReturn(0);
         when(shieldService.getAllowedIpSize()).thenReturn(0);
-        when(shieldService.getAllowedIpSample(anyInt())).thenReturn(java.util.List.of());
+        when(shieldService.getAllowedIpSample(anyInt())).thenReturn(List.of());
     }
 
     @Test

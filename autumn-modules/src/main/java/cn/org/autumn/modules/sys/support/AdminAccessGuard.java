@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import jakarta.websocket.server.ServerEndpoint;
 
 /**
  * 后台访问统一门禁：运维页（超管 + 管理 IP 白名单）、gen CRUD（默认仅超管+管理 IP，自助模块豁免）、
@@ -511,7 +512,7 @@ public class AdminAccessGuard {
         String method = StringUtils.defaultString(methodName);
         String module = extractModuleName(raw);
         // JSR-356：勿对 @ServerEndpoint 做管理 API 门禁（亦避免薄切面误织入）
-        if (raw.isAnnotationPresent(jakarta.websocket.server.ServerEndpoint.class)) {
+        if (raw.isAnnotationPresent(ServerEndpoint.class)) {
             return false;
         }
         // 安装向导：仅 autumn.install.mode=true 时装载；无管理 IP 可认领前须可访问

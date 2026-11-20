@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import cn.org.autumn.modules.client.model.ScanLoginCredentialContext;
 
 @ExtendWith(MockitoExtension.class)
 class RpQrcInboundServiceTest {
@@ -38,7 +39,7 @@ class RpQrcInboundServiceTest {
         pending.setCredentialType("oauth2_classic");
         pending.setCredentialId("b-web");
         when(rpQrcPendingStore.get("ticket-1")).thenReturn(pending);
-        cn.org.autumn.modules.client.model.ScanLoginCredentialContext credential = new cn.org.autumn.modules.client.model.ScanLoginCredentialContext();
+        ScanLoginCredentialContext credential = new ScanLoginCredentialContext();
         credential.setClientSecret("secret");
         when(scanLoginCredentialService.require("oauth2_classic", "b-web")).thenReturn(credential);
 
@@ -65,7 +66,7 @@ class RpQrcInboundServiceTest {
         pending.setCredentialType("oauth2_classic");
         pending.setCredentialId("b-web");
         when(rpQrcPendingStore.get("ticket-1")).thenReturn(pending);
-        cn.org.autumn.modules.client.model.ScanLoginCredentialContext credential = new cn.org.autumn.modules.client.model.ScanLoginCredentialContext();
+        ScanLoginCredentialContext credential = new ScanLoginCredentialContext();
         credential.setClientSecret("secret");
         when(scanLoginCredentialService.require("oauth2_classic", "b-web")).thenReturn(credential);
 

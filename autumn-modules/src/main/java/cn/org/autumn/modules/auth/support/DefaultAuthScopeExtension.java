@@ -6,6 +6,8 @@ import cn.org.autumn.opl.spi.OpenPlatformExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import cn.org.autumn.oauth.model.OAuthClientSnapshot;
+import cn.org.autumn.opl.model.OpenAppSnapshot;
 
 /**
  * 默认 scope 校验：委托 {@link AuthScopeSupport}。
@@ -18,12 +20,12 @@ public class DefaultAuthScopeExtension implements OAuthPlatformExtension, OpenPl
     private AuthScopeSupport authScopeSupport;
 
     @Override
-    public void validateScope(cn.org.autumn.oauth.model.OAuthClientSnapshot client, String scope) throws Exception {
+    public void validateScope(OAuthClientSnapshot client, String scope) throws Exception {
         authScopeSupport.validateOAuthScope(client, scope);
     }
 
     @Override
-    public void validateScope(cn.org.autumn.opl.model.OpenAppSnapshot app, String scope) throws Exception {
+    public void validateScope(OpenAppSnapshot app, String scope) throws Exception {
         authScopeSupport.validateOplScope(app, scope);
     }
 }

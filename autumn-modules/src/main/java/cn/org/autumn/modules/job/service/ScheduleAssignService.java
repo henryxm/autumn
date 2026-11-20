@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import cn.org.autumn.job.JobDuty;
 
 /**
  * 定时任务服务器分配服务
@@ -196,7 +197,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
             return;
         }
         if (StringUtils.isNotBlank(entity.getDuty())) {
-            LoopJob.updateJobDuty(jobId, cn.org.autumn.job.JobDuty.of(entity.getDuty()));
+            LoopJob.updateJobDuty(jobId, JobDuty.of(entity.getDuty()));
         } else {
             // DB 无 duty / 已清空 → 内存回落注解缺省
             LoopJob.updateJobDuty(jobId, null);
@@ -326,7 +327,7 @@ public class ScheduleAssignService extends ModuleService<ScheduleAssignDao, Sche
         if (StringUtils.isBlank(d)) {
             LoopJob.updateJobDuty(jobId, null);
         } else {
-            LoopJob.updateJobDuty(jobId, cn.org.autumn.job.JobDuty.of(d));
+            LoopJob.updateJobDuty(jobId, JobDuty.of(d));
         }
         try {
             ScheduleAssignEntity entity = this.getOne(new QueryWrapper<ScheduleAssignEntity>().eq(columnInWrapper("job_id"), jobId));

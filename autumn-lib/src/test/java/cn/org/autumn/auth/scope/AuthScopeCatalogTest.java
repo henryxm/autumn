@@ -15,6 +15,8 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import org.junit.Before;
 import org.junit.Test;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AuthScopeCatalogTest {
 
@@ -154,12 +156,12 @@ public class AuthScopeCatalogTest {
     @Test
     public void labelsDisplayOrder() {
         AuthScopeSet scopes = AuthScopeSet.of("basic", "phone", "email", "verified", "status");
-        java.util.List<String> oauthLabels = catalog.labels(AuthTrack.OAUTH, scopes);
+        List<String> oauthLabels = catalog.labels(AuthTrack.OAUTH, scopes);
         assertEquals("获取用户唯一标识", oauthLabels.get(0));
         assertEquals("查看基本资料", oauthLabels.get(1));
         assertEquals("查看手机号", oauthLabels.get(2));
         assertEquals("查看邮箱", oauthLabels.get(3));
-        java.util.List<String> oplLabels = catalog.labels(AuthTrack.OPL, scopes);
+        List<String> oplLabels = catalog.labels(AuthTrack.OPL, scopes);
         assertEquals("应用内识别身份", oplLabels.get(0));
         assertEquals("跨应用识别身份", oplLabels.get(1));
         assertEquals("查看基本资料", oplLabels.get(2));
@@ -232,7 +234,7 @@ public class AuthScopeCatalogTest {
     public void labelsIncludeEnabledRealnameTiersInOrder() {
         enableRealNameTiers(AuthTrack.OAUTH, AuthScopeSet.REALNAME_ID, AuthScopeSet.REALNAME_ATTR, AuthScopeSet.REALNAME_PERSON);
         AuthScopeSet scopes = AuthScopeSet.of("basic", AuthScopeSet.REALNAME_ID, AuthScopeSet.REALNAME_ATTR, AuthScopeSet.REALNAME_PERSON);
-        java.util.List<String> labels = catalog.labels(AuthTrack.OAUTH, scopes);
+        List<String> labels = catalog.labels(AuthTrack.OAUTH, scopes);
         int attr = labels.indexOf("查询实名基本属性");
         int person = labels.indexOf("查看实名姓名与生日");
         int id = labels.indexOf("查看实名证件与地址");
@@ -242,13 +244,13 @@ public class AuthScopeCatalogTest {
     }
 
     private void enableRealNameTiers(AuthTrack track, String... tiers) {
-        java.util.List<AuthScopeDef> defs = new java.util.ArrayList<AuthScopeDef>();
+        List<AuthScopeDef> defs = new ArrayList<AuthScopeDef>();
         for (String tier : tiers) {
             AuthScopeDef def = new AuthScopeDef();
             def.setCode(tier);
             def.setBuiltin(true);
             def.setEnabled(true);
-            def.setTracks(java.util.EnumSet.of(track));
+            def.setTracks(EnumSet.of(track));
             defs.add(def);
         }
         catalog.refreshCustom(defs);

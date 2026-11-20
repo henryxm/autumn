@@ -7,6 +7,9 @@ import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 /**
  * 将用户输入的特征值按实体列类型解析并绑定到 JDBC 参数。
@@ -183,11 +186,11 @@ final class TableScanValueBinder {
         };
         for (String pattern : patterns) {
             try {
-                java.text.SimpleDateFormat format = new java.text.SimpleDateFormat(pattern, java.util.Locale.ROOT);
+                SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.ROOT);
                 format.setLenient(false);
                 java.util.Date parsed = format.parse(text);
                 return new Timestamp(parsed.getTime());
-            } catch (java.text.ParseException ignored) {
+            } catch (ParseException ignored) {
                 // try next
             }
         }

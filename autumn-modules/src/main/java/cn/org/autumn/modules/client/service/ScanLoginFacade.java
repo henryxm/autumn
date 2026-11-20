@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import cn.org.autumn.modules.client.model.RpQrcPendingSession;
 
 /**
  * 扫码登录统一门面：B2 同源 Web、D RP 联邦、B3 Open API 服务端建票。
@@ -155,7 +156,7 @@ public class ScanLoginFacade {
         if (StringUtils.isBlank(uuid)) {
             throw new IllegalArgumentException("uuid 不能为空");
         }
-        cn.org.autumn.modules.client.model.RpQrcPendingSession pending = rpQrcPendingStore.get(uuid);
+        RpQrcPendingSession pending = rpQrcPendingStore.get(uuid);
         if (pending == null) {
             throw new IllegalStateException("扫码会话不存在或已过期");
         }
@@ -171,7 +172,7 @@ public class ScanLoginFacade {
         if (StringUtils.isBlank(uuid)) {
             throw new IllegalArgumentException("uuid 不能为空");
         }
-        cn.org.autumn.modules.client.model.RpQrcPendingSession pending = rpQrcPendingStore.get(uuid);
+        RpQrcPendingSession pending = rpQrcPendingStore.get(uuid);
         if (pending == null) {
             throw new IllegalStateException("扫码会话不存在或已过期");
         }

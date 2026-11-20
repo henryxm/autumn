@@ -12,6 +12,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import cn.org.autumn.table.data.index.IndexColumnSpec;
+import cn.org.autumn.table.data.index.IndexDialectCapability;
 
 /**
  * Oracle 12c+ 注解建表 DDL（标识符双引号，保留大小写）。
@@ -91,8 +93,8 @@ public final class OracleJdbcDdlGenerator {
             all.append(sb);
             if (tableInfo.getIndexInfos() != null) {
                 for (IndexInfo raw : tableInfo.getIndexInfos()) {
-                    IndexInfo idx = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
-                            cn.org.autumn.table.data.index.IndexDialectCapability.Family.ORACLE, raw);
+                    IndexInfo idx = IndexDialectCapability.forEmit(
+                            IndexDialectCapability.Family.ORACLE, raw);
                     if (idx == null || StringUtils.isBlank(idx.getName())) {
                         continue;
                     }
@@ -192,8 +194,8 @@ public final class OracleJdbcDdlGenerator {
             return "";
         }
         for (Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
-            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
-                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.ORACLE, ii.getValue());
+            IndexInfo indexInfo = IndexDialectCapability.forEmit(
+                    IndexDialectCapability.Family.ORACLE, ii.getValue());
             if (indexInfo == null) {
                 continue;
             }
@@ -213,13 +215,13 @@ public final class OracleJdbcDdlGenerator {
     }
 
     private static void appendIndexColumnsOrdered(StringBuilder sb, IndexInfo indexInfo) {
-        java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> specs = indexInfo.getColumnSpecs();
+        List<IndexColumnSpec> specs = indexInfo.getColumnSpecs();
         if (specs != null && !specs.isEmpty()) {
             for (int i = 0; i < specs.size(); i++) {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                cn.org.autumn.table.data.index.IndexColumnSpec spec = specs.get(i);
+                IndexColumnSpec spec = specs.get(i);
                 if (spec.isExpression()) {
                     sb.append("(").append(spec.getExpression()).append(")");
                 } else {

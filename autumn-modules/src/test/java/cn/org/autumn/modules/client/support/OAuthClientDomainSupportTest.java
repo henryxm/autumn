@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import cn.org.autumn.config.ClientType;
 
 class OAuthClientDomainSupportTest {
 
@@ -56,6 +57,6 @@ class OAuthClientDomainSupportTest {
 
     @Test
     void isSiteDefault() {
-        assertTrue(OAuthClientDomainSupport.isSiteDefault(cn.org.autumn.config.ClientType.SiteDefault));
+        assertTrue(OAuthClientDomainSupport.isSiteDefault(ClientType.SiteDefault));
     }
 }

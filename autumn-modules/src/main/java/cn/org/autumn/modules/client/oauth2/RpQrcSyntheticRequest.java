@@ -7,6 +7,24 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import org.apache.commons.lang3.StringUtils;
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpUpgradeHandler;
+import jakarta.servlet.http.Part;
+import java.io.BufferedReader;
+import java.net.URI;
+import java.security.Principal;
+import java.util.Collection;
+import java.util.Locale;
 
 /** 入站 Webhook 完成登录时使用的最小 HttpServletRequest，委托未覆盖方法至空壳请求。 */
 public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
@@ -31,7 +49,7 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
         int parsedPort = 80;
         if (StringUtils.isNotBlank(normalized)) {
             try {
-                java.net.URI uri = java.net.URI.create(normalized);
+                URI uri = URI.create(normalized);
                 if (StringUtils.isNotBlank(uri.getScheme())) {
                     parsedScheme = uri.getScheme();
                 }
@@ -111,17 +129,17 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
         return "POST";
     }
 
-    private static final class EmptyHttpServletRequest extends jakarta.servlet.http.HttpServletRequestWrapper {
+    private static final class EmptyHttpServletRequest extends HttpServletRequestWrapper {
         EmptyHttpServletRequest() {
-            super(new jakarta.servlet.http.HttpServletRequest() {
+            super(new HttpServletRequest() {
                 @Override
                 public String getAuthType() {
                     return null;
                 }
 
                 @Override
-                public jakarta.servlet.http.Cookie[] getCookies() {
-                    return new jakarta.servlet.http.Cookie[0];
+                public Cookie[] getCookies() {
+                    return new Cookie[0];
                 }
 
                 @Override
@@ -185,7 +203,7 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public java.security.Principal getUserPrincipal() {
+                public Principal getUserPrincipal() {
                     return null;
                 }
 
@@ -210,7 +228,7 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public jakarta.servlet.ServletConnection getServletConnection() {
+                public ServletConnection getServletConnection() {
                     return null;
                 }
 
@@ -225,12 +243,12 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public jakarta.servlet.http.HttpSession getSession(boolean create) {
+                public HttpSession getSession(boolean create) {
                     return null;
                 }
 
                 @Override
-                public jakarta.servlet.http.HttpSession getSession() {
+                public HttpSession getSession() {
                     return null;
                 }
 
@@ -255,7 +273,7 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public boolean authenticate(jakarta.servlet.http.HttpServletResponse response) {
+                public boolean authenticate(HttpServletResponse response) {
                     return false;
                 }
 
@@ -268,17 +286,17 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public java.util.Collection<jakarta.servlet.http.Part> getParts() {
+                public Collection<Part> getParts() {
                     return Collections.emptyList();
                 }
 
                 @Override
-                public jakarta.servlet.http.Part getPart(String name) {
+                public Part getPart(String name) {
                     return null;
                 }
 
                 @Override
-                public <T extends jakarta.servlet.http.HttpUpgradeHandler> T upgrade(Class<T> handlerClass) {
+                public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) {
                     return null;
                 }
 
@@ -317,7 +335,7 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public jakarta.servlet.ServletInputStream getInputStream() {
+                public ServletInputStream getInputStream() {
                     return null;
                 }
 
@@ -362,7 +380,7 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public java.io.BufferedReader getReader() {
+                public BufferedReader getReader() {
                     return null;
                 }
 
@@ -385,12 +403,12 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public java.util.Locale getLocale() {
-                    return java.util.Locale.getDefault();
+                public Locale getLocale() {
+                    return Locale.getDefault();
                 }
 
                 @Override
-                public Enumeration<java.util.Locale> getLocales() {
+                public Enumeration<Locale> getLocales() {
                     return Collections.enumeration(Collections.singletonList(getLocale()));
                 }
 
@@ -400,7 +418,7 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public jakarta.servlet.RequestDispatcher getRequestDispatcher(String path) {
+                public RequestDispatcher getRequestDispatcher(String path) {
                     return null;
                 }
 
@@ -425,17 +443,17 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public jakarta.servlet.ServletContext getServletContext() {
+                public ServletContext getServletContext() {
                     return null;
                 }
 
                 @Override
-                public jakarta.servlet.AsyncContext startAsync() {
+                public AsyncContext startAsync() {
                     return null;
                 }
 
                 @Override
-                public jakarta.servlet.AsyncContext startAsync(jakarta.servlet.ServletRequest servletRequest, jakarta.servlet.ServletResponse servletResponse) {
+                public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) {
                     return null;
                 }
 
@@ -450,13 +468,13 @@ public class RpQrcSyntheticRequest extends HttpServletRequestWrapper {
                 }
 
                 @Override
-                public jakarta.servlet.AsyncContext getAsyncContext() {
+                public AsyncContext getAsyncContext() {
                     return null;
                 }
 
                 @Override
-                public jakarta.servlet.DispatcherType getDispatcherType() {
-                    return jakarta.servlet.DispatcherType.REQUEST;
+                public DispatcherType getDispatcherType() {
+                    return DispatcherType.REQUEST;
                 }
             });
         }

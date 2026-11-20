@@ -33,6 +33,7 @@ import org.springframework.http.ResponseEntity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import cn.org.autumn.modules.qrc.dto.TicketStatusResult;
 
 /** 开放 OPC 扫码：跨站联邦（D）与同源（B2）集成。 */
 public class RpOpenFederationIntegrationTest extends IntegrationTest {
@@ -55,7 +56,7 @@ public class RpOpenFederationIntegrationTest extends IntegrationTest {
     private static final Type CREATE_RESULT = new TypeToken<Response<TicketCreateResult>>() {
     }.getType();
 
-    private static final Type STATUS_RESULT = new TypeToken<Response<cn.org.autumn.modules.qrc.dto.TicketStatusResult>>() {
+    private static final Type STATUS_RESULT = new TypeToken<Response<TicketStatusResult>>() {
     }.getType();
 
     private static final Type STRING_RESULT = new TypeToken<Response<String>>() {
@@ -143,7 +144,7 @@ public class RpOpenFederationIntegrationTest extends IntegrationTest {
         scanTicketService.confirm(created.getData().getUuid(), scanner, null);
 
         ResponseEntity<String> statusResp = restTemplate.getForEntity(baseUrl + "/qrc/scanticket/web/ticket/status?uuid=" + created.getData().getUuid(), String.class);
-        Response<cn.org.autumn.modules.qrc.dto.TicketStatusResult> status = gson.fromJson(statusResp.getBody(), STATUS_RESULT);
+        Response<TicketStatusResult> status = gson.fromJson(statusResp.getBody(), STATUS_RESULT);
         assertNotNull(status);
         assertEquals(0, status.getCode());
         assertEquals("COMPLETED", status.getData().getStatus());

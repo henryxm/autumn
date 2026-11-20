@@ -15,6 +15,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.security.KeyPair;
 
 /**
  * RSA加密解密工具类
@@ -57,7 +58,7 @@ public class RsaUtil {
         try {
             KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance(KEY_ALGORITHM);
             keyPairGen.initialize(keySize, new SecureRandom());
-            java.security.KeyPair keyPair = keyPairGen.generateKeyPair();
+            KeyPair keyPair = keyPairGen.generateKeyPair();
             RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
             RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
             // Base64编码后的公钥和私钥
@@ -156,7 +157,7 @@ public class RsaUtil {
             int offSet = 0;
             byte[] cache;
             int i = 0;
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             while (inputLen - offSet > 0) {
                 if (inputLen - offSet > maxBlockSize) {
                     cache = cipher.doFinal(dataBytes, offSet, maxBlockSize);

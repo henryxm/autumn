@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
+import java.util.HashMap;
 
 @Component
 public class OAuthDeviceHandler implements IntentHandler {
@@ -45,7 +46,7 @@ public class OAuthDeviceHandler implements IntentHandler {
         }
         ClientGrantEntity grant = clientGrantService.requireEnabledGrant(clientId);
         if (ticket.getPayload() == null) {
-            ticket.setPayload(new java.util.HashMap<>());
+            ticket.setPayload(new HashMap<>());
         }
         String payloadDelivery = TicketPayloads.get(ticket, "delivery");
         if (StringUtils.isNotBlank(payloadDelivery)) {

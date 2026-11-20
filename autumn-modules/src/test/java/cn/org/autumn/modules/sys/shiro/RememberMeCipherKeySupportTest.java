@@ -9,6 +9,11 @@ import java.nio.file.Path;
 import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
+import java.util.Arrays;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 public class RememberMeCipherKeySupportTest {
 
@@ -52,7 +57,7 @@ public class RememberMeCipherKeySupportTest {
         assertTrue(Files.isRegularFile(keyFile));
         assertEquals(16, b.length);
         // 无 Redis 时删除文件 = 新钥，与旧钥不同（旧 Cookie 失效属预期）
-        assertFalse(java.util.Arrays.equals(a, b));
+        assertFalse(Arrays.equals(a, b));
     }
 
     @Test
@@ -78,13 +83,13 @@ public class RememberMeCipherKeySupportTest {
         }
         String redisB64 = Base64.getEncoder().encodeToString(redisRaw);
         String envB64 = Base64.getEncoder().encodeToString(envRaw);
-        org.springframework.data.redis.core.StringRedisTemplate redis =
-                org.mockito.Mockito.mock(org.springframework.data.redis.core.StringRedisTemplate.class);
+        StringRedisTemplate redis =
+                Mockito.mock(StringRedisTemplate.class);
         @SuppressWarnings("unchecked")
-        org.springframework.data.redis.core.ValueOperations<String, String> ops =
-                org.mockito.Mockito.mock(org.springframework.data.redis.core.ValueOperations.class);
-        org.mockito.Mockito.when(redis.opsForValue()).thenReturn(ops);
-        org.mockito.Mockito.when(ops.get(org.mockito.ArgumentMatchers.anyString())).thenReturn(redisB64);
+        ValueOperations<String, String> ops =
+                Mockito.mock(ValueOperations.class);
+        Mockito.when(redis.opsForValue()).thenReturn(ops);
+        Mockito.when(ops.get(ArgumentMatchers.anyString())).thenReturn(redisB64);
 
         Path keyFile = temp.resolve("security").resolve("conflict.key");
         byte[] decoded = RememberMeCipherKeySupport.resolveCipherKey(envB64, keyFile, redis, "default");

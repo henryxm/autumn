@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
+import org.mockito.Mockito;
 
 @ExtendWith(MockitoExtension.class)
 class OauthRpLoginServiceTest {
@@ -36,14 +37,14 @@ class OauthRpLoginServiceTest {
 
     @Test
     void handleCallback_rejectsInvalidState() {
-        HttpServletRequest request = org.mockito.Mockito.mock(HttpServletRequest.class);
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
         when(oauthRpStateService.consumeState("bad-state")).thenReturn(null);
         assertThrows(IllegalStateException.class, () -> oauthRpLoginService.handleCallback(request, "auth-code", "bad-state", null, null));
     }
 
     @Test
     void handleCallback_rejectsMissingCode() {
-        HttpServletRequest request = org.mockito.Mockito.mock(HttpServletRequest.class);
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
         assertThrows(IllegalArgumentException.class, () -> oauthRpLoginService.handleCallback(request, "", "state", null, null));
     }
 }

@@ -13,6 +13,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import cn.org.autumn.table.data.index.IndexColumnSpec;
+import cn.org.autumn.table.data.index.IndexDialectCapability;
 
 /**
  * PostgreSQL 方言：供 {@link PostgresTableDao} 的 {@code @SelectProvider} 使用。
@@ -315,8 +317,8 @@ public class PostgresRelationalSchemaSql implements RelationalSchemaSql {
             }
             if (tableInfo.getIndexInfos() != null) {
                 for (IndexInfo raw : tableInfo.getIndexInfos()) {
-                    IndexInfo idx = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
-                            cn.org.autumn.table.data.index.IndexDialectCapability.Family.POSTGRES, raw);
+                    IndexInfo idx = IndexDialectCapability.forEmit(
+                            IndexDialectCapability.Family.POSTGRES, raw);
                     if (idx == null || StringUtils.isBlank(idx.getName())) {
                         continue;
                     }
@@ -343,7 +345,7 @@ public class PostgresRelationalSchemaSql implements RelationalSchemaSql {
                         }
                         sb.append(")");
                     }
-                    if (org.apache.commons.lang3.StringUtils.isNotBlank(idx.getWherePredicate())) {
+                    if (StringUtils.isNotBlank(idx.getWherePredicate())) {
                         sb.append(" WHERE ").append(idx.getWherePredicate());
                     }
                 }
@@ -444,8 +446,8 @@ public class PostgresRelationalSchemaSql implements RelationalSchemaSql {
         Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
             TableInfo table = ii.getKey();
-            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
-                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.POSTGRES, ii.getValue());
+            IndexInfo indexInfo = IndexDialectCapability.forEmit(
+                    IndexDialectCapability.Family.POSTGRES, ii.getValue());
             if (indexInfo == null) {
                 continue;
             }
@@ -477,7 +479,7 @@ public class PostgresRelationalSchemaSql implements RelationalSchemaSql {
                 }
                 sb.append(")");
             }
-            if (org.apache.commons.lang3.StringUtils.isNotBlank(indexInfo.getWherePredicate())) {
+            if (StringUtils.isNotBlank(indexInfo.getWherePredicate())) {
                 sb.append(" WHERE ").append(indexInfo.getWherePredicate());
             }
             sb.append(";");
@@ -486,13 +488,13 @@ public class PostgresRelationalSchemaSql implements RelationalSchemaSql {
     }
 
     private void appendIndexColumnsOrdered(StringBuilder sb, IndexInfo indexInfo) {
-        java.util.List<cn.org.autumn.table.data.index.IndexColumnSpec> specs = indexInfo.getColumnSpecs();
+        List<IndexColumnSpec> specs = indexInfo.getColumnSpecs();
         if (specs != null && !specs.isEmpty()) {
             for (int i = 0; i < specs.size(); i++) {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                cn.org.autumn.table.data.index.IndexColumnSpec spec = specs.get(i);
+                IndexColumnSpec spec = specs.get(i);
                 if (spec.isExpression()) {
                     sb.append("(").append(spec.getExpression()).append(")");
                 } else {

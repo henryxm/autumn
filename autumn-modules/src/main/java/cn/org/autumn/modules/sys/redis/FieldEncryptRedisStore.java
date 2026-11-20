@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import java.util.LinkedHashSet;
 
 /**
  * 集群模式下字段加密 Redis 存储。
@@ -179,7 +180,7 @@ public class FieldEncryptRedisStore {
     }
 
     private String[] earlyNamespaces() {
-        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
+        LinkedHashSet<String> set = new LinkedHashSet<>();
         String fromEnvBean = null;
         try {
             if (envBean != null) {

@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
 
 /**
  * 入站消息幂等：相同机器人 + 幂等键在缓存有效期内只入队一次。
@@ -59,7 +60,7 @@ public class RobotMessageIdempotencyService {
     }
 
     public RobotMessagePushResult executeOnce(String robotUuid, String idempotencyKey,
-                                              java.util.concurrent.Callable<RobotMessagePushResult> action) throws Exception {
+                                              Callable<RobotMessagePushResult> action) throws Exception {
         if (StringUtils.isBlank(idempotencyKey))
             return action.call();
         String lockKey = "bot:msg:idem:" + cacheKey(robotUuid, idempotencyKey);

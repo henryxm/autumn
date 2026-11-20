@@ -5,12 +5,13 @@ import cn.org.autumn.modules.job.task.LoopJob;
 import cn.org.autumn.node.Registry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
+import cn.org.autumn.job.JobDuty;
 
 /**
  * Registry 心跳（启用条件：显式 {@code autumn.node.registry}，或未配置时跟随 {@code autumn.redis.open}）。
  */
 @Component
-@JobMeta(name = "节点登记心跳", duty = cn.org.autumn.job.JobDuty.ALL, skipIfRunning = true)
+@JobMeta(name = "节点登记心跳", duty = JobDuty.ALL, skipIfRunning = true)
 public class RegistryHeartbeatJob implements LoopJob.OneMinute {
 
     private final ObjectProvider<Registry> registryProvider;

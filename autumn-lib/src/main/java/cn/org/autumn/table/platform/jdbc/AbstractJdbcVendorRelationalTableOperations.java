@@ -30,6 +30,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import cn.org.autumn.table.annotation.IndexMethodEnum;
+import cn.org.autumn.table.annotation.IndexOrder;
 
 /**
  * 基于 JDBC {@link DatabaseMetaData} 的关系库操作：元数据、索引列表、{@code DROP TABLE}，
@@ -413,10 +415,10 @@ public abstract class AbstractJdbcVendorRelationalTableOperations implements Rel
             i.setKeyName(name);
             i.setNonUnique(nonUnique ? "1" : "0");
             // JDBC 元数据通常不区分 method；与注解默认 BTREE 对齐，避免 resolve 前后比对漂移
-            i.setIndexMethod(cn.org.autumn.table.annotation.IndexMethodEnum.BTREE.name());
+            i.setIndexMethod(IndexMethodEnum.BTREE.name());
             for (Map.Entry<Short, String> e : columns.entrySet()) {
                 String asc = orders.get(e.getKey());
-                i.appendColumn(e.getValue(), 0, cn.org.autumn.table.annotation.IndexOrder.fromCollation(asc));
+                i.appendColumn(e.getValue(), 0, IndexOrder.fromCollation(asc));
             }
             return i;
         }

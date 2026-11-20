@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Date;
 
 class IndexIdentityAndNamingTest {
 
@@ -43,7 +44,7 @@ class IndexIdentityAndNamingTest {
         String user;
         String tag;
         String place;
-        java.util.Date createAt;
+        Date createAt;
         String status;
         boolean enabled;
     }

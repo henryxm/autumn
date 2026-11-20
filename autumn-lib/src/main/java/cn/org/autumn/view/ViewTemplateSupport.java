@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
+import java.util.LinkedHashSet;
 
 /**
  * 视图名解析核心：模板是否存在、路径规范化、缺失时统一回落 {@link #FALLBACK_404_VIEW}。
@@ -216,7 +217,7 @@ public class ViewTemplateSupport {
         }
         String normalized = templatePath.startsWith("/") ? templatePath.substring(1) : templatePath;
         String suffix = StringUtils.defaultString(viewSuffix, ".html");
-        java.util.LinkedHashSet<String> paths = new java.util.LinkedHashSet<>();
+        LinkedHashSet<String> paths = new LinkedHashSet<>();
         paths.add(normalized);
         if (StringUtils.isNotBlank(suffix) && !normalized.endsWith(suffix)) {
             paths.add(normalized + suffix);

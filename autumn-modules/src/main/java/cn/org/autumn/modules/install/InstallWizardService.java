@@ -28,10 +28,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.sql.SQLException;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Slf4j
 @Service
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(prefix = "autumn.install", name = "mode", havingValue = "true")
+@ConditionalOnProperty(prefix = "autumn.install", name = "mode", havingValue = "true")
 public class InstallWizardService {
 
     private static final int META_TABLE_DISPLAY_LIMIT = 500;
@@ -185,7 +187,7 @@ public class InstallWizardService {
         }
     }
 
-    private static String getSchemaForMeta(Connection conn, DatabaseMetaData md) throws java.sql.SQLException {
+    private static String getSchemaForMeta(Connection conn, DatabaseMetaData md) throws SQLException {
         String s = conn.getSchema();
         if (StringUtils.isNotBlank(s)) {
             return s;

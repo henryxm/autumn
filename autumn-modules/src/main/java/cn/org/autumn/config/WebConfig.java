@@ -57,7 +57,7 @@ public class WebConfig implements WebMvcConfigurer, SmartInitializingSingleton {
             try {
                 List<HandlerMethodArgumentResolver> argumentResolvers = requestMappingHandlerAdapter.getArgumentResolvers();
                 if (argumentResolvers != null && !argumentResolvers.isEmpty()) {
-                    List<HandlerMethodArgumentResolver> newResolvers = new java.util.ArrayList<>(argumentResolvers);
+                    List<HandlerMethodArgumentResolver> newResolvers = new ArrayList<>(argumentResolvers);
                     // 移除已存在的EncryptArgumentResolver（如果存在）
                     newResolvers.removeIf(resolver -> resolver instanceof EncryptArgumentResolver);
                     // 查找RequestResponseBodyMethodProcessor的位置

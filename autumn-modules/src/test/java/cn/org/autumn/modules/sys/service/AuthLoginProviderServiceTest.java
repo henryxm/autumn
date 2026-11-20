@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
+import cn.org.autumn.modules.client.model.ScanLoginCredentialContext;
 
 @ExtendWith(MockitoExtension.class)
 class AuthLoginProviderServiceTest {
@@ -145,7 +146,7 @@ class AuthLoginProviderServiceTest {
                 .thenReturn(Collections.singletonList(qrOnly));
         when(webOauthEndpointResolver.hasRemoteOrigin(qrOnly)).thenReturn(true);
         when(scanLoginCredentialService.require(AuthLoginProviderType.OAUTH2_CLASSIC, "qr-rp"))
-                .thenReturn(new cn.org.autumn.modules.client.model.ScanLoginCredentialContext());
+                .thenReturn(new ScanLoginCredentialContext());
 
         AuthLoginProviderList list = authLoginProviderService.listPageProviders();
 
@@ -171,7 +172,7 @@ class AuthLoginProviderServiceTest {
         when(connectBindSupport.isSamePlatform(openQr)).thenReturn(false);
         when(connectAppService.tryFillDefaultUris(eq(openQr), isNull())).thenReturn(true);
         when(scanLoginCredentialService.require(AuthLoginProviderType.OAUTH2_OPEN, "open_qr"))
-                .thenReturn(new cn.org.autumn.modules.client.model.ScanLoginCredentialContext());
+                .thenReturn(new ScanLoginCredentialContext());
 
         AuthLoginProviderList list = authLoginProviderService.listPageProviders();
 

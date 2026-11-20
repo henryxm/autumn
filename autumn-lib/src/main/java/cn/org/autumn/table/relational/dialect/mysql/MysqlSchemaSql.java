@@ -15,6 +15,9 @@ import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import cn.org.autumn.table.data.index.IndexDdlFragments;
+import cn.org.autumn.table.data.index.IndexDialectCapability;
+import cn.org.autumn.table.data.index.IndexRebuildTask;
 
 /**
  * MySQL / MariaDB / TiDB / OceanBase MySQL 等主路径：不含内嵌 H2 兼容分支。
@@ -318,16 +321,16 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
         for (Map.Entry<TableInfo, Object> kv : parameter.entrySet()) {
             TableInfo tableInfo = kv.getKey();
             Object val = kv.getValue();
-            if (!(val instanceof cn.org.autumn.table.data.index.IndexRebuildTask)) {
+            if (!(val instanceof IndexRebuildTask)) {
                 continue;
             }
-            cn.org.autumn.table.data.index.IndexRebuildTask task =
-                    (cn.org.autumn.table.data.index.IndexRebuildTask) val;
+            IndexRebuildTask task =
+                    (IndexRebuildTask) val;
             IndexInfo from = task.getDbIndex();
             IndexInfo to = task.getEntityIndex();
             if (from == null || to == null
-                    || org.apache.commons.lang3.StringUtils.isBlank(from.getName())
-                    || org.apache.commons.lang3.StringUtils.isBlank(to.getName())) {
+                    || StringUtils.isBlank(from.getName())
+                    || StringUtils.isBlank(to.getName())) {
                 continue;
             }
             stringBuilder.append("ALTER TABLE `").append(tableInfo.getName()).append("` RENAME INDEX `")
@@ -341,8 +344,8 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
         StringBuilder stringBuilder = new StringBuilder();
         Map<TableInfo, IndexInfo> parameter = map.get(RelationalSchemaSql.paramName);
         for (Map.Entry<TableInfo, IndexInfo> ii : parameter.entrySet()) {
-            IndexInfo indexInfo = cn.org.autumn.table.data.index.IndexDialectCapability.forEmit(
-                    cn.org.autumn.table.data.index.IndexDialectCapability.Family.MYSQL, ii.getValue());
+            IndexInfo indexInfo = IndexDialectCapability.forEmit(
+                    IndexDialectCapability.Family.MYSQL, ii.getValue());
             if (indexInfo == null) {
                 continue;
             }
@@ -352,17 +355,17 @@ public class MysqlSchemaSql implements RelationalSchemaSql {
             }
             stringBuilder.append("INDEX ");
             stringBuilder.append("`").append(indexInfo.getName()).append("` (");
-            cn.org.autumn.table.data.index.IndexDdlFragments.appendMysqlColumns(stringBuilder, indexInfo);
+            IndexDdlFragments.appendMysqlColumns(stringBuilder, indexInfo);
             stringBuilder.append(")");
             stringBuilder.append(" USING ").append(indexInfo.getIndexMethod().toUpperCase());
-            if (org.apache.commons.lang3.StringUtils.isNotBlank(indexInfo.getParser())
+            if (StringUtils.isNotBlank(indexInfo.getParser())
                     && IndexTypeEnum.FULLTEXT.toString().equals(indexInfo.getIndexType())) {
                 stringBuilder.append(" WITH PARSER `").append(indexInfo.getParser()).append("`");
             }
             if (indexInfo.isInvisible()) {
                 stringBuilder.append(" INVISIBLE");
             }
-            if (org.apache.commons.lang3.StringUtils.isNotBlank(indexInfo.getComment())) {
+            if (StringUtils.isNotBlank(indexInfo.getComment())) {
                 stringBuilder.append(" COMMENT '").append(indexInfo.getComment().replace("'", "''")).append("'");
             }
             stringBuilder.append(";");

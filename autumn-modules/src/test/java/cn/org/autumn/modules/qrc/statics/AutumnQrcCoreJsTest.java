@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
+import java.io.ByteArrayOutputStream;
 
 /** autumn-qrc-core.js 方案 C 通知 API 契约测试。 */
 class AutumnQrcCoreJsTest {
@@ -53,7 +54,7 @@ class AutumnQrcCoreJsTest {
         InputStream in = AutumnQrcCoreJsTest.class.getResourceAsStream("/statics/js/autumn-qrc-core.js");
         assertNotNull(in, "classpath statics/js/autumn-qrc-core.js");
         try {
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buf = new byte[4096];
             int n;
             while ((n = in.read(buf)) >= 0) {

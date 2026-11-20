@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.springframework.mock.env.MockEnvironment;
 
 public class EncryptModuleServiceTest {
 
@@ -255,7 +256,7 @@ public class EncryptModuleServiceTest {
         ReflectionTestUtils.setField(factory, "handlers", Collections.emptyList());
         FieldEncryptConfigSource configSource = new FieldEncryptConfigSource();
         ReflectionTestUtils.setField(configSource, "properties", properties);
-        ReflectionTestUtils.setField(configSource, "environment", new org.springframework.mock.env.MockEnvironment());
+        ReflectionTestUtils.setField(configSource, "environment", new MockEnvironment());
         ReflectionTestUtils.setField(configSource, "encryptConfigFactory", factory);
         FieldEncryptService service = new FieldEncryptService();
         ReflectionTestUtils.setField(service, "configSource", configSource);

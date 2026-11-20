@@ -26,6 +26,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import java.lang.reflect.Modifier;
 
 /**
  * 管理 IP 引导密钥：明文仅控制台打印，内存只存 hash；认领后立即清除。
@@ -62,7 +63,7 @@ class IpAdminWhiteServiceBootstrapTest {
         assertTrue(hash instanceof byte[]);
         boolean hasPlainSecretField = false;
         for (var f : IpAdminWhiteService.class.getDeclaredFields()) {
-            if (!java.lang.reflect.Modifier.isStatic(f.getModifiers())
+            if (!Modifier.isStatic(f.getModifiers())
                     && f.getType() == String.class
                     && f.getName().toLowerCase().contains("secret")) {
                 hasPlainSecretField = true;

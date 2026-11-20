@@ -15,6 +15,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 /**
  * 索引硬限制预检：重复列、列数、未知列、表索引数、键长粗估、isUnique+默认空串。
@@ -303,7 +305,7 @@ public final class IndexLimitGuard {
         }
         if (ft == long.class || ft == Long.class || ft == double.class || ft == Double.class
                 || ft == java.util.Date.class || ft == java.sql.Date.class
-                || ft == java.sql.Timestamp.class || ft == java.math.BigDecimal.class) {
+                || ft == Timestamp.class || ft == BigDecimal.class) {
             return 8;
         }
         return 8;

@@ -34,6 +34,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.apache.shiro.session.InvalidSessionException;
+import org.apache.shiro.subject.SimplePrincipalCollection;
+import org.apache.shiro.subject.support.DefaultSubjectContext;
 
 @ExtendWith(MockitoExtension.class)
 class RedisShiroSessionDAOTest {
@@ -179,7 +182,7 @@ class RedisShiroSessionDAOTest {
             }
 
             @Override
-            public Collection<Object> getAttributeKeys() throws org.apache.shiro.session.InvalidSessionException {
+            public Collection<Object> getAttributeKeys() throws InvalidSessionException {
                 return nativeSession.getAttributeKeys();
             }
 
@@ -196,8 +199,8 @@ class RedisShiroSessionDAOTest {
 
         SysUserEntity user = new SysUserEntity();
         user.setUuid("u-remember");
-        nativeSession.setAttribute(org.apache.shiro.subject.support.DefaultSubjectContext.PRINCIPALS_SESSION_KEY,
-                new org.apache.shiro.subject.SimplePrincipalCollection(user, "realm"));
+        nativeSession.setAttribute(DefaultSubjectContext.PRINCIPALS_SESSION_KEY,
+                new SimplePrincipalCollection(user, "realm"));
 
         dao.refreshAfterLogin(proxy, true);
 

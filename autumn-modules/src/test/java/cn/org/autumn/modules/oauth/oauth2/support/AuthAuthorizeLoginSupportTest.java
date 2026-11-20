@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpSession;
 
 class AuthAuthorizeLoginSupportTest {
 
@@ -19,7 +20,7 @@ class AuthAuthorizeLoginSupportTest {
     @Test
     void saveAndResolveLoginTab_usesSession() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setSession(new org.springframework.mock.web.MockHttpSession(null));
+        request.setSession(new MockHttpSession(null));
         AuthAuthorizeLoginSupport.saveLoginTab(request, "qr");
         assertEquals("qr", AuthAuthorizeLoginSupport.resolveLoginTab(request));
     }
@@ -27,7 +28,7 @@ class AuthAuthorizeLoginSupportTest {
     @Test
     void resolveLoginTab_prefersSessionOverQuery() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setSession(new org.springframework.mock.web.MockHttpSession(null));
+        request.setSession(new MockHttpSession(null));
         AuthAuthorizeLoginSupport.saveLoginTab(request, "phone");
         request.setParameter("loginTab", "account");
         assertEquals("phone", AuthAuthorizeLoginSupport.resolveLoginTab(request));

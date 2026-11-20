@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.springframework.util.LinkedMultiValueMap;
 
 /** RP 联邦：建票 + 双 Webhook 入站自动完成（无 local-status / complete）。 */
 public class RpFederatedLoginIntegrationTest extends IntegrationTest {
@@ -94,7 +95,7 @@ public class RpFederatedLoginIntegrationTest extends IntegrationTest {
 
         HttpHeaders formHeaders = new HttpHeaders();
         formHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        org.springframework.util.LinkedMultiValueMap<String, String> form = new org.springframework.util.LinkedMultiValueMap<>();
+        LinkedMultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         WebOauthBindEntity bind = webOauthBindDao.getByAuthenticationAndUpper(web.getUuid(), adminUuid);
         if (bind == null) {
             return;

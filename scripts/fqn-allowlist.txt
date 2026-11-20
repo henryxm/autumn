@@ -8,9 +8,12 @@ autumn-modules/src/main/java/cn/org/autumn/modules/sys/config/DefaultEncryptConf
 # java.util.Date 与 java.sql.Date 冲突
 autumn-modules/src/main/java/cn/org/autumn/modules/db/service/DatabaseBackupSqlExportSupport.java
 autumn-lib/src/main/java/cn/org/autumn/table/data/ColumnInfo.java
+autumn-lib/src/main/java/cn/org/autumn/table/data/index/IndexLimitGuard.java
 autumn-modules/src/main/java/cn/org/autumn/config/SqliteJdbcResultAccessInterceptor.java
 autumn-modules/src/main/java/cn/org/autumn/modules/sys/controller/SysExecController.java
 autumn-modules/src/main/java/cn/org/autumn/modules/usr/service/UserLoginLogService.java
+autumn-modules/src/main/java/cn/org/autumn/modules/db/service/TableScanResultFormatter.java
+autumn-modules/src/main/java/cn/org/autumn/modules/db/service/TableScanValueBinder.java
 
 # MyBatis Configuration 与 Spring @Configuration 冲突
 autumn-modules/src/main/java/cn/org/autumn/config/MybatisPlusConfig.java
@@ -26,3 +29,12 @@ autumn-modules/src/main/java/cn/org/autumn/modules/sys/service/SysLogService.jav
 
 # 类名 Test 与 org.junit.Test 冲突
 autumn-modules/src/test/java/cn/org/autumn/modules/Test.java
+
+# swagger Operation 注解 vs models.Operation
+autumn-modules/src/main/java/cn/org/autumn/config/OperationUnique.java
+
+# jakarta.* 与 javax.* 同名类型并存（桥接适配器）
+autumn-modules/src/main/java/cn/org/autumn/modules/oauth/util/JakartaToJavaxRequestAdapter.java
+
+# java.lang.management vs com.sun.management OperatingSystemMXBean
+autumn-modules/src/main/java/cn/org/autumn/modules/ops/service/OpsRuntimeSnapshotService.java

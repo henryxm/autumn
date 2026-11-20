@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Date;
 
 /**
  * 运维双边 RSA 开放 API（与业务 {@code /rsa/api/v1} 隔离；豁免管理 IP 门禁）。
@@ -200,7 +201,7 @@ public class OpsApiController {
             throw new AException("管理IP不存在", 404);
         }
         entity.setForbidden(forbidden);
-        entity.setUpdateTime(new java.util.Date());
+        entity.setUpdateTime(new Date());
         ipAdminWhiteService.updateById(entity);
         adminAccessGuard.auditWithIp(request, "ops.adminip.setForbidden",
                 "ip=" + ip + " forbidden=" + forbidden + " certId=" + session.getCertId());
@@ -282,7 +283,7 @@ public class OpsApiController {
             throw new AException("白名单IP不存在", 404);
         }
         entity.setForbidden(forbidden);
-        entity.setUpdateTime(new java.util.Date());
+        entity.setUpdateTime(new Date());
         ipWhiteService.updateById(entity);
         adminAccessGuard.auditWithIp(request, "ops.ipwhite.setForbidden",
                 "ip=" + ip + " forbidden=" + forbidden + " certId=" + session.getCertId());

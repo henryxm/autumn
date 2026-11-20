@@ -11,6 +11,7 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * docker-compose 短前缀 crypto.field.* 与 AUTUMN_CRYPTO_FIELD_* / AUTUMN_FIELD_ENCRYPT_* 别名解析。
@@ -87,7 +88,7 @@ public class FieldEncryptConfigSourceAliasTest {
         FieldEncryptConfigSource source = source(properties, env);
         FieldEncryptConfigSource.Resolved resolved = source.resolveFromProperties();
         assertEquals("not-valid-base64!!!", resolved.getKeyBase64());
-        org.junit.jupiter.api.Assertions.assertNull(source.validKeyBase64(resolved.getKeyBase64()));
+        Assertions.assertNull(source.validKeyBase64(resolved.getKeyBase64()));
     }
 
     private static FieldEncryptConfigSource.Resolved resolve(FieldEncryptProperties properties, MockEnvironment env) {

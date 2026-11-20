@@ -5,6 +5,18 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.*;
 import java.security.Principal;
 import java.util.*;
+import java.io.UnsupportedEncodingException;
+import javax.servlet.AsyncContext;
+import javax.servlet.DispatcherType;
+import javax.servlet.ReadListener;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpUpgradeHandler;
+import javax.servlet.http.Part;
 
 /**
  * 适配器：将 jakarta.servlet.http.HttpServletRequest 包装为 javax.servlet.http.HttpServletRequest
@@ -162,7 +174,7 @@ public class JakartaToJavaxRequestAdapter implements javax.servlet.http.HttpServ
             }
 
             @Override
-            public void setReadListener(javax.servlet.ReadListener readListener) {
+            public void setReadListener(ReadListener readListener) {
                 // no-op for Oltu compatibility
             }
         };
@@ -285,12 +297,12 @@ public class JakartaToJavaxRequestAdapter implements javax.servlet.http.HttpServ
     }
 
     @Override
-    public javax.servlet.http.HttpSession getSession(boolean create) {
+    public HttpSession getSession(boolean create) {
         throw new UnsupportedOperationException("Session not supported in adapter");
     }
 
     @Override
-    public javax.servlet.http.HttpSession getSession() {
+    public HttpSession getSession() {
         throw new UnsupportedOperationException("Session not supported in adapter");
     }
 
@@ -321,7 +333,7 @@ public class JakartaToJavaxRequestAdapter implements javax.servlet.http.HttpServ
     }
 
     @Override
-    public boolean authenticate(javax.servlet.http.HttpServletResponse response) {
+    public boolean authenticate(HttpServletResponse response) {
         throw new UnsupportedOperationException("Not supported in adapter");
     }
 
@@ -336,27 +348,27 @@ public class JakartaToJavaxRequestAdapter implements javax.servlet.http.HttpServ
     }
 
     @Override
-    public Collection<javax.servlet.http.Part> getParts() {
+    public Collection<Part> getParts() {
         throw new UnsupportedOperationException("Not supported in adapter");
     }
 
     @Override
-    public javax.servlet.http.Part getPart(String name) {
+    public Part getPart(String name) {
         throw new UnsupportedOperationException("Not supported in adapter");
     }
 
     @Override
-    public <T extends javax.servlet.http.HttpUpgradeHandler> T upgrade(Class<T> handlerClass) {
+    public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) {
         throw new UnsupportedOperationException("Not supported in adapter");
     }
 
     @Override
-    public void setCharacterEncoding(String env) throws java.io.UnsupportedEncodingException {
+    public void setCharacterEncoding(String env) throws UnsupportedEncodingException {
         delegate.setCharacterEncoding(env);
     }
 
     @Override
-    public javax.servlet.RequestDispatcher getRequestDispatcher(String path) {
+    public RequestDispatcher getRequestDispatcher(String path) {
         throw new UnsupportedOperationException("Not supported in adapter");
     }
 
@@ -367,17 +379,17 @@ public class JakartaToJavaxRequestAdapter implements javax.servlet.http.HttpServ
     }
 
     @Override
-    public javax.servlet.ServletContext getServletContext() {
+    public ServletContext getServletContext() {
         throw new UnsupportedOperationException("Not supported in adapter");
     }
 
     @Override
-    public javax.servlet.AsyncContext startAsync() throws IllegalStateException {
+    public AsyncContext startAsync() throws IllegalStateException {
         throw new UnsupportedOperationException("Not supported in adapter");
     }
 
     @Override
-    public javax.servlet.AsyncContext startAsync(javax.servlet.ServletRequest servletRequest, javax.servlet.ServletResponse servletResponse) throws IllegalStateException {
+    public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) throws IllegalStateException {
         throw new UnsupportedOperationException("Not supported in adapter");
     }
 
@@ -392,13 +404,13 @@ public class JakartaToJavaxRequestAdapter implements javax.servlet.http.HttpServ
     }
 
     @Override
-    public javax.servlet.AsyncContext getAsyncContext() {
+    public AsyncContext getAsyncContext() {
         throw new UnsupportedOperationException("Not supported in adapter");
     }
 
     @Override
-    public javax.servlet.DispatcherType getDispatcherType() {
-        return javax.servlet.DispatcherType.valueOf(delegate.getDispatcherType().name());
+    public DispatcherType getDispatcherType() {
+        return DispatcherType.valueOf(delegate.getDispatcherType().name());
     }
 
     /**

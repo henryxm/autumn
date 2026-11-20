@@ -17,7 +17,7 @@ public class XssFilterInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) throws Exception {
         if (handler instanceof HandlerMethod) {
-            HandlerMethod handlerMethod = (org.springframework.web.method.HandlerMethod) handler;
+            HandlerMethod handlerMethod = (HandlerMethod) handler;
             // 检查方法上的注解
             DisableXssFilter methodAnnotation = handlerMethod.getMethod().getAnnotation(DisableXssFilter.class);
             if (methodAnnotation != null && methodAnnotation.value()) {

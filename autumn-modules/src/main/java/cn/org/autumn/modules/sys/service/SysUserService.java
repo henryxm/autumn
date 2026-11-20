@@ -66,6 +66,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.nio.file.Path;
 
 /**
  * 系统用户
@@ -241,7 +242,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (generatedBootstrapPassword == null) {
             synchronized (this) {
                 if (generatedBootstrapPassword == null) {
-                    java.nio.file.Path home = profileStore != null ? profileStore.home() : null;
+                    Path home = profileStore != null ? profileStore.home() : null;
                     String fromFile = AdminBootstrapPasswordSupport.readPassword(home);
                     if (StringUtils.isNotBlank(fromFile)) {
                         generatedBootstrapPassword = fromFile;

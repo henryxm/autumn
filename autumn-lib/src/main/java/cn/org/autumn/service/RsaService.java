@@ -27,6 +27,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.security.InvalidKeyException;
 
 @Slf4j
 @Service
@@ -238,7 +239,7 @@ public class RsaService implements LoadFactory.Must {
         } catch (RuntimeException e) {
             // RsaUtil.encrypt可能抛出RuntimeException包装的InvalidKeyException
             Throwable cause = e.getCause();
-            if (cause instanceof java.security.InvalidKeyException) {
+            if (cause instanceof InvalidKeyException) {
                 log.error("客户端公钥解析失败，Session: {}, 错误: {}", session, cause.getMessage());
                 throw new CodeException(Error.RSA_PUBLIC_KEY_PARSE_ERROR);
             }

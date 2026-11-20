@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.function.Supplier;
 
 @RestController
 @RequestMapping("/oauth/admin/scopes")
@@ -90,7 +91,7 @@ public class ScopeDefinitionAdminController {
         }
     }
 
-    private R admin(HttpServletRequest request, java.util.function.Supplier<R> action) {
+    private R admin(HttpServletRequest request, Supplier<R> action) {
         return systemAdminApi.execute(request, "ScopeDefinition", action);
     }
 

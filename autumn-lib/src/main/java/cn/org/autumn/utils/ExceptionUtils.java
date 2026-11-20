@@ -12,6 +12,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 /**
  * 异常工具类
@@ -106,11 +111,11 @@ public class ExceptionUtils {
      * 判断是否为常见的HTTP异常
      */
     public static boolean isCommonHttpException(Exception e) {
-        return e instanceof org.springframework.web.HttpMediaTypeNotAcceptableException ||
-                e instanceof org.springframework.web.HttpRequestMethodNotSupportedException ||
-                e instanceof org.springframework.http.converter.HttpMessageNotReadableException ||
-                e instanceof org.springframework.web.HttpMediaTypeNotSupportedException ||
-                e instanceof org.springframework.web.bind.MissingServletRequestParameterException;
+        return e instanceof HttpMediaTypeNotAcceptableException ||
+                e instanceof HttpRequestMethodNotSupportedException ||
+                e instanceof HttpMessageNotReadableException ||
+                e instanceof HttpMediaTypeNotSupportedException ||
+                e instanceof MissingServletRequestParameterException;
     }
 
     /**

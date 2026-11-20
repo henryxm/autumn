@@ -3,6 +3,7 @@ package cn.org.autumn.database.runtime;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import cn.org.autumn.exception.AException;
 
 /**
  * ORDER BY 列名白名单：拒绝方言引号旁路与注入片段。
@@ -21,7 +22,7 @@ public class WrapperColumnsOrderByTest {
         assertNull(WrapperColumns.orderByColumnExpression("`id`,if(1=1,id,name)`", true));
         assertNull(WrapperColumns.orderByColumnExpression("id);drop table x--", true));
         assertNull(WrapperColumns.orderByColumnExpression("a.b", true));
-        assertThrows(cn.org.autumn.exception.AException.class,
+        assertThrows(AException.class,
                 () -> WrapperColumns.orderByColumnExpression("1 union select 1", false));
     }
 

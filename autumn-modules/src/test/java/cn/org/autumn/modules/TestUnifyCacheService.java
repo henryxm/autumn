@@ -17,6 +17,9 @@ import java.util.Date;
 import java.util.Random;
 
 import static org.junit.Assert.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * ModuleService 缓存功能测试用例
@@ -234,7 +237,7 @@ public class TestUnifyCacheService {
         for (WebOauthCombineEntity entity : entities) {
             entity.setClientId("updated_batch_" + randomString(10));
         }
-        boolean batchUpdated = webOauthCombineService.updateBatchById(java.util.Arrays.asList(entities));
+        boolean batchUpdated = webOauthCombineService.updateBatchById(Arrays.asList(entities));
         assertTrue("批量更新应该成功", batchUpdated);
         log.info("批量更新完成");
         
@@ -247,7 +250,7 @@ public class TestUnifyCacheService {
         log.info("批量更新后缓存已删除，重新从数据库查询");
         
         // 5. 测试批量删除后缓存删除
-        java.util.List<Long> ids = new java.util.ArrayList<>();
+        List<Long> ids = new ArrayList<>();
         for (WebOauthCombineEntity entity : entities) {
             ids.add(entity.getId());
         }
