@@ -339,7 +339,7 @@ var uuid = '${uuid!""?js_string}';
 - **扩展能力（可选，带默认值）**：`@Index`：`where` / `include` / `parser` / `invisible` / `expression`，以及字段级快捷 `order` / `length` / `collation`；`@IndexField`：`order` / `length` / `expression` / `collation`。不支持的方言 **WARN 并跳过/降级**。索引列 `collation` 已进模型，各方言 DDL **尚未统一发射**——列排序规则优先用 **`@Column.collation`**。
 - **同步配置**：`autumn.table.index.rebuild-on-order-mismatch`（默认 `true`）——列序/方向不一致时**按索引成对** DROP+ADD（失败 WARN 不阻断启动）；日志关键字 `Index rebuild upgrade`。设 `false` 退回仅列集合比对（运维缓冲，不是放弃列序真相）。
 - **依赖仓兼容**：升级 autumn 后，旧 `@Index`/`@IndexField(field,length)` **无需改实体**即可编译启动；`IndexInfo.getFields()` 仍可用（有序 Map 视图）。历史库方向本就是 ASC，与默认一致，**不会仅因默认 ASC 触发重建**。
-- **Dao**：索引注解**只写 Entity**；`*Dao` / `*DaoSql` 禁止声明索引。
+- **Dao**：字符串 `*DaoSql` 禁止「幻想」索引注解。索引声明两条轨（框架均默认支持）：Entity `@Index`/`@Indexes`，或 **Query→Index**（`RuntimeSql#select` / `IndexedSelect` + `QueryIndexContributor`）。开发时对同一组合索引 **二选一**；同指纹以构建器为准；**AI 必读** **`docs/AI_INDEX_ANNOTATIONS.md` §1.1～§1.9**。
 
 #### 列方向 ASC / DESC（性能、用法与长期方案）
 

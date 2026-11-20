@@ -1,19 +1,186 @@
 # 实体索引注解：业务仓标准写法与推荐方案
 
 > **权威约束**仍在 **`docs/AI_STANDARDS.md` §10.2**（硬性纪律、ASC/DESC 基线）。  
-> **本文**面向业务仓：把「主查询 SQL → `@Index` / `@Indexes`」落成**统一风格**的推荐清单与评审表，便于 `vshort` / `im` / `account` 等同构实现。  
-> 框架收集与同步行为见 **`docs/AI_MAP.md` §2.10**、**`docs/AI_BOOT.md` §3**。
+> **本文**面向业务仓：把「主查询 → 索引」落成**统一风格**（**Entity `@Index`/`@Indexes`** 或 **Query→Index / `IndexedSelect`**），便于 `vshort` / `im` / `account` 与 AI 同构实现。  
+> 框架收集与同步行为见 **`docs/AI_MAP.md` §2.10**、**`docs/AI_BOOT.md` §3**。  
+> **Query→Index 专节 = §1.1～§1.9**（AI 写 DaoSql 索引前必读；含性能 §1.8）。
 
 ## 1. 文档职责
 
 | 文档 | 读什么 |
 |------|--------|
-| **`AI_STANDARDS` §10.2** | 硬性禁止项、默认 ASC、何时写 DESC、命名/身份摘要 |
-| **本文** | 业务建模流程、模式目录、**§5 isUnique**、**§6 单列保留 / 组合对齐 Dao**、**§7 命名/身份/运行时限制**、PR 清单 |
-| **`AI_MAP` §2.10** | 注解收集、前缀策略、方言降级、**指纹配对 / RENAME** |
-| **`AI_BOOT` §3** | 启动同步顺序、`Index rebuild upgrade` / rename 日志 |
+| **`AI_STANDARDS` §10.2** | 硬性禁止项、默认 ASC、何时写 DESC、命名/身份摘要；Dao 侧 Query→Index 一句话 |
+| **本文 §1.1～§1.9** | **Query→Index** 发现、API 对照、合并、性能、AI 检查清单（本文权威） |
+| **本文 §2～§12** | Entity 注解建模流程、模式目录、**§5 isUnique**、**§6**、**§7**、PR 清单 |
+| **`AI_MAP` §2.10** | 注解收集、前缀策略、方言降级、指纹配对 / RENAME；Merger 接入点 |
+| **`AI_BOOT` §3** | 启动同步顺序、双轨索引摘要、`Index rebuild` 日志 |
+| **`AI_DATABASE` §3** | `*DaoSql extends RuntimeSql`；`select()` → Query→Index |
 
-**索引只写在 Entity**；Dao / `*DaoSql` **禁止**声明索引。查询写在 Provider，索引按查询设计。
+**双轨（框架同时支持；开发时对同一索引二选一）**：
+
+| 轨 | 适用 | 索引 SSOT | 如何生效 |
+|----|------|-----------|----------|
+| **A. Entity 注解** | 存量、字符串拼 SQL 的 `*DaoSql`、或团队仍用注解声明组合索引 | 字段 `@Index` / 类 `@Indexes` / `isUnique` | 启动 `TableInfo.initFrom` 自动收集（与历来一致，**无开关**） |
+| **B. Query→Index** | 用 `IndexedSelect` 写查询并声明索引 | `IndexedSelect` → Registry | 启动自动 `discover` + `Merger`（**无开关**；无 Contributor 时空转） |
+
+同一组合索引 **禁止** A+B 双写；若双写且同指纹 → **以构建器为准**，注解侧忽略（WARN）。两种方式是并列能力，不是可关可选插件。
+
+### 1.1 Query→Index：目标与边界
+
+- **目标**：有查询即索引——`*DaoSql` 里同一套列角色既生成可移植 SQL，又在启动表同步时进入期望索引集合。  
+- **不改变**：`TableInfo.initFrom` → `IndexDiffEngine` → ADD/RENAME/DROP 的**业务流程**；B 轨只多一个期望源。  
+- **不做**：解析历史字符串 SQL；不强制把存量 `@Indexes` 改成构建器；不替代字段 `@Column(isUnique=true)` 的单列唯一纪律（§5 / STANDARDS §10.2）。  
+- **包名**：`cn.org.autumn.database.runtime.query`（`IndexedSelect`、`QueryIndexRegistry`、`QueryIndexDiscovery`、`QueryIndexMerger`、`QueryIndexContributor`、`@QueryIndexScan`）。
+
+### 1.2 兼容（AI 硬约束）
+
+| 项 | 行为 |
+|----|------|
+| 无 Query→Index 代码的工程 | 仅多一次包缓存遍历；无 Contributor/Scan 则不实例化、Registry 空；`applyTo` 对每表 early-return → **纯 `@Indexes` 行为与历来一致** |
+| 存量迁移 | **禁止**作为任务默认目标；未要求时不要删 Entity `@Indexes`、不要改历史字符串 `*DaoSql` |
+| 表名 | `select("物理表名")` 必须与 `@Table`/`@TableName` 解析出的表名一致（大小写不敏感匹配） |
+
+### 1.3 启动链路（自动化建索引）
+
+```text
+MysqlTableService.createMysqlTable
+  → discoverQueryIndexes()
+       QueryIndexDiscovery.discover(autumn.table.pack, Spring Contributors?)
+       → freezeAfterBootstrap()
+  → 每个实体 new TableInfo(clazz)          // 仍只收集注解
+  → QueryIndexMerger.applyTo(ti, clazz)    // Registry 无同表项则立即返回
+  → buildIndexSql / buildModifyIndex       // 原流程
+```
+
+**登记时机**：构建器 `.sql()` / `.registerIndex()` 写入 `QueryIndexRegistry`。表同步在请求之前，故必须靠 **发现阶段**调用 Provider 方法（见 §1.4），不能指望「第一次业务查询才登记」。
+
+### 1.4 发现规则（二选一，推荐 Contributor）
+
+| 方式 | 条件 | 行为 |
+|------|------|------|
+| **`QueryIndexContributor`（推荐）** | `*DaoSql implements QueryIndexContributor` | `contributeQueryIndexes()`；通常直接调用与 `@SelectProvider` 相同的无参 `String` 方法 |
+| **`@QueryIndexScan`** | 类上注解；**且未**实现 Contributor | 反射调用本类 **public、无参、返回 String** 的方法（跳过 `RuntimeSql` 基类方法） |
+| 同时具备两者 | — | **只走 Contributor**，不再扫全部 String 方法 |
+| 仅有 `IndexedSelect`、无上述其一 | — | **建表同步前不登记**（有 Scan/Contributor 但 Registry 空会 WARN） |
+| Spring `List<QueryIndexContributor>` | 可选 Bean | 额外调用；多数 `*DaoSql` **不是** Bean，仍以包扫描为主 |
+| 扫描包 | `autumn.table.pack`（+ 默认 `cn.org.autumn.modules`） | 与实体扫描同一套；业务 `*DaoSql` 须在这些包下 |
+
+`contributeQueryIndexes` **最小写法**：
+
+```java
+@Override
+public void contributeQueryIndexes() {
+    getByAuthenticationAndUpper();
+    getByAuthenticationAndUser();
+}
+```
+
+### 1.5 API ↔ `@Index` / `@IndexField` 对照（能力对等）
+
+| 注解 | `IndexedSelect` |
+|------|-----------------|
+| `@IndexField` 列序 | `.eq` / `.in` / `.range` / `.col` / `.orderBy*` 的**调用顺序** |
+| `length` | `.eq(col, n)` / `.prefix(n)` / `.col(col, order, n)` |
+| `order` | `.eq(col, n, IndexOrder)` / `.orderByDesc(col)` / `.col(..., order)` |
+| `collation` | `.collation("...")`（作用在**最后一列**） |
+| `expression` | `.expression("lower(email)")` |
+| `name` | `.name("...")`（可空，框架派生） |
+| `indexType` UNIQUE | `.unique()` 或 `.indexType(IndexTypeEnum.…)` |
+| `indexMethod` | `.method(IndexMethodEnum.…)` |
+| `comment` | `.comment("...")` |
+| `where`（部分索引） | `.indexWhere("...")` |
+| `include` | `.include("col1", "col2")` |
+| `parser` / `invisible` | `.parser("...")` / `.invisible(true)` |
+| （查询）`limitOne` | `.limitOne()`（只影响 SQL，不进索引键） |
+| 复杂 WHERE 不进索引 | `.rawWhere("...")` + 需要时再 `.col(...)` |
+
+列名：入参可用驼峰或下划线；索引列与 `quote` 走 `HumpToUnderline`。MyBatis `#{}` 参数名**保留调用方字面量**。
+
+产出：`toIndexInfo()` → 与 `new IndexInfo(@Index)` **同构**的 `IndexInfo`，经同一套 validator / guard / 方言发射。
+
+### 1.6 合并与指纹
+
+1. Registry 同表多项：构建器之间做**前缀覆盖合并**（短前缀被更长同型覆盖；UNIQUE 不被 NORMAL 吞掉）。  
+2. 与 Entity `indexInfos` / `indexColumn`：**同指纹**（`IndexInfo.sameIndexColumnsAndKind`）→ **保留构建器**，去掉注解侧并 WARN。  
+3. **异指纹** → 并集；仅注解有的仍按注解同步；仅构建器有的会 ADD。  
+4. 构建器索引在合并前：`applyPrefixLengthPolicy(entityClass)` + 校验；合并后表级 `IndexLimitGuard`（与注解路径一致）。
+
+### 1.7 推荐示例（Contributor）
+
+```java
+import cn.org.autumn.database.runtime.RuntimeSql;
+import cn.org.autumn.database.runtime.query.QueryIndexContributor;
+
+public class DemoBindDaoSql extends RuntimeSql implements QueryIndexContributor {
+
+    @Override
+    public void contributeQueryIndexes() {
+        getByAuthenticationAndUpper();
+        getByAuthenticationAndUser();
+    }
+
+    public String getByAuthenticationAndUpper() {
+        return select("demo_query_bind")
+                .eq("authentication", 32).eq("upper", 32)
+                .unique().name("auth_upper").limitOne().sql();
+    }
+
+    public String getByAuthenticationAndUser() {
+        return select("demo_query_bind")
+                .eq("authentication", 32).eq("user", 32)
+                .unique().name("auth_user").limitOne().sql();
+    }
+}
+```
+
+`autumn.table.pack` 须能扫到该 `*DaoSql`（与实体包一致）。Entity：**删除**与上同指纹的类级 `@Indexes`；单列 `isUnique` / 无关字段 `@Index` 仍按 §5 / §6。
+
+列表 + 排序示例：
+
+```java
+return select("live_room")
+        .eq("status")
+        .orderByDesc("livingAt")
+        .orderByDesc("id")
+        .name("statuslivingat")
+        .sql();
+```
+
+### 1.8 性能影响（评审摘要）
+
+| 场景 | 影响 | 说明 |
+|------|------|------|
+| **无 Contributor/Scan 的工程** | **可忽略** | 包缓存遍历 + `isAssignableFrom`；不实例化；Registry 空；`applyTo` early-return。纯 `@Indexes` 与历来一致。 |
+| **启动 · 发现** | **一次、启动期** | 仅实例化 Contributor/`@QueryIndexScan` 并调无参方法。量级通常远小于 schema preload / DDL。结束 **`freezeAfterBootstrap`**。 |
+| **启动 · 每表 Merger** | **小** | 仅 Registry 有同表项时做前缀/指纹；无登记的表 early-return。 |
+| **运行期 Provider `sql()`** | **与手写拼接同量级** | 冻结后不再写 Registry。 |
+| **库侧索引本身** | **与手写 `@Indexes` 相同** | 读受益 / 写放大；前缀覆盖 + `IndexLimitGuard` 抑制爆炸。 |
+
+**结论**：查询即索引默认启用发现；无使用者时近零成本；有使用者时付启动一次成本。AI 勿对一表登记大量异指纹「预防性」组合。
+
+### 1.9 AI / Agent 检查清单（Query→Index）
+
+**做之前**
+
+- [ ] 本索引走轨 A（`@Indexes`）还是轨 B（`IndexedSelect`）？**二选一**，勿双写。  
+- [ ] 禁止借机清掉存量无关 `@Indexes`。
+
+**实现轨 B 时**
+
+- [ ] `*DaoSql extends RuntimeSql` + **`implements QueryIndexContributor`**（或仅 `@QueryIndexScan`）。  
+- [ ] `contributeQueryIndexes` 调用了所有需建索引的 Provider 方法。  
+- [ ] `select(表名)` = 实体物理表名；列序 = 等值 → 范围 → 排序；DESC 仅排序键。  
+- [ ] UNIQUE 用 `.unique()`；单列业务唯一仍优先字段 `isUnique`（§5）。  
+- [ ] Entity **无**同指纹 `@Indexes`；宽字符串有 `length`/`.prefix`。  
+- [ ] 未把 LIKE/函数列默认塞进索引键（除非 `.expression` / 显式 `.col`）。
+
+**禁止**
+
+- [ ] 只写 `IndexedSelect` 不做 Contributor/Scan（同步前不登记）。  
+- [ ] 解析或改写历史字符串 `*DaoSql`「顺便」抽索引。  
+- [ ] 与 `@Indexes` 同指纹双写后依赖 WARN 而不删注解。  
+- [ ] 改 `IndexDiffEngine` / 注解同步顺序来「迁就」构建器。  
+- [ ] 臆造 `autumn.table.index.from-query` 开关（**已取消**；双轨常开）。
 
 ## 2. 建模流程（业务仓统一）
 
@@ -24,16 +191,13 @@
    - **等值 / IN**（`status=?`、`user=?`、频道开关 `xsign=1`）  
    - **范围**（`create < ?`、`expire_at < now`）  
    - **排序键**（`ORDER BY living_at DESC, id DESC`）  
-3. **落注解**：  
-   - 单列查找 → 字段 `@Index`  
-   - **单列业务唯一 → 仅字段 `@Column(isUnique = true)`（以字段为准；禁止再 `@Index` / 禁止「唯一列最左」冗余组合）**  
-   - 多列业务唯一 → 类级 `indexType = UNIQUE`（参与列不要再单列 `isUnique`）  
-   - ≥2 列普通组合 → 类级 `@Indexes` + `@IndexField` **按上列顺序**（`field` **优先驼峰属性名**）  
-   - `@Index(name)`：可读压缩语义；可空（框架派生）；仅改名不制造重建（§7）  
-4. **方向**：默认 ASC；仅对 **ORDER BY 中的排序键** 写 `IndexOrder.DESC`（等值列保持 ASC）。  
-5. **组合对齐 Dao**：核对类级 `@Indexes` 的 `@IndexField` **列序与完整度**是否覆盖多条件 WHERE（+ ORDER BY）；缺则补、错序则改。组合含 `isUnique` 列时按 **§5** 整理。  
-6. **既有字段 `@Index` 默认保留**（见 **§6**）：不得因「组合最左已覆盖」批量删除；仅任务**明确写明**某单列无用时才删。  
-7. **注释**：组合索引上方用一行注释写清服务的 Dao/Service 方法或 SQL 形态（便于 Review）。
+3. **选轨并落点**（§1 双轨）：  
+   - **轨 A**：单列 → 字段 `@Index`；单列业务唯一 → 仅 `isUnique`；多列唯一 / ≥2 列组合 → 类级 `@Indexes` + `@IndexField`（列序=上列顺序，`field` 优先驼峰）；`name` 可读可空。  
+   - **轨 B**：`IndexedSelect` 按同上列序 + Contributor（§1.4～§1.9）；**勿**再写同指纹 `@Indexes`。单列 `isUnique` 仍在 Entity。  
+4. **方向**：默认 ASC；仅对 **ORDER BY 排序键** 写 `IndexOrder.DESC` / `.orderByDesc`（等值列 ASC）。  
+5. **组合对齐 Dao**：轨 A 核对 `@IndexField` ↔ `*DaoSql`；轨 B 以构建器列序为真相。含 `isUnique` 列时按 **§5**。  
+6. **既有字段 `@Index` 默认保留**（§6）；不得因「组合最左已覆盖」批量删除。  
+7. **注释**：组合索引或 Contributor 方法上方一行说明查询形态。
 
 ## 3. 硬性约束（摘要，细节以 STANDARDS 为准）
 
@@ -42,12 +206,14 @@
 3. `@IndexField` **数组顺序 = 落库顺序**；列序优先于 ASC/DESC。  
 4. `IndexOrder.DESC` **仅**排序键，且对齐主查询 `ORDER BY`；禁止无 EXPLAIN 全库批量改 DESC。  
 5. 宽字符串（如 `VARCHAR(1000)`）参与组合索引时用 **`@IndexField(length = 191)`**（或字段 `@Index(length = n)`），勿依赖 `@Column.length` 当前缀。  
-6. Dao 层不写索引注解。  
-7. **索引身份不含 name**：列序/方向相同仅改 name → 启动 **RENAME**（§7.3），禁止靠改名触发无意义重建。
+6. Dao 层默认不写索引注解；若用 `IndexedSelect`，则**不要**再写同指纹 `@Indexes`（二选一）。  
+7. **索引身份不含 name**：列序/方向相同仅改 name → 启动 **RENAME**（§7.3），禁止靠改名触发无意义重建。  
+8. Query→Index 与 `@Indexes` **双轨常开、无单独开关**；禁止臆造 `from-query` 配置。
 
-## 4. 模式目录（SQL → 注解）
+## 4. 模式目录（SQL → 注解 / 或 IndexedSelect）
 
-下列模式为**推荐统一风格**；业务仓新索引优先套用，再按表微调。
+下列模式为**推荐统一风格**；业务仓新索引优先套用，再按表微调。  
+**轨 B**：把同一列序改成 `select(表).eq…orderByDesc…name…sql()`，并删掉同指纹 `@Indexes`（对照表见 §1.5）。
 
 ### 4.1 单列等值查找
 
@@ -484,7 +650,8 @@ autumn.table.index:
 - [ ] **多字段组合**的 `@IndexField` 列序/完整度是否对齐 Dao/`*DaoSql` 主查询？  
 - [ ] **是否误删既有字段 `@Index`**（默认应保留；仅任务显式声明无用才删）？  
 - [ ] 宽字符串是否使用 `length` 前缀？  
-- [ ] Dao 是否仍无索引注解？  
+- [ ] 轨 A：Dao 是否仍无索引注解？轨 B：是否已 Contributor/Scan，且与 `@Indexes` **二选一**？  
+- [ ] 轨 B：`select(表名)` 是否等于实体物理表名？`contributeQueryIndexes` 是否覆盖全部需索引的 Provider 方法？  
 - [ ] 索引名是否可读？是否有一行注释对齐查询？`@IndexField` 是否优先驼峰属性名？  
 - [ ] 索引名是否未无故超长（超长会被截断 WARN）？  
 - [ ] 启动日志是否仍刷 `含已 isUnique 列` WARN（新改动应清零或仅剩有注释的 C 类）？
@@ -506,10 +673,15 @@ autumn.table.index:
 | `isUnique` 且 `defaultValue=""` / `''`（多行空串） | UNIQUE 落库失败；改非空唯一值或普通 `@Index`（可空 + NULL 通常无妨） |
 | 无主查询的「预防性」十几个组合 | 写放大、重建慢 |
 | 靠改 `@Index(name)`「制造」索引重建 | 现已指纹配对 + RENAME，无意义且噪音大 |
-| 在 Dao 上幻想索引 | 框架不识别 |
+| 在 Dao 上幻想索引（非 `IndexedSelect`） | 框架不识别 |
+| `@Indexes` 与 `IndexedSelect` 同指纹双写 | 注解侧被忽略；应删冗余注解 |
+| 有 `IndexedSelect` 无 Contributor/Scan | 同步前 Registry 空；索引不会进期望集合 |
+| Contributor 与 `@QueryIndexScan` 同时叠加以为「更稳」 | 多余；有 Contributor 时不再扫 String 方法 |
+| `select` 表名与实体表名不一致 | 合并对不上表，构建器索引静默不生效 |
+| 配置已取消的 `autumn.table.index.from-query` | 无效；双轨常开，无需开关 |
 
 ## 12. 维护
 
-- 约束变更 → 先改 **`AI_STANDARDS` §10.2**，再同步本文模式与清单（含 **§5**）。  
-- 框架收集/同步行为变更 → 同步 **`AI_MAP` §2.10**、**`AI_BOOT` §3**。  
+- 约束变更 → 先改 **`AI_STANDARDS` §10.2**，再同步本文模式与清单（含 **§5**、**§1 Query→Index**）。  
+- 框架收集/同步 / Query→Index 行为变更 → 同步 **`AI_MAP` §2.10**、**`AI_BOOT` §3**、**`AI_DATABASE` §3**、**`AI_INDEX.md` 加载矩阵**。  
 - 业务仓（如 vshort）落地范例变更时，优先把**可复用模式**抽回本文，而不是只留在业务注释里。

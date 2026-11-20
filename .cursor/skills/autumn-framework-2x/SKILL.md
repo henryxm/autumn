@@ -208,7 +208,7 @@ description: >-
 
 - 框架扫描 + **`autumn.table.*`** 对齐表结构；**禁止**常规 **`DDL .sql`**。
 - **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**；**表前缀不进 Entity 类名**；`comment` 短标题 **2～8**。示例：`PayUserPinEntity` + `safe_pay_user_pin`；`ScopeDefinitionEntity` + `auth_scope_definition`。
-- **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再字段级 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅组合索引（≥2 列）**（§10.2）；**组合索引列序优先**（等值→范围→排序；频道/开关等值列必须靠左）；**默认 ASC**；**`IndexOrder.DESC` 仅排序键且对齐主 `ORDER BY`**（ASC 上 DESC 查询可用反向扫描；混合序/热点才显式 DESC；禁止无 EXPLAIN 批量改方向）；**既有字段级 `@Index` 默认保留**（禁止因组合最左覆盖而批量删除）；优化重点为**组合 `@Indexes` 列序对齐 Dao**。硬性纪律 **`docs/AI_STANDARDS.md` §10.2**；业务统一风格/模式目录/PR 清单 **`docs/AI_INDEX_ANNOTATIONS.md`**。
+- **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再字段级 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅组合索引（≥2 列）**（§10.2）；**组合索引列序优先**（等值→范围→排序；频道/开关等值列必须靠左）；**默认 ASC**；**`IndexOrder.DESC` 仅排序键且对齐主 `ORDER BY`**（ASC 上 DESC 查询可用反向扫描；混合序/热点才显式 DESC；禁止无 EXPLAIN 批量改方向）；**既有字段级 `@Index` 默认保留**（禁止因组合最左覆盖而批量删除）；优化重点为**组合 `@Indexes` 列序对齐 Dao**。**Query→Index**（`IndexedSelect` + `QueryIndexContributor`）与 `@Indexes` **双轨常开、无单独开关**；开发对同一索引二选一、同指纹构建器优先。**AI 必读** **`docs/AI_INDEX_ANNOTATIONS.md` §1.1～§1.9**。硬性纪律 **`docs/AI_STANDARDS.md` §10.2**；模式/PR 清单同 **`AI_INDEX_ANNOTATIONS.md`**。
 - **双键**：第二主键按需 **`uuid`** / **`UserBased`** / **无（§3.4 仅 `user`）**；业务 **`user`** 可存 **`sys_user` 或 `bot_robot` 的 uuid**。**存量实体默认不升级**（**`docs/AI_DUAL_KEY.md` §1.2**），除非任务明确要求。详见 **§1.1、§3**。
 
 ## 多库与 SQL（与 `docs/AI_DATABASE.md` 一致）
@@ -298,7 +298,7 @@ description: >-
 - 新索引是否**单字段在字段上 `@Index`**、**组合索引才用类级 `@Indexes`**，且 **`@IndexField` 顺序对齐查询最左前缀**（§10.2）？频道等值列是否靠左？
 - 组合索引若含 **`IndexOrder.DESC`**：是否只在**排序键**上、是否对齐**主查询 ORDER BY**、是否有 **EXPLAIN** 依据（禁止等值列/全表批量 DESC）？
 - 字段级单列需要 DESC/前缀时是否用 **`@Index(order=…)` / `@Index(length=…)`** 快捷，而非再写 `fields={@IndexField(field=本字段)}`？（写法表见 **`docs/AI_STANDARDS.md` §10.2**）
-- 实体索引是否对照 **`docs/AI_INDEX_ANNOTATIONS.md`**（模式目录、**§5 isUnique**、**§7 命名/身份**、§6 单列保留、§10 PR 清单）？
+- 实体索引是否对照 **`docs/AI_INDEX_ANNOTATIONS.md`**（模式目录、**§5 isUnique**、**§7 命名/身份**、§6 单列保留、§10 PR 清单）？若用 Query→Index，是否已读 **§1.1～§1.9**（Contributor、与 `@Indexes` 二选一、无 from-query 开关）？
 - 单列唯一是否**只**字段 `isUnique`？组合是否仍以唯一列为最左（应删，§5 A/D）？
 - `@IndexField` 是否优先驼峰属性名？`@Index(name)` 是否可读且未依赖「改名触发重建」？
 - 机器人相关：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？管理 API 与 `message/push` 鉴权是否分离？Hook 验签是否用原始 body？

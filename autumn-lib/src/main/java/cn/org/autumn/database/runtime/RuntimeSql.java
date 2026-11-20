@@ -1,18 +1,31 @@
 package cn.org.autumn.database.runtime;
 
+import cn.org.autumn.database.runtime.query.IndexedSelect;
+
 /**
  * 手写 SQL / MyBatis {@code *Provider} 的基类：统一从 {@link RuntimeSqlDialectRegistry} 取当前方言，
  * 子类通过 {@link #quote(String)}、{@link #limitOne()}、{@link #likeContainsAny(String)}、{@link #booleanColumnAsTinyInt01(String)}、
  * {@link #limitOffsetSuffix(long, long)}、{@link #lowerColumnContainsNeedle(String, String)}、时间桶方法等拼装可移植 SQL，
  * 避免在每个 Provider 中重复 {@code RuntimeSqlDialectRegistry.get()} 与 {@code d()} 样板代码。
  * <p>
+ * 可选 {@link #select(String)}（{@link IndexedSelect}）可同时生成 SQL 并登记 Query→Index，
+ * 与 Entity {@code @Indexes} 并列；历史字符串拼接路径不变。
+ * <p>
  * 多库兼容纪律、Wrapper 边界与推荐分层见仓库内 {@code docs/AI_DATABASE.md}（相对仓库根）；PostgreSQL 专项见 {@code docs/AI_POSTGRESQL.md}。
  *
  * @see RuntimeSqlDialect
+ * @see IndexedSelect
  */
 public class RuntimeSql {
 
     public static final RuntimeSql sql = new RuntimeSql();
+
+    /**
+     * 查询即索引构建器（与 {@code @Indexes} 并列）。历史 {@code *DaoSql} 可继续字符串拼接，不必改用本方法。
+     */
+    public IndexedSelect select(String table) {
+        return IndexedSelect.from(this, table);
+    }
 
     /**
      * 当前线程/上下文下的运行时方言（由注册表解析，通常为 Spring 管理的 {@link RoutingRuntimeSqlDialect} 等）。

@@ -385,6 +385,8 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 ### 2.10 实体建表注解（`@Table` / `@Column` / `@Index` / `@Indexes`）
 
+**Query→Index（与 `@Indexes` 并列）**：同步前始终 `QueryIndexDiscovery` → 每表 `QueryIndexMerger.applyTo(ti, clazz)`（Registry 无同表项则立即返回）。同指纹以构建器为准忽略 Entity `@Indexes`。业务/AI 权威：**`docs/AI_INDEX_ANNOTATIONS.md` §1.1～§1.9**；包 `cn.org.autumn.database.runtime.query`。
+
 > 包名：`cn.org.autumn.table.annotation.*`；收集与 SQL 拼装入口：`TableInfo`、`QuerySql`、`IndexInfo`。
 
 #### 2.10.1 注解职责速览
@@ -406,6 +408,8 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 - 字段上的 `@Index`（通过 `new IndexInfo(k, field)` 解析）。
 
 同时，`@Column(isUnique = true)` 会把对应列记入 **`indexColumn`**（`IndexInfo` 视为唯一索引形态），在 **`getIndexInfosCombine()`** 中还会与 `indexInfos` 合并，供迁移阶段比对索引差异（`MysqlTableService.buildModifyIndex`）。
+
+`MysqlTableService` 在同步前始终 `QueryIndexDiscovery.discover`，并在 `new TableInfo(clazz)` 之后调用 **`QueryIndexMerger.applyTo(table, clazz)`**（含前缀策略与实体列校验）：并入 `QueryIndexRegistry` 同表索引；与注解侧同指纹则**忽略注解条目**（构建器优先）。无 Query→Index 登记时 Merger early-return，纯注解表与历来一致。
 
 因此：
 

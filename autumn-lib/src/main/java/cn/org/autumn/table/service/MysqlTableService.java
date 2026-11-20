@@ -27,6 +27,9 @@ import cn.org.autumn.table.utils.TableCharsetUtils;
 
 import static cn.org.autumn.table.data.InitType.*;
 import cn.org.autumn.table.annotation.IndexOrder;
+import cn.org.autumn.database.runtime.query.QueryIndexContributor;
+import cn.org.autumn.database.runtime.query.QueryIndexDiscovery;
+import cn.org.autumn.database.runtime.query.QueryIndexMerger;
 import cn.org.autumn.table.data.index.IndexDialectCapability;
 import cn.org.autumn.table.data.index.IndexDiffEngine;
 import cn.org.autumn.table.data.index.IndexLimitGuard;
@@ -101,6 +104,10 @@ public class MysqlTableService {
     @Value("${autumn.table.index.max-name-length:0}")
     private int indexMaxNameLength;
 
+    /** 可选：Spring 管理的 QueryIndexContributor（多数 *DaoSql 非 Bean，仍以包扫描为主）。 */
+    @Autowired(required = false)
+    private List<QueryIndexContributor> queryIndexContributors;
+
     /** 单次 createMysqlTable 内的批量元数据快照；无则回退逐表查询。 */
     private final ThreadLocal<SchemaSyncMetadata> schemaSyncMeta = new ThreadLocal<>();
 
@@ -127,6 +134,11 @@ public class MysqlTableService {
 
     public Set<String> getPacks() {
         return new CopyOnWriteArraySet<>(Arrays.asList(pack.split(",|:|;|-| ")));
+    }
+
+    /** Query→Index 启动发现（与 @Indexes 并列，无单独开关；无 Contributor 时几乎空转）。 */
+    private void discoverQueryIndexes() {
+        QueryIndexDiscovery.discover(getPacks(), queryIndexContributors);
     }
 
     public Set<Class<?>> getClasses() {
@@ -182,6 +194,8 @@ public class MysqlTableService {
             log.info("安装向导模式，跳过注解建表。");
             return;
         }
+
+        discoverQueryIndexes();
 
         long t0 = System.currentTimeMillis();
         SchemaSyncMetadata preload = tableDao.loadSchemaSyncMetadata();
@@ -298,6 +312,9 @@ public class MysqlTableService {
 
                 if (!tableInfo.isValid())
                     continue;
+
+                // Query→Index：Registry 无同表项时 applyTo 立即返回，不影响纯 @Indexes 表
+                QueryIndexMerger.applyTo(tableInfo, clazz);
 
                 // 用于存新增表的字段
                 List<Object> newFieldList = new ArrayList<Object>();
@@ -983,9 +1000,11 @@ public class MysqlTableService {
         Set<Class<?>> classes = getClasses();
         Map<String, Object> typeMap = mySqlTypeAndLengthMap();
         List<Map<String, Object>> out = new ArrayList<>();
+        discoverQueryIndexes();
         for (Class<?> clazz : classes) {
             TableInfo ti = new TableInfo(clazz);
             if (!ti.isValid()) continue;
+            QueryIndexMerger.applyTo(ti, clazz);
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("className", clazz.getSimpleName());
             m.put("classFullName", clazz.getName());

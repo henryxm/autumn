@@ -8,9 +8,12 @@ package cn.org.autumn.table.data.index;
  * 启动日志含 {@code Index rebuild upgrade begin/done}；大表可能耗时。
  * 设为 {@code false} 时退回「仅列集合」比对（逃生舱，跳过错序纠正）。
  * <p>
- * 限制阈值（见 {@link IndexLimitGuard}）：
+ * 限制配额（见 {@link IndexLimitGuard}）：
  * {@code max-columns-per-index}/{@code max-per-table}/{@code max-key-bytes}/
  * {@code skip-on-limit-violation}/{@code warn-unique-blank-default}。
+ * <p>
+ * Query→Index 与 Entity {@code @Indexes} 均为默认支持的索引来源（无单独开关）；
+ * 合并见 {@code QueryIndexMerger}。
  */
 public final class IndexTableSettings {
 
