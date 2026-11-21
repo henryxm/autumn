@@ -41,11 +41,15 @@ spring:
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
+      # 生产默认关闭。启用须设强密码：DRUID_STAT_VIEW_ENABLED=true + DRUID_LOGIN_*；弱密码/空账号由框架强制关闭
+      # allow 默认本机；多 IP 逗号分隔，如 127.0.0.1,10.0.0.0/8（勿设空串=全网）
       stat-view-servlet:
-        enabled: false
+        enabled: ${DRUID_STAT_VIEW_ENABLED:false}
         url-pattern: /druid/*
         login-username: ${DRUID_LOGIN_USERNAME:}
         login-password: ${DRUID_LOGIN_PASSWORD:}
+        allow: ${DRUID_ALLOW:127.0.0.1}
+        reset-enable: false
       filter:
         stat:
           log-slow-sql: true

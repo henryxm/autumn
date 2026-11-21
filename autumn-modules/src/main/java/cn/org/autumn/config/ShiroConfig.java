@@ -241,7 +241,7 @@ public class ShiroConfig {
             filterMap.put("/swagger-ui.html", "anon");
             filterMap.put("/webjars/**", "anon");
             filterMap.put("/swagger-resources/**", "anon");
-            filterMap.put("/druid/**", "anon");
+            // /druid/** 不 anon：须 Shiro 登录；另受 Druid login-* / allow 约束（见 DruidStatViewSecurityEnvironmentPostProcessor）
         }
 
         filterMap.put("/shield/**", "anon");

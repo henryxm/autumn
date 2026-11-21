@@ -178,6 +178,11 @@ public class ScopeDefinitionEntity { ... }
 > **PostgreSQL 专项（DDL、`PostgresQuerySql`、迁移）：`docs/AI_POSTGRESQL.md`。**
 
 - **配置**：`autumn.database` 与主数据源 **JDBC URL** 共同决定 `DatabaseType`（`DatabaseHolder#resolveType`）；TiDB / OceanBase MySQL 等与 `jdbc:mysql` 重叠时须按 **`docs/AI_DATABASE.md` §2** 配置。
+- **Druid 监控页**（`spring.datasource.druid.stat-view-servlet`）：
+  - **生产默认关**（`DRUID_STAT_VIEW_ENABLED=false`）；开启须设 **`DRUID_LOGIN_USERNAME` / `DRUID_LOGIN_PASSWORD`（强密码）**，可选 **`DRUID_ALLOW`**（默认 `127.0.0.1`，勿空串=全网）。
+  - **空账号 = 关闭 Druid 自身认证（裸奔）**，不是「更安全」；框架 `DruidStatViewSecurityEnvironmentPostProcessor` 在启用但账号为空、或生产弱密码（如 `changeme`）时**强制关闭**；`allow=""` 回退本机。
+  - 依赖 `druid-spring-boot-3-starter` 条件注册；`DruidMonitorConfig` 仅为 starter Bean 缺失时的安全兜底，**禁止**无条件注册无登录 `/druid/*`。
+  - Shiro **不**对 `/druid/**` anon（含 dev）；另须后台登录。菜单「SQL监控」仍走已登录会话。
 - **路由**：`DatabaseType` + `RoutingRelationalTableOperations` / `RoutingRuntimeSqlDialect`；注解建表仅对 **mysql / mariadb / postgresql** 执行同步。
 - **方言与 SQL**：底层为 `RuntimeSqlDialect`；**默认**业务 SQL 应对已支持类型全量兼容（**`docs/AI_DATABASE.md` §1**）。**手写 SQL 必须**走 **Provider**，并推荐 **`extends RuntimeSql`**，使用 `quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList`、闭区间 **`columnBetween`** 等（**`docs/AI_DATABASE.md` §3～§5 / §3.1**；示例见 **`docs/AI_POSTGRESQL.md`**）。`@Lang(SelectInLangDriver)` 时勿靠裸 `<=` 碰旧驱动 XML；`PostgresQuerySql` 负责 PG DDL/元数据。
 - **类型兼容**：新建 PG 库时 `tinyint(1)` 布尔元数据可落 **`boolean`** 列；**已有 `smallint` 列**可与实体 **`int` 0/1** 对齐，或 **`ALTER ... TYPE boolean USING (...)`**。

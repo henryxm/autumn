@@ -1,3 +1,4 @@
 org.springframework.boot.env.EnvironmentPostProcessor=\
 cn.org.autumn.install.InstallModeEnvironmentBindingPostProcessor,\
-cn.org.autumn.install.AutumnRedisStackEnvironmentPostProcessor
+cn.org.autumn.install.AutumnRedisStackEnvironmentPostProcessor,\
+cn.org.autumn.datasources.DruidStatViewSecurityEnvironmentPostProcessor

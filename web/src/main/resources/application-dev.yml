@@ -27,11 +27,14 @@ spring:
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
+      # 本地可开；须登录。生产请关。allow 默认本机
       stat-view-servlet:
-        enabled: true
+        enabled: ${DRUID_STAT_VIEW_ENABLED:true}
         url-pattern: /druid/*
         login-username: ${DRUID_LOGIN_USERNAME:admin}
         login-password: ${DRUID_LOGIN_PASSWORD:changeme}
+        allow: ${DRUID_ALLOW:127.0.0.1}
+        reset-enable: false
       filter:
         stat:
           log-slow-sql: true

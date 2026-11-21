@@ -64,7 +64,7 @@
 | **B-03** | nonce 防重放 | `putIfAbsent` + 可选 Redis；签名协议不变 |
 | **B-04** | `@Login` 拦截器 | 校验失败改为抛错，不再吞异常放行 |
 | **B-05** | `sidx` ORDER BY | 非法排序列被丢弃（列表默认序），不再注入 |
-| **B-06** | Druid | prod 默认关控制台；dev 需登录 |
+| **B-06** | Druid | prod 默认关控制台；启用须强密码+`DRUID_ALLOW`；空账号/弱密码框架强制关；`/druid/**` 不 Shiro anon |
 | **B-07** | `org.json` 版本 | 强制 ≥20240303，覆盖 Oltu 传递依赖 |
 
 ---
