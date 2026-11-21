@@ -712,7 +712,7 @@ public class OpsApiController {
     }
 
     /**
-     * 开关公开发现页 {@code /ops/discover}（不要求 clearToken）。
+     * 开关公开发现页 {@code /autumn/ops/discover}（不要求 clearToken）。
      */
     @PostMapping("/gate/setDiscoverEnabled")
     public Response<Map<String, Object>> gateSetDiscoverEnabled(@RequestBody Map<String, Object> body,

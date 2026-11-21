@@ -9,7 +9,7 @@ import org.springframework.ui.Model;
 /**
  * 公开发现页视图解析。
  * <ul>
- *   <li>匿名 {@code /ops/discover}：受 {@code discoverEnabled} 控制；关闭 → 404</li>
+ *   <li>匿名 {@code /autumn/ops/discover}：受 {@code discoverEnabled} 控制；关闭 → 404</li>
  *   <li>后台 {@code main}：管理员已登录，始终展示完整落地页；并注入公网开关真值供模板提示</li>
  * </ul>
  */

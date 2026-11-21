@@ -174,7 +174,7 @@ public class SitePortalSupportTest {
         assertEquals("/statics/img/logo.png", model.get("logoUrl"));
         assertEquals("https://chaoran.xin/", model.get("officialUrl"));
         assertEquals("https://chaoran.xin/download", model.get("installQrUrl"));
-        assertEquals("https://ops.example.com/ops/discover", model.get("discoverAbsoluteUrl"));
+        assertEquals("https://ops.example.com/autumn/ops/discover", model.get("discoverAbsoluteUrl"));
         assertFalse(model.containsAttribute("siteId"));
         assertFalse(model.containsAttribute("fingerprint"));
         assertFalse(model.containsAttribute("opsCert"));

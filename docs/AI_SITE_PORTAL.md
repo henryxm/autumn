@@ -21,7 +21,7 @@ API（系统管理员）：`GET/POST /sys/site-portal/*`
 | `meta` | `copyrightHolder` / `copyrightYearStart` / `copyrightYearEnd` / `versionLabel` | 页脚版权与版本；未填不展示；**仅填版本号**时不生成 © 行，版本单独展示 |
 | `legalLinks` | `privacyUrl` / `termsUrl` / `aboutUrl` / `helpUrl` / `contactUrl` / `communityUrl` | 法律与帮助链接；相对路径自动加 `contextPath`；`communityUrl` 框架默认为裸路径 `/user/community.html`，带业务 `product` 的默认由下游 `SiteLegalLinksHandler` 提供 |
 | `filings[]` | `type` / `number` / `prefix` / `suffix` / `url` / `showIcon` | 备案/许可列表；`prefix`/`suffix` 可选，仅展示不参与链接；`number` 为空则整项不展示 |
-| `chaoranxin` | `officialUrl` / `installQrUrl` / `storeLinks[]` | 超然信公开落地页（`/ops/discover` 与后台 `main` 同源）；见 §2.3 |
+| `chaoranxin` | `officialUrl` / `installQrUrl` / `storeLinks[]` | 超然信公开落地页（`/autumn/ops/discover` 与后台 `main` 同源）；见 §2.3 |
 | 开关 | `syncLoadingTheme` | 保存时同步品牌名与 Logo 到 `LOADING_THEME` |
 
 ### 2.1 法律链接默认值
@@ -106,9 +106,9 @@ API（系统管理员）：`GET/POST /sys/site-portal/*`
 | `installQrUrl` | 空（回退 `officialUrl`） | 「扫码安装」二维码内容 |
 | `storeLinks[]` | `[]` | `{ name, url }`；有则展示文字链，无则仅「应用市场搜索」文案 |
 
-管理页「站点门户」有折叠编辑区。公开页由 `SitePortalSupport.applyDiscoverPublicModel` 注入，**不**附带 ops 证书字段。运维码 URL 用 `WebPathUtils.absoluteUrl(..., "/ops/discover", ssl)`。
+管理页「站点门户」有折叠编辑区。公开页由 `SitePortalSupport.applyDiscoverPublicModel` 注入，**不**附带 ops 证书字段。运维码 URL 用 `WebPathUtils.absoluteUrl(..., "/autumn/ops/discover", ssl)`。
 
-公网 `/ops/discover` 另受 `SECURITY_OPS_CERT_CONFIG.discoverEnabled` 控制（默认开；证书绑定后可自动关 → **404**）；后台 `main` 始终完整落地页。详见 `docs/AI_OPS_CERT.md` §3.0。
+公网 `/autumn/ops/discover` 另受 `SECURITY_OPS_CERT_CONFIG.discoverEnabled` 控制（默认开；证书绑定后可自动关 → **404**）；后台 `main` 始终完整落地页。详见 `docs/AI_OPS_CERT.md` §3.0。
 
 ## 3. 前台展示
 
@@ -194,7 +194,7 @@ public class MyLegalLinks implements SiteLegalLinksHandler {
 |------|------|
 | 配置模型 | `autumn-lib/.../model/SitePortalConfig.java`（含 `SitePortalChaoranxin` / `SitePortalStoreLink`） |
 | 解析 | `autumn-modules/.../site/SitePortalSupport.java`（`applyToModel` / `applyDiscoverPublicModel`） |
-| 公开落地页 | `templates/ops/discover.html` · `OpsDiscoverController` · QR `statics/plugins/qrcode/qrcode.min.js` |
+| 公开落地页 | `templates/ops/discover.html` · URL `/autumn/ops/discover` · `OpsDiscoverController` · QR `statics/plugins/qrcode/qrcode.min.js` |
 | 备案类型 | `autumn-lib/.../model/ComplianceFilingType.java` |
 | SPI | `autumn-lib/.../config/SiteLegalLinksHandler.java` |
 | 管理 API | `SitePortalAdminController` `/sys/site-portal` |

@@ -33,16 +33,16 @@
 
 ### 3.0 发现 URL（分享 / 扫码）与公开落地页
 
-- 规范形态：`{baseUrl}/ops/discover`（由站点 baseUrl **动态拼接**，**不含** OpsEnroll / 分享口令 / 私钥）
-- `GET /ops/discover`：匿名 **超然信公开落地页**（受 `SECURITY_OPS_CERT_CONFIG.discoverEnabled` 控制，**默认 true**）
-  - **开启**：模板 `templates/ops/discover.html` — 双轨并重（站点运维 / 超然信下载）、双二维码、可复制本页链接
+- 规范形态：`{baseUrl}/autumn/ops/discover`（由站点 baseUrl **动态拼接**，**不含** OpsEnroll / 分享口令 / 私钥）
+- `GET /autumn/ops/discover`：匿名 **超然信公开落地页**（受 `SECURITY_OPS_CERT_CONFIG.discoverEnabled` 控制，**默认 true**）
+  - **开启**：模板 `templates/ops/discover.html`（URL 为 `/autumn/ops/discover`）— 双轨并重（站点运维 / 超然信下载）、双二维码、可复制本页链接
   - **关闭**：对外 **404**（如同页面不存在，避免被探测）；**不**渲染关闭说明页、**不**输出站点/运维字段
   - 证书 **enroll / cert/claim 成功后自动** `discoverEnabled=false`；`reset` 后恢复 `true`；App 可经会话再开关
   - 后台登录首页 `main`：管理员已登录，**始终**完整落地页（版面不受开关控制）；模板注入 `publicDiscoverEnabled` 真值，公网已关时提示「勿对外分发运维码」
   - **注意**：`discoverEnabled` **不削弱** T0 `probe`（持公开 Probe Token 仍可探测）；仅控制浏览器 HTML 发现页是否存在
   - 可选商店链与官网 URL 见 `SITE_PORTAL_CONFIG.chaoranxin`（`docs/AI_SITE_PORTAL.md`）
-- Shiro：`/ops/discover` = `anon`；管理 IP 门禁豁免 `OpsDiscoverController`；关闭发现页**不**禁止 `/ops/api/v1/probe`
-- 后台菜单：运维监控 →「公开落地页」新窗口打开 `/ops/discover`（用于查看**公网真实态**：关闭时即为 404；完整落地预览请看登录后首页 `main`）
+- Shiro：`/autumn/ops/discover` = `anon`；管理 IP 门禁豁免 `OpsDiscoverController`；关闭发现页**不**禁止 `/ops/api/v1/probe`
+- 后台菜单：运维监控 →「公开落地页」新窗口打开 `/autumn/ops/discover`（用于查看**公网真实态**：关闭时即为 404；完整落地预览请看登录后首页 `main`）
 - App：拦截该 path（或 `crchat://vc/autumnops?base=`）→ 剥离 baseUrl → 本地 `POST …/probe`；**不依赖落地页文案**
 - 等价标记（客户端）：`?autumn_ops=1` / `#autumn_ops`（可选）
 

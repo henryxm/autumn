@@ -53,7 +53,7 @@ public class SecurityOpsCertConfig implements Serializable {
     private long resetAt = 0L;
 
     /**
-     * 是否开放 {@code /ops/discover} 公开落地页；默认 true；证书绑定成功后自动 false。
+     * 是否开放 {@code /autumn/ops/discover} 公开落地页；默认 true；证书绑定成功后自动 false。
      */
     @ConfigField(category = InputType.BooleanType, name = "站点发现页",
             description = "关闭后浏览器访问发现页仅提示用超然信管理；可用运维 App 再打开")

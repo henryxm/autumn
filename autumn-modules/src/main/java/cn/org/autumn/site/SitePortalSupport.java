@@ -101,7 +101,7 @@ public class SitePortalSupport {
     }
 
     /**
-     * 超然信公开落地页（{@code /ops/discover} 与后台 {@code main.html} 同源）。
+     * 超然信公开落地页（{@code /autumn/ops/discover} 与后台 {@code main.html} 同源）。
      * 仅注入公开字段，不含 ops 证书 / siteId / 指纹。
      */
     public void applyDiscoverPublicModel(HttpServletRequest request, Model model) {
@@ -125,7 +125,7 @@ public class SitePortalSupport {
         model.addAttribute("installQrUrl", installQrUrl);
         model.addAttribute(
                 "discoverAbsoluteUrl",
-                WebPathUtils.absoluteUrl(request, "/ops/discover", sysConfigService.isSsl()));
+                WebPathUtils.absoluteUrl(request, "/autumn/ops/discover", sysConfigService.isSsl()));
         List<SitePortalStoreLink> storeLinks = cx.getStoreLinks();
         model.addAttribute(
                 "storeLinks",

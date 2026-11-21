@@ -46,7 +46,7 @@ Autumn 是一套可扩展的后台基础框架：在 Spring Boot 之上提供权
 |----|------|
 | **官网** | [https://chaoran.xin/](https://chaoran.xin/) |
 | **应用市场** | 在 App Store、华为应用市场、应用宝等搜索 **「超然信」** 安装 |
-| **公开落地页** | `{站点 baseUrl}/ops/discover`（双轨：站点运维 + 超然信下载；受 `discoverEnabled` 控制，默认开；入驻成功后常自动关） |
+| **公开落地页** | `{站点 baseUrl}/autumn/ops/discover`（双轨：站点运维 + 超然信下载；受 `discoverEnabled` 控制，默认开；入驻成功后常自动关） |
 | **客户端源码** | [`autumn-app`](https://github.com/henryxm/autumn-app.git)（`autumn_ops` / `autumn_ops_ui`；iOS Pod `AutumnOpsCore` / `AutumnOpsUI`） |
 | **后台配置** | **系统管理 → 站点门户**：`SITE_PORTAL_CONFIG.chaoranxin`（`officialUrl` 默认官网、`installQrUrl`、`storeLinks[]`） |
 
@@ -144,7 +144,7 @@ WARN  ... IpAdminWhiteService  : AdminIpBootstrap secret=********
 
 ### 首次入驻（超然信）
 
-1. 安装超然信 → 打开运维 Gate（扫码 `{base}/ops/discover`、粘贴站点 Base URL，或会话内 `AutumnOps` 消息）。
+1. 安装超然信 → 打开运维 Gate（扫码 `{base}/autumn/ops/discover`、粘贴站点 Base URL，或会话内 `AutumnOps` 消息）。
 2. 粘贴 `OpsEnroll secret=` → 本地生成 RSA → `enroll` → 私钥按站点分目录存放。
 3. 成功后服务端自动（幂等）：
    - `adminIpEnable=true`
@@ -204,7 +204,7 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 - [ ] enroll 仅成功一次；响应**无私钥**；双节点 fingerprint 一致
 - [ ] 入驻后 `adminIpEnable=true` 且当前 IP 在 `wall_ip_admin_white`
 - [ ] 关管理 IP / 删当前 IP / reset 均须 clearToken
-- [ ] `/ops/discover` 入驻后公网 404；登录后 `main` 仍可完整预览
+- [ ] `/autumn/ops/discover` 入驻后公网 404；登录后 `main` 仍可完整预览
 - [ ] `cert/issue` → 他机 `claim` 得独立 `certId`；认领码不可复用
 - [ ] `/rsa/api/v1` 与账号密码登录不受影响
 
@@ -238,7 +238,7 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 | 会话 / Redis / 登录日志 / 日志级别 | 会话与中间件 | [`AI_SESSION_GUARD`](docs/AI_SESSION_GUARD.md) · [`REDIS_STANDALONE`](docs/REDIS_STANDALONE.md) |
 | 字段加密 / 配置安全 | at-rest 加密与 `SECURITY_*` JSON | [`AI_FIELD_ENCRYPT`](docs/AI_FIELD_ENCRYPT.md) · [`加固 3.0`](docs/AI_SECURITY_HARDENING_3_0_COMPAT.md) |
 | 人机检测 / Bean 执行器 / 重建表 / 版本更新 | 防护与运维工具（Bean/WebShell 默认关，见加固 C-21） | [`加固 3.0`](docs/AI_SECURITY_HARDENING_3_0_COMPAT.md) |
-| **公开落地页** | 新窗口打开 `/ops/discover`（公网真实态；关闭时即为 404） | [`AI_OPS_CERT`](docs/AI_OPS_CERT.md) §3.0 |
+| **公开落地页** | 新窗口打开 `/autumn/ops/discover`（公网真实态；关闭时即为 404） | [`AI_OPS_CERT`](docs/AI_OPS_CERT.md) §3.0 |
 
 ### 授权与开放
 
@@ -371,7 +371,7 @@ mvn clean package -DskipTests
 - 启动后立刻保存三类日志密钥（见 [密钥一览](#首次启动控制台密钥一览)）；**勿**默认尝试 `admin/admin`（新装无效）。
 - 开发可先直登；**生产 profile 勿叠 `dev`/`h2`/`sqlite`**（`Config.isDev()` 会短路管理 IP 校验）。
 - `OpsEnroll` / `AdminIpBootstrap` / 引导口令 / clearToken **勿**写入仓库或长期工单。
-- 生产建议：`autumn.redis.open=true`、`autumn.shiro.redis=true`、**HTTPS**；改超管密码；超然信入驻证书；配置 **clearToken**；确认公网 `/ops/discover` 是否仍需开放。
+- 生产建议：`autumn.redis.open=true`、`autumn.shiro.redis=true`、**HTTPS**；改超管密码；超然信入驻证书；配置 **clearToken**；确认公网 `/autumn/ops/discover` 是否仍需开放。
 - 多节点：共享或统一 `system.password`；引导口令文件在**创建 admin 的那台** `node.home`（见加固 §2.2.1）。
 - 多节点定时任务配合 `LoopJob` 的 `assignTag` / `server.tag`。
 

@@ -13,12 +13,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
- * 超然信公开落地页：{@code GET /ops/discover}。
+ * 超然信公开落地页：{@code GET /autumn/ops/discover}。
  * App 拦截同 path 后本地 probe，不依赖本页内容。
  * {@code discoverEnabled=false} 时返回 404，对外如同页面不存在。
+ * <p>旧路径 {@code /ops/discover} 已废弃，无兼容跳转。
  */
 @Controller
-@RequestMapping("/ops")
+@RequestMapping("/autumn/ops")
 public class OpsDiscoverController {
 
     @Autowired

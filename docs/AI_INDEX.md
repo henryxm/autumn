@@ -81,7 +81,7 @@
 - **实体字段存储加密**：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_FIELD_ENCRYPT.md`
 - 安全改造/攻防演练：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SECURITY.md`（**升级加固后兼容/回滚**叠加 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`**）
 - **业务仓对齐管理 IP / 非标准包 gen**：`docs/AI_STANDARDS.md` §14 + **`docs/AI_ADMIN_ACCESS_MATRIX.md`**（先查表）+ **`docs/AI_ADMIN_IP_BIZ.md`** + **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`** C-20/C-22/C-23
-- **运维证书 / 超然信 Gate / OpsEnroll / clearToken / 重置证书**：根 **`README.md`**（操作分段 + 启动密钥一览）+ **`docs/AI_OPS_CERT.md`** + **`docs/AI_ADMIN_ACCESS_MATRIX.md`** + **`docs/AI_ADMIN_IP_BIZ.md`** + **`docs/AI_SITE_PORTAL.md`**（`/ops/discover` 与 `chaoranxin` 下载配置）；加固旁注 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`** C-20
+- **运维证书 / 超然信 Gate / OpsEnroll / clearToken / 重置证书**：根 **`README.md`**（操作分段 + 启动密钥一览）+ **`docs/AI_OPS_CERT.md`** + **`docs/AI_ADMIN_ACCESS_MATRIX.md`** + **`docs/AI_ADMIN_IP_BIZ.md`** + **`docs/AI_SITE_PORTAL.md`**（`/autumn/ops/discover` 与 `chaoranxin` 下载配置）；加固旁注 **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`** C-20
 - **管理员引导口令 / 新装随机密码 / 老库口令兼容**：根 **`README.md`**「首次启动：控制台密钥一览」+ **`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`** §2.2.1（`AdminBootstrapPasswordSupport`、`admin-bootstrap.credentials`；**禁止**再假定新装 `admin/admin`）
 - **集群节点 / 运维监控页**：`docs/AI_BOOT.md` + `docs/AI_MAP.md` + **`docs/AI_CLUSTER_NODE.md`**（叠加 `docs/AI_CLUSTER_JOB_ORCHESTRATION.md` / `docs/AI_SERVER_ROLE.md` 若改职责门禁）
 - 文档治理/多人协作：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`

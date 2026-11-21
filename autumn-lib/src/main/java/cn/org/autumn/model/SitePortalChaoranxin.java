@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * 超然信公开落地页（/ops/discover）配置；不含任何运维证书数据。
+ * 超然信公开落地页（/autumn/ops/discover）配置；不含任何运维证书数据。
  */
 @Getter
 @Setter
