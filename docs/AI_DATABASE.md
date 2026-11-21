@@ -116,7 +116,21 @@ SQL 里的裸 **`<=` / `<` / `<>`** 含有 `<`，在旧驱动下会直接触发�
 
 `SAXParseException: 元素内容必须由格式正确的字符数据或标记组成`（常见于 column ~ 数百）。
 
-框架现已在注入 foreach **之前**对文本做 XML 转义，并**保留**已有 `&lt;` / `&gt;` / `&amp;` / `&#…;`（防双重转义）。
+**改动史与兼容目标**：`83cc2e7b` 起对 `<script>` 路径做文本转义，修复「`@Lang` + 裸 `<=`」的 SAXParseException（dimina）；但若对每个 `<` 一律转义，会破坏历史 **CDATA**（字面量进 MySQL）以及偶发的 **`<if>` / `</foreach>`** 手写动态标签。当前驱动在转义前**保留** CDATA、`<!--…-->`、XML/MyBatis 元素标签，并**保留**已有实体、**转义**标签外裸比较符——使升级后三条历史路径与「有 Lang 的动态标签」均可零改业务 SQL。
+
+#### 升级兼容矩阵（`@Lang(SelectInLangDriver)`）
+
+| 历史 / 现写法 | 驱动行为 | 依赖方是否须为升级改 SQL |
+|---------------|----------|--------------------------|
+| `@Lang` + 裸 `<` / `<=` / `<>` / `>=` | 标签外转义为实体 | **否**（需已含转义的 autumn-lib） |
+| `@Lang` + 手写 `&lt;=` 等 | 实体不二次转义 | **否** |
+| `@Lang` + `<![CDATA[…<…]]>`（比较符在 CDATA 内，**IN 在段外**） | **CDATA 段原样保留**，解析后比较符正常 | **否**（须已含 CDATA/标签保留的 autumn-lib） |
+| `@Lang` + 手写 `<if>` / `<foreach>` / `</where>` 等 | **元素标签原样保留**；标签之间的裸比较符仍转义 | **否** |
+| `@Lang` + `<!--…-->` | 注释原样保留 | **否** |
+| **无** `@Lang` 的 `@Select` 内写 CDATA | 不经本驱动；字符串原样下发 | **是**（历来非法；删 CDATA 或改 Provider） |
+| 把 `IN (#{p})` 写进 CDATA 内 | foreach 注入落在 CDATA 文本中，IN **不展开** | **是**（历来如此；IN 占位须在 CDATA 外） |
+
+新代码仍优先 `BETWEEN` / `columnBetween`，**不要新写 CDATA** 或手写 `&lt;`。
 
 #### 标准写法（按优先级）
 
@@ -124,24 +138,29 @@ SQL 里的裸 **`<=` / `<` / `<>`** 含有 `<`，在旧驱动下会直接触发�
 |------|----------|------|
 | 闭区间 `[a,b]` + 任意 Provider | **`columnBetween(quote("col"), "#{from}", "#{to}")`** 或手写 `BETWEEN #{from} AND #{to}` | **首选**；无 `<`，与 LangDriver 无关也安全 |
 | 开/半开区间、单边比较 + **无** `@Lang(SelectInLangDriver)` | 裸写 `col < #{x}` / `col >= #{x}` | 普通 Provider 走 RawSqlSource，不包 `<script>` |
-| 同上 + **有** `@Lang(SelectInLangDriver)` | 仍可裸写 `<=` / `<`（由驱动转义） | 依赖 autumn-lib 已含转义的版本 |
-| 历史存量 | 已写 `&lt;=` 可保留 | 驱动不二次转义；**新代码不要手写实体** |
+| 同上 + **有** `@Lang(SelectInLangDriver)` | 仍可裸写 `<=` / `<`（由驱动转义） | 依赖 autumn-lib 已含转义 + CDATA/标签保留 |
+| 历史存量 | 已写 `&lt;=` / CDATA / 动态标签可保留 | **新代码不要手写实体 / CDATA**；动态 SQL 更推荐 Provider 拼装 |
 
 #### 禁止 / 易错
 
 | 反模式 | 后果 |
 |--------|------|
-| `@Lang(SelectInLangDriver)` + 裸 `<=`，却跑**未转义**的旧 autumn-lib | 启动/运行期 SAXParseException（本次 dimina 月活汇总即此） |
+| `@Lang(SelectInLangDriver)` + 裸 `<=`，却跑**未转义**的旧 autumn-lib | 启动/运行期 SAXParseException（dimina） |
+| `@Lang` + CDATA，却跑**只转义、未保留 CDATA**的 autumn-lib | SQL 含字面量 `<![CDATA[`，MySQL `bad SQL grammar` |
+| `@Lang` + 手写 `<if>`，却跑**只转义、未保留标签**的 autumn-lib | `&lt;if` 字面量，动态分支失效 |
 | 新代码手写 `&lt;=`「自己转义」又叠未识别实体的二次 `&amp;lt;=`（旧自定义转义） | SQL 变成字面量 `&lt;=` |
 | 闭区间拆成 `>=` + `<=` 却忘记加 `@Lang` 仅对 IN 生效… | IN 不展开；或加了 Lang 后旧驱动炸 XML |
 | 把比较符写进注解 `@Select("… <= …")` | 违反 Provider 强制；且注解 SQL 同样可能走 XML |
+| **无** `@Lang` 却写 CDATA | CDATA 标记原样进 JDBC（不在本驱动承诺内） |
+| `IN (#{p})` 写在 CDATA 内 | IN 不展开（与旧驱动相同限制） |
 
 #### 检查清单（Agent / 评审）
 
 - [ ] 方法是否 `@Lang(SelectInLangDriver)`？若是，闭区间是否优先 `columnBetween` / `BETWEEN`？
-- [ ] 是否同时出现 `IN (#{…})` 与 `<=` / `<` / `<>`？部署的 autumn-lib 是否已含 SelectInLangDriver 转义？
-- [ ] 新代码是否避免手写 `&lt;=`？
-- [ ] 无 Lang 的 Provider 仍可用裸比较符，勿无故改成实体编码。
+- [ ] 是否同时出现 `IN (#{…})` 与 `<=` / `<` / `<>`？部署的 autumn-lib 是否已含转义 **且** CDATA/动态标签保留？
+- [ ] 新代码是否避免手写 `&lt;=` / CDATA？
+- [ ] 无 Lang 的 Provider 仍可用裸比较符，勿无故改成实体编码或 CDATA。
+- [ ] 历史 CDATA 是否只包比较表达式、`IN (#{…})` 仍在段外？
 
 #### 示例
 

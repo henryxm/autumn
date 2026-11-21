@@ -49,6 +49,7 @@
 |---|-----|------|
 | 11 | **二方扩展** | 依赖方若 **继承/实现** autumn 的 `ModuleService`、`BaseMenu`、`LoopJob` 等，对照 **CHANGELOG** 或 **Diff** 检查重载签名、废弃方法。 |
 | 12 | **手写 SQL** | 硬编码 `LIMIT`/`FIND_IN_SET`/三参 `concat('%',#{x},'%')`/保留字列名等，在多库下易出错；**老旧 Dao 上 `@Select`/`@Update`/`@Insert`/`@Delete` 内联字符串**、**Wrapper 中反引号/`apply` 拼方言**、**Java 里手写引号拼 `eq`/`orderBy`/分页排序**须按 **`docs/AI_DATABASE.md` §8** 迁到 **`RuntimeSql` + Provider** 或 **`WrapperColumns`（§4.0）**（见下「跨库手写 SQL 与 RuntimeSql」）。 |
+| 12a | **`SelectInLangDriver` 升级兼容** | `83cc2e7b` 起增加 XML 文本转义（修裸 `<=` 的 SAX）。若升级后出现：(1) SQL 含字面量 `<![CDATA[` / `bad SQL grammar`；(2) `&lt;if` 等动态标签失效——确认 autumn-lib 已含 **转义 + CDATA/注释/元素标签保留**（见 **`docs/AI_DATABASE.md` §3.1** 矩阵与改动史）。库存量 **`@Lang` + CDATA / 裸比较符 / `&lt;` / 手写 `<if>`** **不必为升级改 SQL**；**无** `@Lang` 写 CDATA、或把 `IN (#{p})` 塞进 CDATA 内，历来非法/不展开，不在零改承诺内。 |
 | 13 | **实体布尔与 MyBatis** | 避免同一字段 **`getX(int)` + `boolean isX()`** 引发 `Reflector` 冲突；分页若自定义 count，避免 **`COUNT(...) ORDER BY`**（PG 非法）。 |
 
 ### 2.5 回归与发布
