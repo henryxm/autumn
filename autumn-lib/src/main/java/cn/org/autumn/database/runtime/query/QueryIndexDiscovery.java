@@ -1,21 +1,24 @@
 package cn.org.autumn.database.runtime.query;
 
 import cn.org.autumn.database.runtime.RuntimeSql;
+import cn.org.autumn.table.annotation.Index;
+import cn.org.autumn.table.annotation.Indexes;
 import cn.org.autumn.table.utils.ClassTools;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 启动时发现 {@link QueryIndexContributor} / {@link QueryIndexScan}，触发索引登记。
- * 与 Entity {@code @Indexes} 并列，无单独开关；包内无 Contributor/Scan 时仅遍历类元数据。
+ * 启动发现：扫描 {@link RuntimeSql} 子类中带空 {@code @Index}/{@code @Indexes} 的<strong>无参 public String</strong>方法并 invoke，
+ * 由 {@link IndexedSelect#sql()} 登记查询即索引。
  * <p>
- * 扫描范围与注解建表相同（{@code autumn.table.pack}）；另可注入 Spring 管理的 {@link QueryIndexContributor}。
+ * 方法注解<strong>仅白名单</strong>，不解析 fields/name 等；无标记方法的类不实例化。
  */
 @Slf4j
 public final class QueryIndexDiscovery {
@@ -26,33 +29,11 @@ public final class QueryIndexDiscovery {
     }
 
     public static void discover(Set<String> packs) {
-        discover(packs, null);
-    }
-
-    /**
-     * @param springContributors 可选；Spring 容器中的 Contributor（DaoSql 通常不是 Bean，以包扫描为主）
-     */
-    public static void discover(Set<String> packs, Collection<? extends QueryIndexContributor> springContributors) {
         if (!DISCOVERED.compareAndSet(false, true)) {
             return;
         }
-        int contributors = 0;
-        int scanned = 0;
-
-        if (springContributors != null) {
-            for (QueryIndexContributor c : springContributors) {
-                if (c == null) {
-                    continue;
-                }
-                try {
-                    c.contributeQueryIndexes();
-                    contributors++;
-                } catch (Exception e) {
-                    log.warn("QueryIndexContributor(bean) failed: class={} err={}",
-                            c.getClass().getName(), e.toString());
-                }
-            }
-        }
+        int classesHit = 0;
+        int methodsInvoked = 0;
 
         if (packs != null) {
             for (String pkg : packs) {
@@ -71,34 +52,32 @@ public final class QueryIndexDiscovery {
                             || Modifier.isAbstract(clazz.getModifiers())) {
                         continue;
                     }
-                    boolean isContributor = QueryIndexContributor.class.isAssignableFrom(clazz);
-                    boolean isScan = clazz.isAnnotationPresent(QueryIndexScan.class);
-                    if (!isContributor && !isScan) {
+                    if (!RuntimeSql.class.isAssignableFrom(clazz)) {
                         continue;
                     }
-                    if (isContributor) {
-                        if (invokeContributor(clazz)) {
-                            contributors++;
-                        }
+                    List<Method> marked = findMarkedMethods(clazz);
+                    if (marked.isEmpty()) {
                         continue;
                     }
-                    if (invokeScanMethods(clazz)) {
-                        scanned++;
+                    int n = invokeMarked(clazz, marked);
+                    if (n > 0) {
+                        classesHit++;
+                        methodsInvoked += n;
                     }
                 }
             }
         }
 
-        if (contributors > 0 || scanned > 0) {
+        if (classesHit > 0) {
             if (QueryIndexRegistry.isEmpty()) {
-                log.warn("QueryIndexDiscovery: 已扫描 Contributor/Scan 但未登记任何索引；"
-                        + "请确认 contributeQueryIndexes / 无参 String 方法调用了 IndexedSelect，且 select(table) 与实体表名一致");
+                log.warn("QueryIndexDiscovery: 已调用带 @Index 的方法但未登记索引；"
+                        + "请确认方法内使用 IndexedSelect.sql()，且 select(table) 与实体表名一致");
             } else {
-                log.info("QueryIndexDiscovery done: contributors={} queryIndexScan={} tables={}",
-                        contributors, scanned, QueryIndexRegistry.tableCount());
+                log.info("QueryIndexDiscovery done: daoSqlClasses={} methods={} tables={}",
+                        classesHit, methodsInvoked, QueryIndexRegistry.tableCount());
             }
         } else {
-            log.debug("QueryIndexDiscovery done: no Contributor/@QueryIndexScan in packs");
+            log.debug("QueryIndexDiscovery done: no @Index/@Indexes on RuntimeSql provider methods");
         }
         QueryIndexRegistry.freezeAfterBootstrap();
     }
@@ -107,57 +86,50 @@ public final class QueryIndexDiscovery {
     public static void resetForTests() {
         DISCOVERED.set(false);
         QueryIndexRegistry.clear();
+        IndexedSelect.clearSqlMemoForTests();
     }
 
-    private static boolean invokeContributor(Class<?> clazz) {
-        try {
-            Object instance = newInstance(clazz);
-            if (instance instanceof QueryIndexContributor) {
-                ((QueryIndexContributor) instance).contributeQueryIndexes();
-                return true;
-            }
-        } catch (Exception e) {
-            log.warn("QueryIndexContributor failed: class={} err={}", clazz.getName(), e.toString());
-        }
-        return false;
-    }
-
-    private static boolean invokeScanMethods(Class<?> clazz) {
-        Object instance;
-        try {
-            instance = newInstance(clazz);
-        } catch (Exception e) {
-            log.warn("QueryIndexScan instantiate failed: class={} err={}", clazz.getName(), e.toString());
-            return false;
-        }
-        boolean any = false;
-        for (Method m : clazz.getMethods()) {
-            if (m.getDeclaringClass() == Object.class) {
+    private static List<Method> findMarkedMethods(Class<?> clazz) {
+        List<Method> out = new ArrayList<>();
+        for (Method m : clazz.getDeclaredMethods()) {
+            if (!Modifier.isPublic(m.getModifiers()) || Modifier.isStatic(m.getModifiers())) {
                 continue;
             }
             if (m.getParameterCount() != 0 || m.getReturnType() != String.class) {
                 continue;
             }
-            if (!Modifier.isPublic(m.getModifiers()) || Modifier.isStatic(m.getModifiers())) {
+            if (m.getDeclaringClass() == RuntimeSql.class || m.getDeclaringClass() == Object.class) {
                 continue;
             }
-            if (m.getDeclaringClass() == RuntimeSql.class) {
+            if (m.getAnnotation(Index.class) == null && m.getAnnotation(Indexes.class) == null) {
                 continue;
             }
+            out.add(m);
+        }
+        return out;
+    }
+
+    private static int invokeMarked(Class<?> clazz, List<Method> methods) {
+        Object instance;
+        try {
+            Constructor<?> ctor = clazz.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            instance = ctor.newInstance();
+        } catch (Exception e) {
+            log.warn("QueryIndexDiscovery instantiate failed: class={} err={}", clazz.getName(), e.toString());
+            return 0;
+        }
+        int ok = 0;
+        for (Method m : methods) {
             try {
+                m.setAccessible(true);
                 m.invoke(instance);
-                any = true;
+                ok++;
             } catch (Exception e) {
-                log.warn("QueryIndexScan method failed: class={} method={} err={}",
+                log.warn("QueryIndexDiscovery method failed: class={} method={} err={}",
                         clazz.getName(), m.getName(), e.toString());
             }
         }
-        return any;
-    }
-
-    private static Object newInstance(Class<?> clazz) throws Exception {
-        Constructor<?> ctor = clazz.getDeclaredConstructor();
-        ctor.setAccessible(true);
-        return ctor.newInstance();
+        return ok;
     }
 }

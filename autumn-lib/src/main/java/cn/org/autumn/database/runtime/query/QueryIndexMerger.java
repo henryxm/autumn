@@ -13,10 +13,11 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * 将 {@link QueryIndexRegistry} 与 Entity 注解索引合并：同指纹以构建器为准并忽略注解侧。
+ * 将 {@link QueryIndexRegistry}（查询即索引）与 Entity 注解索引合并：
+ * 同指纹<strong>以查询即索引为准</strong>，去掉 Entity 侧。
  * <p>
- * 与 {@code @Indexes} 并列的第二种索引来源；不改变 {@code initFrom} / {@code IndexDiffEngine} 业务流程。
- * Registry 无同表登记时立即返回（纯注解表零开销）。
+ * 与 Entity {@code @Index}/{@code @Indexes} 并列的第二种期望源；不改变 {@code initFrom} / {@code IndexDiffEngine}。
+ * Registry 无同表登记时立即返回（纯 Entity 表零开销）。
  */
 @Slf4j
 public final class QueryIndexMerger {
@@ -64,7 +65,7 @@ public final class QueryIndexMerger {
             return;
         }
 
-        // 仅规范化构建器侧，避免对已校验的 Entity 索引二次 WARN
+        // 仅规范化查询即索引侧，避免对已校验的 Entity 索引二次 WARN
         IndexAnnotationValidator.normalizeAndValidateAll(fromQuery, tableName, entityClass, 0);
 
         List<IndexInfo> indexInfos = table.getIndexInfos();
@@ -118,7 +119,7 @@ public final class QueryIndexMerger {
             }
             for (IndexInfo q : fromQuery) {
                 if (q != null && entityIdx.sameIndexColumnsAndKind(q)) {
-                    log.warn("表 [{}] 索引与 Query→Index 同指纹，忽略注解侧({}) name={}，以构建器为准 name={}",
+                    log.warn("表 [{}] 索引与查询即索引同指纹，忽略 Entity 侧({}) name={}，以查询即索引为准 name={}",
                             tableName, source, entityIdx.getName(), q.getName());
                     it.remove();
                     break;
@@ -128,7 +129,7 @@ public final class QueryIndexMerger {
     }
 
     /**
-     * 构建器多查询之间：较短前缀且类型/方法等兼容时丢弃短索引，保留更长覆盖。
+     * 查询即索引多条之间：较短前缀且类型/方法等兼容时丢弃短索引，保留更长覆盖。
      * UNIQUE 不被普通索引的更长前缀吞掉。
      */
     static List<IndexInfo> collapsePrefixCovered(List<IndexInfo> input) {

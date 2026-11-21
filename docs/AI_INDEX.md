@@ -16,7 +16,7 @@
 - **`docs/REDIS_KEYS_AND_SCAN.md`**：**禁止 `KEYS`、推荐 `SCAN`**（大键空间运维、`redis.html` 事故、批量删键/列表分页推荐写法、**constraints-scan J 组**）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
 - `docs/AI_STANDARDS.md`：**约束性开发规范**（**§2.0 Lombok + `@Slf4j`**、**§2.1 实体业务落 Service**、**§3～§4 内外 API**、**§10.2 索引硬性纪律 / ASC·DESC**、**§11.0 生成可替换、禁特有逻辑进模板产物（空壳除外）**、**§13 禁外部直连 Dao**、**PageAware / gen 超管**）
-- **`docs/AI_INDEX_ANNOTATIONS.md`**：**实体索引 / Query→Index 业务标准**（**§1.1～§1.9** 双轨常开·发现·API 对照·性能·AI 清单；SQL→注解模式、**§5 isUnique**、**§6**、**§7**、PR 清单；约束权威仍为 **STANDARDS §10.2**）
+- **`docs/AI_INDEX_ANNOTATIONS.md`**：**实体索引 / 查询即索引**（**§1** 双轨与标准写法；**§5 isUnique**、**§6**、**§7**、PR 清单；约束权威 **STANDARDS §10.2**）
 - **`docs/AI_DUAL_KEY.md`**：**双主键落地**（`UuidBased` / `SnowBased` / **`UserBased`**、**§3.4 无第二主键仅 `user`**、`AutoIdService`、`Uuid` / `Snow`）
 - `docs/AI_CODE_STYLE.md`：**Java 版式**（方法/调用；**§5.1 Lombok 实体与 `@Slf4j`**；**import 优先** §7；**日志单行** §8）
 - `docs/AI_SERVICE_COHESION.md`：**实体 Service 内聚（硬）**（业务唯一落点、Controller 薄、约 1000 行再拆、少工具类）
@@ -70,7 +70,7 @@
 
 - 日常开发：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md`（涉及 SQL/Wrapper/多库时追加 **`docs/AI_DATABASE.md`**；改 **`templates/**/*.html`** 时必读 **`docs/AI_STANDARDS.md` §7**）
 - **实体索引注解 / 表结构同步索引**：`docs/AI_STANDARDS.md` §10.2 + **`docs/AI_INDEX_ANNOTATIONS.md`**（+ `docs/AI_MAP.md` §2.10 / `docs/AI_BOOT.md` §3）
-- **Query→Index（`IndexedSelect`，与 `@Indexes` 并列）**：必读 **`docs/AI_INDEX_ANNOTATIONS.md` §1.1～§1.9**；再加 STANDARDS §10.2 + `AI_DATABASE.md` §3 + `AI_MAP.md` §2.10 / `AI_BOOT.md` §3
+- **查询即索引（方法空 `@Index` + `IndexedSelect`）**：必读 **`docs/AI_INDEX_ANNOTATIONS.md` §1**；再加 STANDARDS §10.2 + `AI_DATABASE.md` §3 + `AI_MAP.md` §2.10 / `AI_BOOT.md` §3
 - 会话终止与重新登录守卫：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SESSION_GUARD.md`
 - 分布式互斥/跨节点任务：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_DISTRIBUTED_LOCK.md`
 - **内存队列 / `asyncTaskExecutor` 异步 drain / 本机调度闸门**：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_ASYNC_TASK.md`（持锁写路径叠加 **`docs/AI_DISTRIBUTED_LOCK.md`**）

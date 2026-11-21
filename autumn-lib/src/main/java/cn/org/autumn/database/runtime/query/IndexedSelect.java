@@ -1,6 +1,7 @@
 package cn.org.autumn.database.runtime.query;
 
 import cn.org.autumn.database.runtime.RuntimeSql;
+import cn.org.autumn.database.runtime.RuntimeSqlDialect;
 import cn.org.autumn.table.annotation.IndexMethodEnum;
 import cn.org.autumn.table.annotation.IndexOrder;
 import cn.org.autumn.table.annotation.IndexTypeEnum;
@@ -11,14 +12,21 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 结构化 SELECT 构建器：同一链路生成可移植 SQL，并登记与 {@code @Index}/{@code @Indexes} 能力对等的 {@link IndexInfo}。
+ * 查询即索引：同一链路生成可移植 SQL，并登记与 Entity {@code @Index}/{@code @Indexes} 能力对等的 {@link IndexInfo}
+ * （含单列前缀/方向/expression/部分索引等）。
  * <p>
- * 与 Entity {@code @Indexes} 并列的索引声明方式；同一组合索引开发时<strong>二选一</strong>。
- * 同指纹时以本构建器为准。历史字符串 {@code *DaoSql} 无需改动。
+ * Provider 方法上标<strong>空</strong>{@code @Index} 作发现白名单；索引定义只认本类链式 API。
+ * 启动时 {@link QueryIndexDiscovery} invoke 带标记的无参方法，{@link #sql()} 写入 {@link QueryIndexRegistry}。
+ * 与 Entity 同指纹时<strong>以查询即索引为准</strong>。
+ * <p>
+ * 冻结后 SQL 模板按「方言 + 查询签名」memoize。
  */
 public final class IndexedSelect {
+
+    private static final ConcurrentHashMap<String, String> SQL_MEMO = new ConcurrentHashMap<>();
 
     private final RuntimeSql runtime;
     private final String table;
@@ -66,7 +74,10 @@ public final class IndexedSelect {
         return this;
     }
 
-    /** IN 条件，并作为索引键。参数占位保留调用方字面量（集合由调用方绑定）。 */
+    /**
+     * IN 条件，并作为索引键。产物 {@code IN (#{param})}，须配合 Dao
+     * {@code @Lang(SelectInLangDriver.class)}。
+     */
     public IndexedSelect in(String column) {
         return in(column, 0);
     }
@@ -104,7 +115,7 @@ public final class IndexedSelect {
     }
 
     /**
-     * 设置<strong>最后一列</strong>索引 collation（对齐 {@code @IndexField(collation)} / 字段级 {@code @Index(collation)}）。
+     * 设置<strong>最后一列</strong>索引 collation（对齐 {@code @IndexField(collation)}）。
      */
     public IndexedSelect collation(String collation) {
         if (indexColumns.isEmpty()) {
@@ -120,9 +131,7 @@ public final class IndexedSelect {
         return this;
     }
 
-    /**
-     * 设置最后一列索引前缀长度（对齐 {@code @IndexField(length)}）。
-     */
+    /** 设置最后一列索引前缀长度（对齐 {@code @IndexField(length)}）。 */
     public IndexedSelect prefix(int length) {
         if (indexColumns.isEmpty()) {
             throw new IllegalStateException("prefix() requires a prior index column");
@@ -136,7 +145,7 @@ public final class IndexedSelect {
         return this;
     }
 
-    /** 显式追加索引列（可不进入 WHERE），对齐 {@code @IndexField}。 */
+    /** 显式追加索引列（可不进入 WHERE）。 */
     public IndexedSelect col(String column) {
         return col(column, IndexOrder.ASC, 0, "");
     }
@@ -156,7 +165,7 @@ public final class IndexedSelect {
         return this;
     }
 
-    /** 表达式索引列（对齐 {@code @IndexField(expression)} / {@code @Index(expression)}）。 */
+    /** 表达式索引列（只进索引，不进 WHERE）。 */
     public IndexedSelect expression(String expr) {
         return expression(expr, IndexOrder.ASC);
     }
@@ -265,23 +274,49 @@ public final class IndexedSelect {
     }
 
     /**
-     * 仅登记索引，不生成 SQL（供 {@link QueryIndexContributor} 使用）。
-     * 启动发现已结束后为 no-op（见 {@link QueryIndexRegistry#freezeAfterBootstrap()}）。
+     * 仅登记索引，不生成 SQL。
+     * 已 {@link QueryIndexRegistry#freezeAfterBootstrap()} 时 no-op，且不建 {@link IndexInfo}。
      */
     public IndexedSelect registerIndex() {
+        if (QueryIndexRegistry.isFrozen()) {
+            return this;
+        }
         QueryIndexRegistry.register(table, toIndexInfo());
         return this;
     }
 
     /**
-     * 生成 SELECT * SQL；若 {@link #registerOnSql(boolean)} 为 true 则尝试登记索引。
-     * 热路径：发现冻结后登记跳过，仅余字符串拼接（与手写 Provider 同量级）。
+     * 生成 SELECT * SQL；若 {@link #registerOnSql(boolean)} 为 true 且未冻结则登记索引。
+     * 冻结后按方言 + 签名 memoize。
      */
     public String sql() {
-        if (registerOnSql) {
+        if (registerOnSql && !QueryIndexRegistry.isFrozen()) {
             registerIndex();
         }
+        if (QueryIndexRegistry.isFrozen()) {
+            return SQL_MEMO.computeIfAbsent(sqlMemoKey(), k -> buildSql());
+        }
         return buildSql();
+    }
+
+    public static void clearSqlMemoForTests() {
+        SQL_MEMO.clear();
+    }
+
+    private String sqlMemoKey() {
+        RuntimeSqlDialect d = runtime.dialect();
+        StringBuilder kb = new StringBuilder(96);
+        kb.append(d == null ? "null" : d.getClass().getName()).append('\u0001');
+        kb.append(table).append('\u0001');
+        for (WherePart w : whereParts) {
+            kb.append(w.kind.name()).append(':').append(w.sqlColumn).append(':').append(w.paramName).append('\u0001');
+        }
+        kb.append('\u0002');
+        for (OrderPart o : orderParts) {
+            kb.append(o.column).append(':').append(o.order.name()).append('\u0001');
+        }
+        kb.append('\u0002').append(limitOne ? '1' : '0');
+        return kb.toString();
     }
 
     /** 当前计划对应的 {@link IndexInfo}（不登记）。 */

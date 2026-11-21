@@ -27,7 +27,6 @@ import cn.org.autumn.table.utils.TableCharsetUtils;
 
 import static cn.org.autumn.table.data.InitType.*;
 import cn.org.autumn.table.annotation.IndexOrder;
-import cn.org.autumn.database.runtime.query.QueryIndexContributor;
 import cn.org.autumn.database.runtime.query.QueryIndexDiscovery;
 import cn.org.autumn.database.runtime.query.QueryIndexMerger;
 import cn.org.autumn.table.data.index.IndexDialectCapability;
@@ -104,10 +103,6 @@ public class MysqlTableService {
     @Value("${autumn.table.index.max-name-length:0}")
     private int indexMaxNameLength;
 
-    /** 可选：Spring 管理的 QueryIndexContributor（多数 *DaoSql 非 Bean，仍以包扫描为主）。 */
-    @Autowired(required = false)
-    private List<QueryIndexContributor> queryIndexContributors;
-
     /** 单次 createMysqlTable 内的批量元数据快照；无则回退逐表查询。 */
     private final ThreadLocal<SchemaSyncMetadata> schemaSyncMeta = new ThreadLocal<>();
 
@@ -136,9 +131,9 @@ public class MysqlTableService {
         return new CopyOnWriteArraySet<>(Arrays.asList(pack.split(",|:|;|-| ")));
     }
 
-    /** Query→Index 启动发现（与 @Indexes 并列，无单独开关；无 Contributor 时几乎空转）。 */
+    /** 查询即索引启动发现（方法空 @Index + IndexedSelect；无标记时几乎空转）。 */
     private void discoverQueryIndexes() {
-        QueryIndexDiscovery.discover(getPacks(), queryIndexContributors);
+        QueryIndexDiscovery.discover(getPacks());
     }
 
     public Set<Class<?>> getClasses() {

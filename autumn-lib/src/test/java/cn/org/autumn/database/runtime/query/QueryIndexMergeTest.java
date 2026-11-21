@@ -1,5 +1,6 @@
 package cn.org.autumn.database.runtime.query;
 
+import cn.org.autumn.database.runtime.RuntimeSql;
 import cn.org.autumn.table.annotation.Column;
 import cn.org.autumn.table.annotation.Index;
 import cn.org.autumn.table.annotation.IndexField;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,27 +45,55 @@ class QueryIndexMergeTest {
     }
 
     @Test
-    void sameFingerprint_builderWins_entityIgnored() {
+    void sameFingerprint_queryIndexWins_entityIgnored() {
         TableInfo ti = new TableInfo(DemoBindEntity.class);
         assertTrue(ti.getIndexInfos().stream().anyMatch(i -> "auth_upper".equals(i.getName())));
 
-        IndexInfo fromBuilder = new cn.org.autumn.database.runtime.RuntimeSql()
+        IndexInfo fromQuery = new RuntimeSql()
                 .select("demo_query_bind")
                 .eq("authentication", 32).eq("upper", 32)
-                .unique().name("auth_upper_builder")
+                .unique().name("auth_upper_query")
                 .toIndexInfo();
-        QueryIndexRegistry.register("demo_query_bind", fromBuilder);
+        QueryIndexRegistry.register("demo_query_bind", fromQuery);
 
         QueryIndexMerger.applyTo(ti, DemoBindEntity.class);
 
-        assertTrue(ti.getIndexInfos().stream().anyMatch(i -> "auth_upper_builder".equals(i.getName())));
+        assertTrue(ti.getIndexInfos().stream().anyMatch(i -> "auth_upper_query".equals(i.getName())));
         assertFalse(ti.getIndexInfos().stream().anyMatch(i -> "auth_upper".equals(i.getName())));
         assertTrue(ti.getIndexInfos().stream().anyMatch(i -> "auth_user".equals(i.getName())));
     }
 
     @Test
-    void builderParity_nameTypeMethodWhereIncludeParserInvisibleExpressionCollation() {
-        IndexInfo info = new cn.org.autumn.database.runtime.RuntimeSql()
+    void singleField_queryIndexWins_overFieldIndex() {
+        TableInfo ti = new TableInfo(SingleFieldEntity.class);
+        assertTrue(ti.getIndexInfos().stream().anyMatch(i -> {
+            if (i.getColumnSpecs() == null || i.getColumnSpecs().size() != 1) {
+                return false;
+            }
+            return "tag".equals(i.getColumnSpecs().get(0).getColumn())
+                    && i.getColumnSpecs().get(0).getPrefixLength() == 32;
+        }));
+
+        IndexInfo fromQuery = new RuntimeSql()
+                .select("demo_single_field")
+                .eq("tag", 32)
+                .name("tag_query")
+                .toIndexInfo();
+        QueryIndexRegistry.register("demo_single_field", fromQuery);
+
+        QueryIndexMerger.applyTo(ti, SingleFieldEntity.class);
+
+        assertTrue(ti.getIndexInfos().stream().anyMatch(i -> "tag_query".equals(i.getName())));
+        assertTrue(ti.getIndexInfos().stream().noneMatch(i ->
+                i.getColumnSpecs() != null
+                        && i.getColumnSpecs().size() == 1
+                        && "tag".equals(i.getColumnSpecs().get(0).getColumn())
+                        && !"tag_query".equals(i.getName())));
+    }
+
+    @Test
+    void builderParity_nameTypeMethodWhereIncludeExpressionCollation() {
+        IndexInfo info = new RuntimeSql()
                 .select("demo_query_bind")
                 .eq("authentication", 32).collation("utf8mb4_bin")
                 .eq("upper", 32)
@@ -73,8 +103,6 @@ class QueryIndexMergeTest {
                 .comment("oauth bind")
                 .indexWhere("upper is not null")
                 .include("user")
-                .parser("")
-                .invisible(false)
                 .toIndexInfo();
         assertEquals("auth_upper", info.getName());
         assertEquals("UNIQUE", info.getIndexType());
@@ -85,7 +113,7 @@ class QueryIndexMergeTest {
         assertEquals("utf8mb4_bin", info.getColumnSpecs().get(0).getCollation());
         assertEquals(32, info.getColumnSpecs().get(0).getPrefixLength());
 
-        IndexInfo expr = new cn.org.autumn.database.runtime.RuntimeSql()
+        IndexInfo expr = new RuntimeSql()
                 .select("demo_query_bind")
                 .expression("lower(authentication)", IndexOrder.ASC)
                 .name("auth_lower")
@@ -96,9 +124,9 @@ class QueryIndexMergeTest {
 
     @Test
     void prefixCover_keepsLonger() {
-        IndexInfo shortIdx = new cn.org.autumn.database.runtime.RuntimeSql()
+        IndexInfo shortIdx = new RuntimeSql()
                 .select("t").eq("user").eq("status").name("us").toIndexInfo();
-        IndexInfo longIdx = new cn.org.autumn.database.runtime.RuntimeSql()
+        IndexInfo longIdx = new RuntimeSql()
                 .select("t").eq("user").eq("status").orderByDesc("id").name("usi").toIndexInfo();
         assertTrue(QueryIndexMerger.isPrefixCoveredBy(shortIdx, longIdx));
         assertFalse(QueryIndexMerger.isPrefixCoveredBy(longIdx, shortIdx));
@@ -107,7 +135,7 @@ class QueryIndexMergeTest {
 
     @Test
     void indexedSelect_sqlAndIndexParity() {
-        String sql = new cn.org.autumn.database.runtime.RuntimeSql()
+        String sql = new RuntimeSql()
                 .select("demo_query_bind")
                 .eq("authentication", 32).eq("upper", 32)
                 .unique().name("auth_upper")
@@ -115,10 +143,8 @@ class QueryIndexMergeTest {
                 .registerOnSql(false)
                 .sql();
         assertTrue(sql.contains("FROM"));
-        assertTrue(sql.contains("authentication"));
-        assertTrue(sql.contains("upper"));
         assertTrue(sql.contains("#{authentication}"));
-        IndexInfo info = new cn.org.autumn.database.runtime.RuntimeSql()
+        IndexInfo info = new RuntimeSql()
                 .select("demo_query_bind")
                 .eq("authentication", 32).eq("upper", 32)
                 .unique().name("auth_upper")
@@ -130,7 +156,7 @@ class QueryIndexMergeTest {
 
     @Test
     void discoveryThenMerge_endToEnd() {
-        QueryIndexDiscovery.discover(java.util.Collections.singleton("cn.org.autumn.database.runtime.query"));
+        QueryIndexDiscovery.discover(Collections.singleton("cn.org.autumn.database.runtime.query"));
         assertFalse(QueryIndexRegistry.forTable("demo_query_bind").isEmpty());
         assertTrue(QueryIndexRegistry.isFrozen());
 
@@ -140,11 +166,16 @@ class QueryIndexMergeTest {
         assertTrue(ti.getIndexInfos().stream().anyMatch(i -> "auth_user".equals(i.getName())));
 
         int tables = QueryIndexRegistry.tableCount();
-        new cn.org.autumn.database.runtime.RuntimeSql()
+        new RuntimeSql()
                 .select("demo_query_bind").eq("authentication").eq("newcol").name("should_not_register").sql();
         assertEquals(tables, QueryIndexRegistry.tableCount());
         assertTrue(QueryIndexRegistry.forTable("demo_query_bind").stream()
                 .noneMatch(i -> "should_not_register".equals(i.getName())));
+
+        var sql = new RuntimeSql();
+        String a = sql.select("demo_query_bind").eq("authentication", 32).eq("upper", 32).limitOne().sql();
+        String b = sql.select("demo_query_bind").eq("authentication", 32).eq("upper", 32).limitOne().sql();
+        assertTrue(a == b);
     }
 
     private static List<String> indexNames(TableInfo ti) {
@@ -174,5 +205,12 @@ class QueryIndexMergeTest {
         private String authentication;
         @Column(length = 32, comment = "上游")
         private String upper;
+    }
+
+    @Table(value = "demo_single_field", comment = "单字段索引试点")
+    public static class SingleFieldEntity {
+        @Column(length = 64, comment = "标签")
+        @Index(length = 32)
+        private String tag;
     }
 }

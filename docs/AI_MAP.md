@@ -385,7 +385,7 @@ public class DemoService extends ModuleService<DemoDao, DemoEntity> implements L
 
 ### 2.10 实体建表注解（`@Table` / `@Column` / `@Index` / `@Indexes`）
 
-**Query→Index（与 `@Indexes` 并列）**：同步前始终 `QueryIndexDiscovery` → 每表 `QueryIndexMerger.applyTo(ti, clazz)`（Registry 无同表项则立即返回）。同指纹以构建器为准忽略 Entity `@Indexes`。业务/AI 权威：**`docs/AI_INDEX_ANNOTATIONS.md` §1.1～§1.9**；包 `cn.org.autumn.database.runtime.query`。
+**查询即索引（与 Entity `@Index`/`@Indexes` 并列）**：同步前 `QueryIndexDiscovery` → 每表 `QueryIndexMerger.applyTo`（Registry 空则立即返回）。同指纹以查询即索引为准。权威：**`docs/AI_INDEX_ANNOTATIONS.md` §1**；包 `cn.org.autumn.database.runtime.query`。
 
 > 包名：`cn.org.autumn.table.annotation.*`；收集与 SQL 拼装入口：`TableInfo`、`QuerySql`、`IndexInfo`。
 

@@ -101,7 +101,7 @@
 
 3. **推荐**业务侧 `*DaoSql` **`extends RuntimeSql`**，通过 **`quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList`、`enabledTrueSqlLiteral`、`enabledFalseSqlLiteral`、`booleanColumnAsTinyInt01`、`limitOffsetSuffix`、`limitOffsetMybatisParams`、`epochMillisFromTimestamp`、`updateWithJoin`、`lowerColumnContainsNeedle`、`currentTimestamp`、`truncateTable`**，以及 **`timestampBucketDay` / `timestampBucketMonth` / `timestampBucketYear` / `timestampBucketIsoWeek`**（时间桶与布尔规范化入参均为 **`quote` 后的单列**）拼装，保证与 `RoutingRuntimeSqlDialect` / `RuntimeSqlDialectRegistry` 一致。**禁止**在 Provider 中手写 `DATE_FORMAT`、`to_char` 等单库日期分桶函数。
 
-4. **Query→Index（与 `@Indexes` 并列）**：`RuntimeSql#select(table)` → **`IndexedSelect`** 可同时生成 SQL 并登记索引；实现 **`QueryIndexContributor`**（或 `@QueryIndexScan`），与 Entity `@Indexes` **二选一**。完整纪律见 **`docs/AI_INDEX_ANNOTATIONS.md` §1.1～§1.9**。历史字符串拼接 Provider **不必**改用；无 Contributor 时表同步与历来一致。
+4. **查询即索引（与 Entity `@Index`/`@Indexes` 并列）**：`RuntimeSql#select(table)` → **`IndexedSelect`**；无参 Provider 标**空** `@Index` 作发现标记。同指纹以查询即索引为准。纪律见 **`docs/AI_INDEX_ANNOTATIONS.md` §1**。无方法标记时表同步与历来一致。
 
 5. **历史与框架内置**注解 SQL 仅允许在治理计划中逐步迁移；**新增与变更一律 Provider**。
 
@@ -164,6 +164,8 @@ MyBatis-Plus `EntityWrapper` / `Wrapper` 生成的 SQL 仍经当前数据源执�
 - **LIKE** 需与方言一致的拼接（使用 **`likeContainsAny`**）
 - **逗号分隔列表**权限 / 数据范围（使用 **`columnValueInCommaSeparatedList`**）
 - **分页语义**依赖数据库专属语法（已由 PageHelper 处理的简单列表查询除外）
+
+上述场景同样**禁止**用 **`IndexedSelect.sql()`** 硬凑（无 JOIN/UNION API）；索引用 **Entity `@Indexes`**，或方法标 `@Index` + 体内 **`registerIndex()`**（§1.10.2）。
 
 ---
 

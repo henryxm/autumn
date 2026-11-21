@@ -14,11 +14,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 进程级登记：{@link IndexedSelect} 派生的索引（按表名）。
- * 与 Entity {@code @Indexes} 并列的索引期望源；启动同步时由 {@link QueryIndexMerger} 读取。
+ * 进程级登记：{@link IndexedSelect} 在启动发现期写入的索引（按表名）。
+ * 与 Entity {@code @Indexes} 并列；启动同步时由 {@link QueryIndexMerger} 读取。
  * <p>
- * 启动发现结束后 {@link #freezeAfterBootstrap()}：运行期 Provider 再调 {@link #register} 直接跳过，
- * 避免热路径反复建 {@link IndexInfo} / 指纹比对。
+ * 启动发现结束后 {@link #freezeAfterBootstrap()}：之后 {@link #register} 直接跳过。
  */
 public final class QueryIndexRegistry {
 
@@ -41,7 +40,7 @@ public final class QueryIndexRegistry {
 
     /**
      * 登记一条索引定义。已 {@link #freezeAfterBootstrap()} 时 no-op。
-     * 同指纹已存在则保留原条目（不替换），降低启动期重复 contribute 的写放大。
+     * 同指纹已存在则保留原条目（不替换），降低启动期重复登记的写放大。
      */
     public static void register(String table, IndexInfo index) {
         if (index == null || StringUtils.isBlank(table)) {

@@ -1,35 +1,27 @@
 package cn.org.autumn.database.runtime.query;
 
 import cn.org.autumn.database.runtime.RuntimeSql;
+import cn.org.autumn.table.annotation.Index;
 
 /**
- * 新业务试点：Query→Index 写法示例（测试夹具，不改写生产 *DaoSql）。
- * 与 {@link QueryIndexMergeTest.DemoBindEntity} 同表；同指纹时覆盖 Entity @Indexes。
- * <p>
- * 实现 {@link QueryIndexContributor} 即可被启动扫描登记（不必再叠 {@link QueryIndexScan}）。
+ * Query→Index 试点：方法上空 {@link Index} 仅作发现标记；索引由 {@link IndexedSelect} 链声明。
  */
-public class DemoQueryBindDaoSql extends RuntimeSql implements QueryIndexContributor {
+public class DemoQueryBindDaoSql extends RuntimeSql {
 
-    @Override
-    public void contributeQueryIndexes() {
-        getByAuthenticationAndUpper();
-        getByAuthenticationAndUser();
-    }
-
+    @Index
     public String getByAuthenticationAndUpper() {
         return select("demo_query_bind")
                 .eq("authentication", 32).eq("upper", 32)
-                .unique()
-                .name("auth_upper")
+                .unique().name("auth_upper")
                 .limitOne()
                 .sql();
     }
 
+    @Index
     public String getByAuthenticationAndUser() {
         return select("demo_query_bind")
                 .eq("authentication", 32).eq("user", 32)
-                .unique()
-                .name("auth_user")
+                .unique().name("auth_user")
                 .limitOne()
                 .sql();
     }
