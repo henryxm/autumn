@@ -10,6 +10,8 @@ import org.apache.commons.lang3.StringUtils;
 import cn.org.autumn.utils.IPUtils;
 
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +23,7 @@ import java.util.List;
 @Schema(name = "IP地址")
 public class IP implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     @Schema(name = "IP地址")
@@ -66,8 +69,7 @@ public class IP implements Serializable {
                 ips.add(ip);
         } else {
             String[] ipa = ip.split(",");
-            for (int index = 0; index < ipa.length; index++) {
-                String strIp = ipa[index];
+            for (String strIp : ipa) {
                 if (!("unknown".equalsIgnoreCase(strIp))) {
                     ips.add(strIp);
                 }
@@ -77,13 +79,13 @@ public class IP implements Serializable {
     }
 
     /**
-     * 与 {@link IPUtils#getIp} 统一：多跳 XFF 取首个有效 hop 并 trim。
+     * 与 {@link IPUtils#getIp} 统一（默认仅 remoteAddr；配置可信代理后按右侧剥离 XFF）。
      */
     public static String getIp(HttpServletRequest request) {
         if (request == null) {
             return null;
         }
         String ip = IPUtils.getIp(request);
-        return ip == null || ip.isEmpty() ? null : ip;
+        return ip.isEmpty() ? null : ip;
     }
 }

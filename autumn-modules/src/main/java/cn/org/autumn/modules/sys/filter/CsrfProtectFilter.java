@@ -1,10 +1,13 @@
 package cn.org.autumn.modules.sys.filter;
 
 import cn.org.autumn.modules.bot.service.RobotTokenService;
+import cn.org.autumn.modules.oauth.service.ClientDetailsService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.ApiAuthSupport;
 import cn.org.autumn.modules.sys.support.CsrfTokenSupport;
+import cn.org.autumn.modules.usr.entity.UserTokenEntity;
+import cn.org.autumn.modules.usr.service.UserTokenService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -19,7 +22,7 @@ import java.io.IOException;
 import java.util.Locale;
 
 /**
- * Cookie 会话状态变更 CSRF 防护；Bearer / {@code rbt_} API 豁免。
+ * Cookie 会话状态变更 CSRF 防护；仅<strong>校验通过</strong>的 Bearer / {@code rbt_} / 用户 API Token 豁免。
  * 开关以 SysConfig {@code SECURITY_AUTH_CONFIG.csrfEnforce} 为准（集群同步）。
  */
 @Component
@@ -29,6 +32,18 @@ public class CsrfProtectFilter implements Filter {
     @Autowired
     @Lazy
     private SysConfigService sysConfigService;
+
+    @Autowired
+    @Lazy
+    private UserTokenService userTokenService;
+
+    @Autowired
+    @Lazy
+    private RobotTokenService robotTokenService;
+
+    @Autowired
+    @Lazy
+    private ClientDetailsService clientDetailsService;
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
@@ -81,11 +96,38 @@ public class CsrfProtectFilter implements Filter {
                 || path.startsWith("/captcha")) {
             return true;
         }
-        String auth = req.getHeader("Authorization");
-        if (StringUtils.isNotBlank(auth) && auth.regionMatches(true, 0, "Bearer ", 0, 7)) {
-            return true;
-        }
+        return hasValidatedApiCredential(req);
+    }
+
+    /**
+     * 仅真实有效的 API 凭证豁免 CSRF；任意长度≥16 的假 Token / Bearer 头不再豁免。
+     */
+    private boolean hasValidatedApiCredential(HttpServletRequest req) {
         String apiToken = ApiAuthSupport.extractToken(req);
-        return StringUtils.isNotBlank(apiToken) && (apiToken.startsWith(RobotTokenService.TOKEN_PREFIX) || apiToken.length() >= 16);
+        if (StringUtils.isBlank(apiToken)) {
+            return false;
+        }
+        if (apiToken.startsWith(RobotTokenService.TOKEN_PREFIX)) {
+            try {
+                return robotTokenService != null && robotTokenService.validate(apiToken) != null;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        try {
+            if (clientDetailsService != null && clientDetailsService.isValidAccessToken(apiToken)) {
+                return true;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            if (userTokenService != null) {
+                UserTokenEntity entity = userTokenService.queryByToken(apiToken);
+                return entity != null && entity.getExpireTime() != null
+                        && entity.getExpireTime().getTime() > System.currentTimeMillis();
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 }

@@ -1,6 +1,7 @@
 package cn.org.autumn.modules.usr.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import cn.org.autumn.table.annotation.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,6 +10,8 @@ import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.Date;
+
+import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
 
 /**
  * 用户Token
@@ -40,10 +43,12 @@ public class UserTokenEntity implements Serializable {
     private String userUuid;
 
     @Column(length = 100, comment = "Token", isUnique = true)
+    @JsonProperty(access = WRITE_ONLY)
     private String token;
 
     @Column(length = 100, comment = "刷新Token")
     @Index
+    @JsonProperty(access = WRITE_ONLY)
     private String refreshToken;
 
     @Column(type = "datetime", comment = "过期时间")

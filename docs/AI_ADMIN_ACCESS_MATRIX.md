@@ -16,6 +16,8 @@
 
 生产 profile **勿**叠 `dev`/`h2`/`sqlite`：`Config.isDev()` 下 `checkAdmin` 会短路。`adminIpEnable=false`（默认）时非 dev 也不验管理 IP。
 
+客户端 IP：配置 `autumn.client-ip.trusted-proxies` 后按列表从 XFF 右侧剥离。未配置时：公网 `remoteAddr` **忽略** XFF；回环/私网 `remoteAddr`（本机 Nginx / Docker）取 XFF **最右一跳**。Nginx 应对后端 **覆盖** `X-Forwarded-For $remote_addr`，勿 append 客户端原值。
+
 ---
 
 ## 1. 门禁分层（先分清层，再查表）
@@ -77,7 +79,8 @@ within(*..modules..controller..*)
 | 同上，但类名 `*Api` / `*ApiController` | `LanguageApi#getSupportedLanguage` | 否* | 否* | **C-23** 防模块毯误拦 |
 | 类名以 `AdminController` 结尾 | `OauthAsAdminController` | 是 | 是 | |
 | SPI `managedModules()` 模块下手写 Controller | 业务仓模式 B | 是 | 是 | 见 AI_ADMIN_IP_BIZ |
-| 自助 gen：`usr`/`safe`/`bot`/`qrc` + SPI `selfGenModules` | `UserProfileControllerGen` | 否* | 否* | 仍受 L1/行级隔离 |
+| 自助 gen：`usr`/`safe`/`bot`/`qrc` + SPI `selfGenModules` | （仅未列入敏感名单的 Controller） | 否* | 否* | 仍受 L1；**无**默认行级隔离；禁止把 `usr:*`/`bot:*` 整包授给普通角色 |
+| 敏感自助全表 | `UserProfile`/`UserLoginLog`/`Robot*`/`ScanTicket` gen / `ClientGrant` / Token/PIN 等（`SENSITIVE_SELF_GEN_CONTROLLERS`） | 是 | 是 | 全表无行级隔离 → **强制**超管+管理 IP；Hook/Grant/Token `secret` JSON `WRITE_ONLY`；Web 扫码子类扩展方法不连坐 |
 | 固定豁免 Controller | Login / Page / Proxy / Wall / Spm / OAuth2·Bot·Qrc API 等 | 否* | 否* | §2.3 |
 | 方法豁免 | `nav`、`info()`(0 参)、`password`、`self*`、`Shield#test` 等 | 否* | 否* | §2.3 |
 | `install` 包 / 模块 | 安装向导 | 否* | 否* | 首装无白名单 |
@@ -131,7 +134,7 @@ within(*..modules..controller..*)
 | `SysMenuController#nav` | 登录用户导航 |
 | `SysUserController#password` | 本人改密 |
 | `SysUserController#info` 且实参个数 = 0 | 本人资料；`info(uuid)` **仍强制** |
-| `ShieldController#test` | 防火墙探测 |
+| `ShieldController#test` | 防火墙探测（只读 403，不再写入护盾放行集） |
 
 ---
 

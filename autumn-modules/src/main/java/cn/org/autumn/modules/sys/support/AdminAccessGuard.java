@@ -68,9 +68,37 @@ public class AdminAccessGuard {
     /**
      * gen CRUD 豁免模块（普通用户本人数据）：不强制系统管理员。
      * 子项目可通过 {@link AdminAccessModuleHandler#selfGenModules()} 追加。
+     * <p>
+     * 例外：{@link #SENSITIVE_SELF_GEN_CONTROLLERS} 内的全表敏感资源仍强制超管+管理 IP。
      */
     public static final Set<String> SELF_GEN_MODULES = Set.of(
             "usr", "safe", "bot", "qrc"
+    );
+
+    /**
+     * 自助模块内仍强制运维门禁的 Controller（全表 Token/凭证，无行级隔离）。
+     * 含 Gen 基类与子类简单名。
+     */
+    public static final Set<String> SENSITIVE_SELF_GEN_CONTROLLERS = Set.of(
+            "UserTokenController", "UserTokenControllerGen",
+            "RobotTokenController", "RobotTokenControllerGen",
+            "PayUserPinController", "PayUserPinControllerGen",
+            "PayUserBiometricController", "PayUserBiometricControllerGen",
+            "PayUserGestureController", "PayUserGestureControllerGen",
+            "PayUserTrustedIpController", "PayUserTrustedIpControllerGen",
+            "UserProfileController", "UserProfileControllerGen",
+            "UserOpenController", "UserOpenControllerGen",
+            "UserLoginLogController", "UserLoginLogControllerGen",
+            "PayUserSecuritySettingController", "PayUserSecuritySettingControllerGen",
+            "PayUserTrustedDeviceController", "PayUserTrustedDeviceControllerGen",
+            "PayGateAttemptController", "PayGateAttemptControllerGen",
+            "PayCredentialLogController", "PayCredentialLogControllerGen",
+            "RobotController", "RobotControllerGen",
+            "RobotHookController", "RobotHookControllerGen",
+            "RobotConfigController", "RobotConfigControllerGen",
+            "GuestController", "GuestControllerGen",
+            "ScanTicketController", "ScanTicketControllerGen",
+            "ClientGrantController", "ClientGrantControllerGen"
     );
 
     /** 非 gen 定制管理页（裸名） */
@@ -471,6 +499,7 @@ public class AdminAccessGuard {
      * <p>
      * 规则：位于 {@code *.controller.gen.*} 且模块<strong>不</strong>在自助豁免列表 → 强制超管。
      * 覆盖 im/vshort/xsignw/bighub 等业务 gen，防止有菜单的非超管读全表。
+     * 自助模块内 {@link #SENSITIVE_SELF_GEN_CONTROLLERS}（Token/PIN 等全表）仍强制。
      */
     public boolean shouldRequireSystemAdminForGen(Class<?> type) {
         if (type == null) {
@@ -481,11 +510,31 @@ public class AdminAccessGuard {
         if (!name.contains(".controller.gen.")) {
             return false;
         }
+        if (isSensitiveSelfGenController(raw)) {
+            return true;
+        }
         String module = extractModuleName(raw);
         if (isSelfGenModule(module)) {
             return false;
         }
         return true;
+    }
+
+    /** 自助模块内全表敏感 Controller（Token/支付凭证等）。 */
+    public boolean isSensitiveSelfGenController(Class<?> type) {
+        if (type == null) {
+            return false;
+        }
+        Class<?> raw = unwrapProxyClass(type);
+        if (SENSITIVE_SELF_GEN_CONTROLLERS.contains(raw.getSimpleName())) {
+            return true;
+        }
+        for (Class<?> c = raw; c != null && c != Object.class; c = c.getSuperclass()) {
+            if (SENSITIVE_SELF_GEN_CONTROLLERS.contains(c.getSimpleName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -552,16 +601,38 @@ public class AdminAccessGuard {
         return shouldRequireAdminIpApi(type, methodName, -1);
     }
 
-    /** 方法声明类是否为受限 gen（{@code *.controller.gen.*} 或 {@code *ControllerGen}，非自助）。 */
+    /**
+     * 方法声明类是否为受限 gen。
+     * <p>
+     * 仅认 {@code *.controller.gen.*} / {@code *ControllerGen}（含敏感自助全表 Gen）。
+     * 业务子类简单名即使在 {@link #SENSITIVE_SELF_GEN_CONTROLLERS}（如 {@code ScanTicketController}）
+     * 也不视为受限声明类，以便子类无权限注解的公开扩展方法（webStatus 等）走豁免分支。
+     */
     public boolean isRestrictedGenDeclaringType(Class<?> declaringType) {
         if (declaringType == null) {
             return false;
         }
         Class<?> decl = unwrapProxyClass(declaringType);
+        if (!isGenControllerType(decl)) {
+            return false;
+        }
         if (shouldRequireSystemAdminForGen(decl)) {
             return true;
         }
+        if (isSensitiveSelfGenController(decl)) {
+            return true;
+        }
         return decl.getSimpleName().endsWith("ControllerGen") && !isSelfGenModule(extractModuleName(decl));
+    }
+
+    /** 是否 gen 控制器类型（包路径或 {@code *ControllerGen} 后缀）。 */
+    public static boolean isGenControllerType(Class<?> type) {
+        if (type == null) {
+            return false;
+        }
+        Class<?> raw = unwrapProxyClass(type);
+        String name = raw.getName();
+        return name.contains(".controller.gen.") || raw.getSimpleName().endsWith("ControllerGen");
     }
 
     /** 公开 API 控制器命名：{@code *Api} / {@code *ApiController}。 */
@@ -600,10 +671,13 @@ public class AdminAccessGuard {
         return null;
     }
 
-    /** 继承受限 gen 基类（方法声明在父包时仍强制）。 */
+    /** 继承受限 gen 基类（方法声明在父包时仍强制；含敏感自助全表）。 */
     public boolean extendsRestrictedGenController(Class<?> type) {
         for (Class<?> c = unwrapProxyClass(type); c != null && c != Object.class; c = c.getSuperclass()) {
             if (shouldRequireSystemAdminForGen(c)) {
+                return true;
+            }
+            if (isSensitiveSelfGenController(c)) {
                 return true;
             }
             if (c.getSimpleName().endsWith("ControllerGen") && !isSelfGenModule(extractModuleName(c))) {

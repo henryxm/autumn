@@ -147,7 +147,8 @@ location /http/proxy/ {
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    # 覆盖写入真实对端，勿用 $proxy_add_x_forwarded_for（会保留客户端伪造的左侧 hop）
+    proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header Connection "";
 
     proxy_buffering off;

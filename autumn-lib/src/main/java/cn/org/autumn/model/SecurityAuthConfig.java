@@ -35,8 +35,8 @@ public class SecurityAuthConfig implements Serializable {
     @ConfigField(category = InputType.BooleanType, name = "允许仅 userUuid hint", description = "无 Token 时允许凭 userUuid 解析身份（仅内网/网关可信场景；默认关闭）")
     private boolean allowUserUuidHint = false;
 
-    @ConfigField(category = InputType.BooleanType, name = "强制 CSRF", description = "Cookie 会话的 POST/PUT/DELETE/PATCH 须带 X-CSRF-Token；生产建议开启")
-    private boolean csrfEnforce = false;
+    @ConfigField(category = InputType.BooleanType, name = "强制 CSRF", description = "Cookie 会话的 POST/PUT/DELETE/PATCH 须带 X-CSRF-Token；默认开启（生产种子亦为 true；存量库可在安全认证配置中确认）")
+    private boolean csrfEnforce = true;
 
     @ConfigField(category = InputType.StringType, name = "CORS 允许 Origin", description = "额外允许的完整 Origin，逗号或换行分隔；空则仅站点同源")
     private String corsAllowedOrigins = "";

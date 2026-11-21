@@ -671,6 +671,9 @@ public class AuthorizationController {
                 return tokenError(httpResponse, "错误的授权码", INVALID_GRANT, SC_BAD_REQUEST);
             }
             tokenStore = clientDetailsService.get(ValueType.authCode, authCode);
+            if (!clientOwnsTokenStore(tokenStore, clientId)) {
+                return tokenError(httpResponse, "授权码与客户端不匹配", INVALID_GRANT, SC_BAD_REQUEST);
+            }
         }
         //2. 使用Refresh Token 获取Token模式
         if (grantType.equals(GrantType.REFRESH_TOKEN.toString())) {
@@ -678,6 +681,9 @@ public class AuthorizationController {
                 return tokenError(httpResponse, "错误的Refresh Token", INVALID_GRANT, SC_BAD_REQUEST);
             }
             tokenStore = clientDetailsService.get(ValueType.refreshToken, refresh);
+            if (!clientOwnsTokenStore(tokenStore, clientId)) {
+                return tokenError(httpResponse, "Refresh Token与客户端不匹配", INVALID_GRANT, SC_BAD_REQUEST);
+            }
         }
         //3.客户端证书授权模式
         if (grantType.equals(GrantType.CLIENT_CREDENTIALS.toString())) {
@@ -812,5 +818,21 @@ public class AuthorizationController {
             log.debug("authRealName failed: {}", e.getMessage());
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
+    }
+
+    /**
+     * 授权码 / Refresh Token 必须归属当前 client_id（对齐 OPL issueTokenFromCode）。
+     * 历史无 clientId 的存量令牌拒绝跨客户端兑换。
+     */
+    private static boolean clientOwnsTokenStore(TokenStore tokenStore, String clientId) {
+        if (tokenStore == null || StringUtils.isBlank(clientId)) {
+            return false;
+        }
+        String owner = tokenStore.getClientId();
+        // 存量空 clientId：密钥已校验的当前 client 可兑换，随后 putToken 补写归属
+        if (StringUtils.isBlank(owner)) {
+            return true;
+        }
+        return clientId.equals(owner);
     }
 }

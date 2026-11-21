@@ -9,6 +9,9 @@ public final class TicketPayloads {
     /** Bridge probe-grant 绑定材料；仅建票/授权页下发，勿写入 status/QR。 */
     public static final String PROBE_NONCE = "probeNonce";
 
+    /** Web 创建浏览器绑定密钥；仅 Cookie 持有，勿写入 status/QR 响应。 */
+    public static final String BROWSER_BIND = "browserBind";
+
     private TicketPayloads() {
     }
 

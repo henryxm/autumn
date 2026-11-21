@@ -46,6 +46,7 @@ class IpAdminWhiteServiceBootstrapTest {
         ReflectionTestUtils.setField(service, "sysConfigService", sysConfigService);
         when(dao.getIps(0)).thenReturn(new HashSet<>());
         when(dao.activeCount()).thenReturn(0);
+        when(dao.selectCount(null)).thenReturn(0L);
         when(sysConfigService.isAdminIpEnable()).thenReturn(true);
     }
 

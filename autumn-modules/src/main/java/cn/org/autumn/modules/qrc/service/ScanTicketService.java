@@ -49,9 +49,12 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
 
     public static final String TICKET_KEY_PREFIX = "qrc:ticket:";
     public static final String EXCHANGE_KEY_PREFIX = "qrc:exchange:";
+    /** RP 等无本机 TicketSnapshot 时的浏览器绑定密钥（与票同量级 TTL）。 */
+    public static final String BROWSER_BIND_KEY_PREFIX = "qrc:browser_bind:";
 
     private final Map<String, TicketSnapshot> localTickets = new ConcurrentHashMap<>();
     private final Map<String, ExchangeSnapshot> localExchanges = new ConcurrentHashMap<>();
+    private final Map<String, String> localBrowserBinds = new ConcurrentHashMap<>();
 
     @Autowired
     private RedisUtils redisUtils;
@@ -283,6 +286,52 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         }
         TicketSnapshot ticket = getTicket(snapshot.getUuid());
         return ticket == null ? null : ticket.getIntent();
+    }
+
+    /** Web 浏览器绑定：读取 exchange 对应票据 uuid。 */
+    public String peekExchangeTicketUuid(String exchange) {
+        if (StringUtils.isBlank(exchange)) {
+            return null;
+        }
+        ExchangeSnapshot snapshot = getExchange(exchange);
+        return snapshot == null ? null : snapshot.getUuid();
+    }
+
+    /** Web 浏览器绑定：按 uuid 取内存/Redis 票据（不做过期刷新）。 */
+    public TicketSnapshot findTicket(String uuid) {
+        return getTicket(uuid);
+    }
+
+    /** Web 浏览器绑定：写回 payload（含 browserBind）。 */
+    public void persistTicket(TicketSnapshot ticket) {
+        saveTicket(ticket);
+    }
+
+    /** 旁路绑定密钥（集群可走 Redis；无 Redis 时本机 Map）。 */
+    public void putBrowserBind(String uuid, String secret, long ttlSeconds) {
+        if (StringUtils.isBlank(uuid) || StringUtils.isBlank(secret)) {
+            return;
+        }
+        long ttl = Math.max(1, ttlSeconds);
+        String key = BROWSER_BIND_KEY_PREFIX + uuid;
+        if (redisUtils.isOpen()) {
+            redisUtils.set(key, secret, ttl);
+        }
+        localBrowserBinds.put(uuid, secret);
+    }
+
+    public String getBrowserBind(String uuid) {
+        if (StringUtils.isBlank(uuid)) {
+            return null;
+        }
+        String key = BROWSER_BIND_KEY_PREFIX + uuid;
+        if (redisUtils.isOpen()) {
+            Object value = redisUtils.get(key);
+            if (value instanceof String && StringUtils.isNotBlank((String) value)) {
+                return (String) value;
+            }
+        }
+        return localBrowserBinds.get(uuid);
     }
 
     public SysUserEntity consumeExchangeToken(String exchange) throws CodeException {

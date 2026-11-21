@@ -350,12 +350,19 @@
 
 - [ ] **`POST /wall/api/ipwhite/add`**（用户防拉黑名单）：未登录/非超管（及管理 IP 校验开启且未加白）→ 不写库；删当前 IP 须头 `x-clear-authentication` = clearToken  
 - [ ] **管理 IP**：`wall_ip_admin_white` 与 `wall_ip_white` 表隔离；运维/gen/`requireOpsAdmin` 走 `IpAdminWhiteService.checkAdmin`（受 `adminIpEnable` 控制），不跟随 `WallDefault.ipWhiteEnable`；**不从用户白名单迁移/回退**，空表初始化；用户 `isWhite` **逻辑继承**管理名单（管理 IP 默认免防火墙拉黑）  
-- [ ] **管理 IP 引导**：管理白名单**空表**时启动打印 `AdminIpBootstrap secret=`（明文一次；与是否已开 `adminIpEnable` 无关）；内存只存 hash；`POST /wall/api/ipadminwhite/bootstrap` 认领当前 IP 后立即清 hash；二次同一密钥失败；名单非空后 bootstrap 拒绝；客户端 IP 解析与 `IPUtils.getIp` 统一（XFF 首 hop + trim）  
+- [ ] **管理 IP 引导**：管理白名单**表中无任何行**时启动打印 `AdminIpBootstrap secret=`（明文一次；与是否已开 `adminIpEnable` 无关）；全部 `forbidden=1` **不**重发引导密钥；内存只存 hash；`POST /wall/api/ipadminwhite/bootstrap` 认领当前 IP 后立即清 hash；二次同一密钥失败；名单非空后 bootstrap 拒绝；客户端 IP 与 `IPUtils.getIp` 统一（配 `trusted-proxies` 后右侧剥离；未配时公网仅 `remoteAddr`，私网/回环取 XFF 最右一跳）  
+- [ ] **管理 IP 写入**：异地 IP / CIDR 加白须 clearToken；CIDR 仅允许 IPv4≥/24、IPv6≥/64；`setForbidden` 立即刷内存名单  
 - [ ] **`wall.html`**：超管可进页；仅 `adminIpEnable=true` 且 IP 未加白时**不直接展示内容**，居中输入临时安全密码（引导态=启动密钥，否则=`clearToken`）→ `POST /wall/api/ipadminwhite/unlock` 认领当前 IP 后再显示；POST 带 CSRF；认领后增删管理 IP 须已在管理名单；用户白名单区块文案区分「防拉黑」
 - [ ] **`/sys/node/*`（`ProfileController`）**：未登录/非超管（及管理 IP 校验开启且未加白）→ 403（`GEN_MODULES` 含 `node`，切面强制）
 - [ ] **install 向导**：`autumn.install.mode=true` 时可无管理 IP；切面织入 install 包但不强制 IP（首装无白名单）  
 - [ ] **`firewall.html`**：非超管不得改 `WallDefault`；`white=false` 须 clearToken  
-- [ ] gen CRUD：非超管调 `*.controller.gen.*` → 403；`adminIpEnable=true` 时管理 IP 未加白亦 403；**usr/safe/bot/qrc**（及 SPI `selfGenModules`）不强制超管  
+- [ ] gen CRUD：非超管调 `*.controller.gen.*` → 403；`adminIpEnable=true` 时管理 IP 未加白亦 403；**usr/safe/bot/qrc**（及 SPI `selfGenModules`）一般不强制超管；**例外** `SENSITIVE_SELF_GEN_CONTROLLERS`（UserProfile/LoginLog/Robot*/ScanTicket/ClientGrant/Token/PIN 等全表）强制超管+管理 IP；secret/Token JSON `WRITE_ONLY`  
+- [ ] **clearToken**：长度≥16；常量时间比较+失败锁定；运维 App **不可首次铸造**（须 Web 超管配置）；`/sys/ops/admin-bootstrap/reveal` 另须运维会话或超管 Session  
+- [ ] **Shield#test**：仅 403 探测，不再 `put` 护盾放行集  
+- [ ] **CSRF**：假长 `Token`/`Bearer` 头**不能**豁免；仅校验通过的用户 Token / OAuth access / `rbt_` 豁免  
+- [ ] **OAuth token**：authorization_code / refresh_token 须 `TokenStore.clientId` 匹配当前 `client_id`；**空 clientId 存量票**在密钥已校验时允许兑换并补写归属  
+- [ ] **Web 扫码**：建票下发 `autumn_qrc_bind_{uuid}`（兼写旧 `autumn_qrc_bind`）；status/stream/exchange/cancel 须匹配；多标签互不覆盖；RP 旁路键 `qrc:browser_bind:`（Redis）；升级前无 `browserBind` 的短命票放行至过期；子类 `web*` **不**因敏感 Gen 名连坐超管门禁  
+- [ ] **多域名 + Nginx**：生产仍建议配 `autumn.client-ip.trusted-proxies`；Nginx `X-Forwarded-For $remote_addr`（覆盖）；多 Origin 写入 `corsAllowedOrigins`；Cookie POST 带 `X-CSRF-Token`  
 - [ ] 子项目 `modules/{biz}/**` **页面**：默认非超管可开（登录由 Spm）；`adminLockdown=true` 或 `@PageAware(admin=true)` 时仅超管  
 - [ ] 普通用户自助：`/sys/session/self/list`、`self/ping`、`/sys/user/info|password` 仍 200（本人数据）  
 - [ ] `/plugin/load|unload` 与 HTML `/plugin` 一致：超管（+可选管理 IP）  

@@ -51,7 +51,10 @@ import cn.org.autumn.modules.sys.controller.SysLoginController;
 import cn.org.autumn.modules.sys.controller.SysMenuController;
 import cn.org.autumn.modules.sys.controller.SysUserController;
 import cn.org.autumn.modules.sys.controller.SysUsingController;
+import cn.org.autumn.modules.qrc.controller.ScanTicketController;
+import cn.org.autumn.modules.usr.controller.UserTokenController;
 import cn.org.autumn.modules.usr.controller.gen.UserProfileControllerGen;
+import cn.org.autumn.modules.usr.controller.gen.UserTokenControllerGen;
 import cn.org.autumn.modules.wall.controller.ShieldController;
 import cn.org.autumn.modules.wall.controller.WallController;
 import cn.org.autumn.modules.wall.controller.gen.IpWhiteControllerGen;
@@ -111,11 +114,12 @@ class AdminAccessGuardTest {
     void genRequiresSystemAdmin_exceptSelfModules() {
         assertTrue(guard.shouldRequireSystemAdminForGen(
                 IpWhiteControllerGen.class));
-        assertFalse(guard.shouldRequireSystemAdminForGen(
+        // 敏感自助全表（资料/机器人/Token/PIN 等）强制超管
+        assertTrue(guard.shouldRequireSystemAdminForGen(
                 UserProfileControllerGen.class));
-        assertFalse(guard.shouldRequireSystemAdminForGen(
+        assertTrue(guard.shouldRequireSystemAdminForGen(
                 PayUserPinControllerGen.class));
-        assertFalse(guard.shouldRequireSystemAdminForGen(
+        assertTrue(guard.shouldRequireSystemAdminForGen(
                 RobotControllerGen.class));
         assertTrue(guard.shouldRequireSystemAdminForGen(
                 ClientDetailsControllerGen.class));
@@ -155,8 +159,39 @@ class AdminAccessGuardTest {
                 SysUsingController.class, "using", 2));
         assertFalse(guard.shouldRequireAdminIpApi(
                 AuthLoginProviderController.class, "providers", 0));
-        assertFalse(guard.shouldRequireAdminIpApi(
+        assertTrue(guard.shouldRequireAdminIpApi(
                 UserProfileControllerGen.class, "list", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                UserTokenControllerGen.class, "list", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                UserTokenController.class, UserTokenControllerGen.class, "list", 1));
+        assertTrue(guard.shouldRequireAdminIpApi(
+                PayUserPinControllerGen.class, "list", 1));
+        // Web 扫码子类扩展方法（无权限注解、非 GEN_MODULES）不因敏感 Gen 连坐
+        assertFalse(guard.isRestrictedGenDeclaringType(ScanTicketController.class));
+        assertTrue(guard.isRestrictedGenDeclaringType(
+                cn.org.autumn.modules.qrc.controller.gen.ScanTicketControllerGen.class));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                ScanTicketController.class,
+                ScanTicketController.class,
+                "webStatus", 2));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                ScanTicketController.class,
+                ScanTicketController.class,
+                "webCreate", 3));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                ScanTicketController.class,
+                ScanTicketController.class,
+                "webStream", 3));
+        assertFalse(guard.shouldRequireAdminIpApi(
+                ScanTicketController.class,
+                ScanTicketController.class,
+                "webExchange", 2));
+        // Gen CRUD 仍强制
+        assertTrue(guard.shouldRequireAdminIpApi(
+                ScanTicketController.class,
+                cn.org.autumn.modules.qrc.controller.gen.ScanTicketControllerGen.class,
+                "list", 1));
         assertTrue(guard.shouldRequireAdminIpApi(
                 OauthAsAdminController.class, "overview", 1));
         assertTrue(guard.shouldRequireAdminIpApi(

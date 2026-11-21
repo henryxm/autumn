@@ -13,7 +13,9 @@ import cn.org.autumn.modules.sys.service.SysLogService;
 import cn.org.autumn.modules.sys.service.SysUserRoleService;
 import cn.org.autumn.modules.sys.shiro.ShiroUtils;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
+import cn.org.autumn.modules.sys.support.ClearTokenSupport;
 import cn.org.autumn.modules.wall.service.IpAdminWhiteService;
+import cn.org.autumn.utils.IPUtils;
 import cn.org.autumn.modules.wall.site.WallDefault;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.site.AuthPageSupport;
@@ -548,7 +550,10 @@ public class SysPageController implements ErrorController {
         SecurityOpsConfig ops = sysConfigService.getSecurityOpsConfig();
         String configured = ops != null ? ops.getClearToken() : null;
         String token = request.getHeader("x-clear-authentication");
-        if (StringUtils.isBlank(configured) || StringUtils.isBlank(token) || !configured.equals(token)) {
+        String clientKey = "page:" + StringUtils.defaultString(IPUtils.getIp(request), "-");
+        try {
+            ClearTokenSupport.assertMatches(configured, token, clientKey);
+        } catch (AException e) {
             throw new AException("需要运维 clear Token 确认", 403);
         }
     }

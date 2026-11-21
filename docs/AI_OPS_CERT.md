@@ -96,9 +96,9 @@ reset / wall opscert/reset (T4，不依赖 ops session)
 | 3 | `/challenge` | T2 | 有效 `certId` | — | `nonce`/`expireSeconds` | 可探测证是否存在 | **持证前置**；certId 宜不可猜测；见 §4.5 |
 | 4 | `/session` | T2 | certId + nonce + 客户端私钥签名 + AES 经服务端公钥包裹 | — | `sessionId`/`expireAt` | 低（密码学绑定） | **证明持证**；换取会话头 |
 | 5 | `/adminip/list` | T3 | `requireOpsSession` | — | 管理 IP 分页列表 | 高 | **必须会话** |
-| 6 | `/adminip/add` | T3 | session | 可 `claimCurrent` | `ip`/成功标志 | 高 | **必须会话** |
+| 6 | `/adminip/add` | T3 | session | 认领当前 IP 可直接写；**异地/CIDR 须 clearToken**；CIDR 仅 IPv4≥/24、IPv6≥/64 | `ip`/成功标志 | 高 | 会话 + 条件 clearToken |
 | 7 | `/adminip/remove` | T3 | session | 删**当前访问 IP** 时 `assertClearToken` | `ip` | 高 | 会话 + 条件 clearToken |
-| 8 | `/adminip/setForbidden` | T3 | session | — | 状态 | 高 | **必须会话** |
+| 8 | `/adminip/setForbidden` | T3 | session | 立即刷内存名单 | 状态 | 高 | **必须会话** |
 | 9 | `/currentIp` | T3 | session | — | `ip` + **`inAdmin`/`inWhite`**（`getByIp` 是否存在，含禁用行） | 低 | **必须会话**；供 App 隐藏「加入当前 IP」CTA |
 | 10 | `/ipwhite/list` | T3 | session | — | 用户白名单列表 | 中高 | **必须会话** |
 | 11 | `/ipwhite/add` | T3 | session | 可 `claimCurrent` | `ip` | 中高 | **必须会话** |
@@ -125,7 +125,7 @@ reset / wall opscert/reset (T4，不依赖 ops session)
 | 20 | `/gate/get` | T3 | session | — | `adminIpEnable`/`discoverEnabled`/`clearTokenConfigured`（布尔，**非明文**） | 低中 | **必须会话**；禁止下发 clearToken 明文 |
 | 21 | `/runtime/snapshot` | T3 | session | — | 主机/磁盘/库/路径/防火墙样本/Redis/访问量等 | **高** | **必须会话**；禁止降到 Probe |
 | 22 | `/gate/verifyClearToken` | T3 | session + `assertClearToken` | — | `valid` | 低（可爆破） | 会话 + 正确令牌 |
-| 23 | `/gate/setClearToken` | T3 | session | 已配置须 `oldClearToken`；首次可直接设 | `clearTokenConfigured`/`changed` | 中（首次抢注） | **必须会话**；见 §4.5 |
+| 23 | `/gate/setClearToken` | T3 | session | **禁止首次铸造**（须 Web 超管先配）；已配置须 `oldClearToken`；新令牌≥16 | `clearTokenConfigured`/`changed` | 中 | **必须会话**；打断 OpsEnroll→reveal 链；见 §4.5 |
 | 24 | `/gate/setAdminIpEnable` | T3 | session | `enable=false` 须 clearToken | `adminIpEnable` | 高 | 关校验 = 会话 + clearToken |
 | 24b | `/gate/setDiscoverEnabled` | T3 | session | body.`enable`；**不要求** clearToken | `discoverEnabled` | 低中 | 会话即可开关公开发现页 |
 | 25 | `/cert/list` | T3 | session | — | 设备 `certId`/label/revoked/时间/`self`/`activeCount` | 中 | **必须会话** |
@@ -189,7 +189,7 @@ reset / wall opscert/reset (T4，不依赖 ops session)
 | Wall/Shield 仍拦 ops | 未 bypass | **文档标明**；黑名单自救可能失败 → 后续评估将 `/ops/api/v1/**` 加入旁路或对有效 Session 放行 |
 | 无 Redis 多节点会话 | 内存会话 | 需 LB 粘性；入驻验密不依赖粘性 |
 | 持 session 设备失窃 | 可改名单/发认领码/拉 runtime | 吊销证、短会话 TTL；运维设备须保护 |
-| 首次 `setClearToken` 可抢注 | 未配置时可直接写入 | 审计；后续可加 enroll 后短窗 |
+| 首次 `setClearToken` 抢注 | **已加固**：运维会话禁止首次写入；须 Web 超管先配；轮换≥16 + 常量时间/锁定 | 已关闭 OpsEnroll→自设 clearToken→`admin-bootstrap/reveal` 链 |
 | 一期 body 明文 | 依赖 TLS | **接受**于内网/HTTPS；公网必须 TLS |
 ## 5. 完整交互时序
 
@@ -250,4 +250,7 @@ UPDATE sys_config SET param_value = '{}' WHERE param_key = 'SECURITY_OPS_CERT_CO
 - [ ] 吊销最后一张有效证响应 `lastCert=true`
 - [ ] `/rsa/api/v1` 与账号密码登录回归
 - [ ] wall bootstrap / clearToken 解锁仍可用
+- [ ] `gate/setClearToken`：未配置时运维会话 **403**；已配置须 `oldClearToken` 且新令牌≥16
+- [ ] 超管 Cookie **alone** 调 `adminip/list` → **401**（缺 `X-Ops-Session`）
+- [ ] 生产已配 `autumn.client-ip.trusted-proxies` + Nginx 覆盖 XFF；多域名已配 `corsAllowedOrigins`
 - [ ] （现状记录）客户端 IP 在用户黑名单时：`/ops/api/v1/probe` 与 session 是否被 Wall 拦截（见 §4.5）

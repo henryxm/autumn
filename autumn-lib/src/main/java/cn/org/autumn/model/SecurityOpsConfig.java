@@ -24,7 +24,7 @@ public class SecurityOpsConfig implements Serializable {
     public static final String config = "security_hardening_config";
 
     @ConfigField(category = InputType.StringType, name = "清除确认令牌",
-            description = "危险操作二次确认令牌（如关闭管理 IP 校验、删除当前访问 IP 的白名单/管理 IP）；空则拒绝")
+            description = "危险操作二次确认令牌（如关闭管理 IP 校验、删除当前访问 IP 的白名单/管理 IP）；须由 Web 超管首次配置，长度建议≥16；空则拒绝；运维 App 仅可凭旧令牌轮换")
     private String clearToken = "";
 
     @ConfigField(category = InputType.StringType, name = "重初始化令牌",

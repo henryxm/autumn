@@ -4,6 +4,8 @@ import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.model.Request;
 import cn.org.autumn.modules.client.dto.RpQrcCreateRequest;
 import cn.org.autumn.modules.client.service.ScanLoginFacade;
+import cn.org.autumn.modules.qrc.dto.TicketCreateResult;
+import cn.org.autumn.modules.qrc.support.ScanBrowserBindSupport;
 import cn.org.autumn.modules.spm.interceptor.SpmInterceptor;
 import cn.org.autumn.modules.usr.interceptor.AuthorizationInterceptor;
 import cn.org.autumn.utils.R;
@@ -33,19 +35,29 @@ public class ClientOauth2QrcController {
     @Autowired
     ScanLoginFacade scanLoginFacade;
 
+    @Autowired
+    ScanBrowserBindSupport scanBrowserBindSupport;
+
     @PostMapping("/ticket/create")
     @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
-    public R create(@Valid @RequestBody(required = false) Request<RpQrcCreateRequest> request, HttpServletRequest servlet) {
+    public R create(@Valid @RequestBody(required = false) Request<RpQrcCreateRequest> request,
+                    HttpServletRequest servlet, HttpServletResponse response) {
         try {
             RpQrcCreateRequest data = request == null ? null : request.getData();
             String callback = data == null ? null : data.getCallback();
             String type = data == null ? null : data.getType();
             String id = data == null ? null : data.getId();
             log.debug("RP QRC create request type={} id={} callback={}", type, id, callback);
+            TicketCreateResult created;
             if (StringUtils.isNotBlank(type) && StringUtils.isNotBlank(id)) {
-                return R.ok().put("data", scanLoginFacade.createWebTicketByCredential(servlet, type, id, callback));
+                created = scanLoginFacade.createWebTicketByCredential(servlet, type, id, callback);
+            } else {
+                created = scanLoginFacade.createRpTicket(servlet, callback);
             }
-            return R.ok().put("data", scanLoginFacade.createRpTicket(servlet, callback));
+            if (created != null && StringUtils.isNotBlank(created.getUuid())) {
+                scanBrowserBindSupport.bindOnCreate(created.getUuid(), servlet, response);
+            }
+            return R.ok().put("data", created);
         } catch (Exception e) {
             log.warn("RP QRC create failed: {}", e.getMessage());
             return R.error(e.getMessage());
@@ -54,21 +66,25 @@ public class ClientOauth2QrcController {
 
     @GetMapping(value = "/ticket/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
-    public SseEmitter stream(@RequestParam("uuid") String uuid, HttpServletResponse response) {
+    public SseEmitter stream(@RequestParam("uuid") String uuid,
+                             HttpServletRequest request,
+                             HttpServletResponse response) {
         response.setHeader("Cache-Control", "no-cache, no-transform");
         response.setHeader("Connection", "keep-alive");
         response.setHeader("X-Accel-Buffering", "no");
+        scanBrowserBindSupport.assertBoundByUuid(uuid, request);
         log.debug("RP QRC stream subscribe uuid={}", uuid);
         return scanLoginFacade.streamRpTicket(uuid);
     }
 
     @GetMapping("/ticket/status")
     @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
-    public R status(@RequestParam("uuid") String uuid) {
+    public R status(@RequestParam("uuid") String uuid, HttpServletRequest request) {
         try {
             if (StringUtils.isBlank(uuid)) {
                 return R.error("uuid 不能为空");
             }
+            scanBrowserBindSupport.assertBoundByUuid(uuid, request);
             return R.ok().put("data", scanLoginFacade.pollRpTicketStatus(uuid));
         } catch (Exception e) {
             log.warn("RP QRC status failed uuid={}: {}", uuid, e.getMessage());
@@ -83,6 +99,7 @@ public class ClientOauth2QrcController {
             if (StringUtils.isBlank(uuid)) {
                 return R.error("uuid 不能为空");
             }
+            scanBrowserBindSupport.assertBoundByUuid(uuid, servlet);
             scanLoginFacade.cancelRpTicket(servlet, uuid);
             return R.ok().put("data", uuid);
         } catch (Exception e) {

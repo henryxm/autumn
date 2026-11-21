@@ -1,6 +1,5 @@
 package cn.org.autumn.modules.wall.controller;
 
-import cn.org.autumn.utils.IPUtils;
 import org.springframework.web.bind.annotation.*;
 import cn.org.autumn.modules.wall.controller.gen.ShieldControllerGen;
 
@@ -19,10 +18,11 @@ import java.io.IOException;
 @RequestMapping({"wall/shield", "shield"})
 public class ShieldController extends ShieldControllerGen {
 
+    /**
+     * 防火墙探测：仅返回 403，不再把客户端 IP 写入护盾放行集（防 XFF 伪造加白）。
+     */
     @RequestMapping(value = "/test", method = RequestMethod.POST)
     public void test(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String ip = IPUtils.getIp(request);
-        shieldService.put(ip);
         response.setStatus(403);
         response.sendRedirect("/");
     }

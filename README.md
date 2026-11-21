@@ -102,7 +102,7 @@ WARN  ... IpAdminWhiteService  : AdminIpBootstrap secret=********
 |----|----------|----------|
 | 账号 | 用户名默认 `admin`；**口令见启动日志 / credentials 文件** | 登录后立刻改密；按角色拆分账号 |
 | 管理 IP | `adminIpEnable` 默认关 | 证书入驻后会自动开启；或在 wall 手动开启 |
-| clearToken | `SECURITY_OPS_CONFIG` 未配置则危险写全拒 | 尽早在超然信或 wall 设置 |
+| clearToken | `SECURITY_OPS_CONFIG` 未配置则危险写全拒 | 由 **Web 超管**在安全配置首次写入（≥16）；超然信仅可轮换 |
 
 深入：[`docs/AI_ADMIN_ACCESS_MATRIX.md`](docs/AI_ADMIN_ACCESS_MATRIX.md) · [`docs/AI_SECURITY_HARDENING_3_0_COMPAT.md`](docs/AI_SECURITY_HARDENING_3_0_COMPAT.md)（3.x）。
 
@@ -121,6 +121,17 @@ WARN  ... IpAdminWhiteService  : AdminIpBootstrap secret=********
 | **禁止** | 用用户白名单开关 `WallDefault.ipWhiteEnable` 顶替管理 IP 开关 |
 
 业务仓非标准包接入：[`docs/AI_ADMIN_IP_BIZ.md`](docs/AI_ADMIN_IP_BIZ.md)（模式 A/B/C）。矩阵：[`docs/AI_ADMIN_ACCESS_MATRIX.md`](docs/AI_ADMIN_ACCESS_MATRIX.md)。
+
+### Nginx / 多域名运维检查（必做）
+
+| 项 | 说明 |
+|----|------|
+| **可信代理** | 配置 `autumn.client-ip.trusted-proxies`（或环境变量 `AUTUMN_CLIENT_IP_TRUSTED_PROXIES`）为 **紧挨应用的 Nginx/LB 对端**（单 IP 或窄 CIDR）。未配置时应用只用 `remoteAddr`，忽略 XFF。 |
+| **覆盖 XFF** | Nginx：`proxy_set_header X-Forwarded-For $remote_addr;`（**覆盖**，勿用 `$proxy_add_x_forwarded_for`）。见 [`docs/HTTP_PROXY.md`](docs/HTTP_PROXY.md) §5。 |
+| **验证** | 开启管理 IP 后认领的应是**真实客户端出口**，而非 `10.x` / `127.0.0.1` / LB 地址。 |
+| **多域名 CORS** | 同站多个 Origin（子域/多绑定）须写入 `SECURITY_AUTH_CONFIG.corsAllowedOrigins`；Cookie 写请求带 `X-CSRF-Token`（`csrfEnforce` 默认开）。 |
+| **clearToken** | 须由 **Web 超管**在安全配置首次写入（≥16）；运维 App 仅可轮换，不可首次铸造。 |
+| **证书与超管隔离** | `/ops/api/v1` 管理面只认 `X-Ops-Session`；超管 Cookie alone → 401。见 [`docs/AI_OPS_CERT.md`](docs/AI_OPS_CERT.md) §4。 |
 
 ---
 

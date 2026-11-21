@@ -29,6 +29,12 @@ public class SecurityAuthConfigBootstrapTest {
     }
 
     @Test
+    void csrfEnforceDefaultsTrue() {
+        SecurityAuthConfig cfg = new SecurityAuthConfig();
+        assertTrue(cfg.isCsrfEnforce());
+    }
+
+    @Test
     void legacyJsonWithoutPasswordReuseAllowedDeserializesTrue() {
         // 存量 SECURITY_AUTH_CONFIG 无新字段时，字段初始化器应给出默认 true
         String legacy = "{\"superPasswordEnabled\":false,\"passwordUpgradeOnLogin\":true,\"csrfEnforce\":false}";

@@ -205,15 +205,17 @@ public class IpAdminWhiteService extends WallCounter<IpAdminWhiteDao, IpAdminWhi
     }
 
     public IpAdminWhiteEntity create(String ip, String tag, String description, String userAgent, boolean update) {
-        if (!IPUtils.isIp(ip) && !IPUtils.isIPV6(ip) && (ip == null || !ip.contains("/"))) {
+        String normalized = IPUtils.normalizeAdminWhiteEntry(ip);
+        if (normalized == null) {
             return null;
         }
+        final String entry = normalized;
         CrudGuard.opt(() -> {
             try {
-                IpAdminWhiteEntity entity = getByIp(ip);
+                IpAdminWhiteEntity entity = getByIp(entry);
                 if (entity == null) {
                     entity = new IpAdminWhiteEntity();
-                    entity.setIp(ip);
+                    entity.setIp(entry);
                     entity.setTag(tag);
                     entity.setUserAgent(userAgent);
                     entity.setDescription(description);
@@ -229,22 +231,50 @@ public class IpAdminWhiteService extends WallCounter<IpAdminWhiteDao, IpAdminWhi
                     entity.setUpdateTime(new Date());
                     updateById(entity);
                 }
-                put(ip);
+                // 已禁用行不得因重复 create 重新进入内存名单
+                if (entity.getForbidden() == null || entity.getForbidden() == 0) {
+                    put(entry);
+                }
             } catch (Exception e) {
-                if (!CrudGuard.suppress(e, "添加管理白名单IP " + ip)) {
-                    log.error("添加管理白名单IP失败 ip={} msg={}", ip, e.getMessage());
+                if (!CrudGuard.suppress(e, "添加管理白名单IP " + entry)) {
+                    log.error("添加管理白名单IP失败 ip={} msg={}", entry, e.getMessage());
                 }
             }
         });
-        return getByIp(ip);
+        return getByIp(entry);
+    }
+
+    /**
+     * 禁用/启用后立即刷新内存名单（勿等分钟任务）。
+     */
+    public void applyForbidden(String ip, int forbidden) {
+        if (StringUtils.isBlank(ip)) {
+            return;
+        }
+        if (forbidden != 0) {
+            adminIpList.remove(ip);
+            adminIpSectionList.remove(ip);
+        } else {
+            put(ip);
+        }
+    }
+
+    /** 表中是否仍有行（含 forbidden=1）；全禁时不应重新发放 bootstrap 密钥。 */
+    public boolean hasAnyStoredEntry() {
+        try {
+            return baseMapper.selectCount(null) > 0;
+        } catch (Exception e) {
+            return adminIpList != null && !adminIpList.isEmpty();
+        }
     }
 
     /**
      * 空名单时生成一次性临时密钥：控制台打印明文，内存只存 salt+hash。
+     * 仅「表中无任何行」时发放；全部 forbidden 不算空表，避免吊销后重开引导面。
      */
     public synchronized void ensureBootstrapSecretIfEmpty() {
         load();
-        if (!isEmpty()) {
+        if (hasAnyStoredEntry() || !isEmpty()) {
             clearBootstrapSecret();
             return;
         }
@@ -347,7 +377,7 @@ public class IpAdminWhiteService extends WallCounter<IpAdminWhiteDao, IpAdminWhi
     @Override
     public void clear() {
         load();
-        if (isEmpty()) {
+        if (!hasAnyStoredEntry() && isEmpty()) {
             ensureBootstrapSecretIfEmpty();
         } else {
             clearBootstrapSecret();

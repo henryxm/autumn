@@ -10,6 +10,7 @@ import cn.org.autumn.modules.ops.service.OpsRuntimeSnapshotService;
 import cn.org.autumn.modules.ops.service.OpsSessionService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
+import cn.org.autumn.modules.sys.support.ClearTokenSupport;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
@@ -53,6 +54,7 @@ class OpsApiControllerTest {
 
     @BeforeEach
     void setUp() {
+        ClearTokenSupport.resetForTests();
         controller = new OpsApiController();
         opsCertService = mock(OpsCertService.class);
         opsSessionService = mock(OpsSessionService.class);
@@ -201,7 +203,7 @@ class OpsApiControllerTest {
     }
 
     @Test
-    void gateSetClearToken_firstTimeAndChange() {
+    void gateSetClearToken_rejectsFirstTimeFromOps_andAllowsRotate() {
         OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
                 "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
         when(opsSessionService.requireSession("opss-1")).thenReturn(session);
@@ -211,21 +213,44 @@ class OpsApiControllerTest {
         SecurityOpsConfig empty = new SecurityOpsConfig();
         empty.setClearToken("");
         when(sysConfigService.getSecurityOpsConfig()).thenReturn(empty);
-
-        Response<Map<String, Object>> created = controller.gateSetClearToken(
-                Map.of("clearToken", "new-token-1"), req);
-        assertEquals(true, created.getData().get("clearTokenConfigured"));
-        verify(sysConfigService).saveSecurityOpsConfig(argThat(c -> "new-token-1".equals(c.getClearToken())));
+        AException first = assertThrows(AException.class, () -> controller.gateSetClearToken(
+                Map.of("clearToken", "sixteen-chars-01"), req));
+        assertTrue(first.getMessage().contains("系统管理员"));
 
         SecurityOpsConfig existing = new SecurityOpsConfig();
-        existing.setClearToken("new-token-1");
+        existing.setClearToken("sixteen-chars-01");
         when(sysConfigService.getSecurityOpsConfig()).thenReturn(existing);
         assertThrows(AException.class, () -> controller.gateSetClearToken(
-                Map.of("clearToken", "new-token-2", "oldClearToken", "wrong"), req));
+                Map.of("clearToken", "sixteen-chars-02", "oldClearToken", "wrong-old-token!"), req));
 
         Response<Map<String, Object>> changed = controller.gateSetClearToken(
-                Map.of("clearToken", "new-token-2", "oldClearToken", "new-token-1"), req);
+                Map.of("clearToken", "sixteen-chars-02", "oldClearToken", "sixteen-chars-01"), req);
         assertEquals(true, changed.getData().get("changed"));
+        verify(sysConfigService).saveSecurityOpsConfig(argThat(c -> "sixteen-chars-02".equals(c.getClearToken())));
+    }
+
+    @Test
+    void adminIpAdd_remoteOrCidrRequiresClearToken() {
+        OpsSessionService.OpsSession session = new OpsSessionService.OpsSession(
+                "opss-1", "ops-cert", "aes", "", System.currentTimeMillis() + 60_000);
+        when(opsSessionService.requireSession("opss-1")).thenReturn(session);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setRemoteAddr("198.51.100.9");
+        req.addHeader(AutumnOpsProbe.SESSION_HEADER, "opss-1");
+
+        SecurityOpsConfig ops = new SecurityOpsConfig();
+        ops.setClearToken("sixteen-chars-ok");
+        when(sysConfigService.getSecurityOpsConfig()).thenReturn(ops);
+
+        assertThrows(AException.class, () -> controller.adminIpAdd(
+                Map.of("ip", "0.0.0.0/1"), req));
+
+        IpAdminWhiteEntity entity = new IpAdminWhiteEntity();
+        entity.setIp("203.0.113.50");
+        when(ipAdminWhiteService.create(eq("203.0.113.50"), anyString(), anyString())).thenReturn(entity);
+        Response<Map<String, Object>> res = controller.adminIpAdd(
+                Map.of("ip", "203.0.113.50", "clearToken", "sixteen-chars-ok"), req);
+        assertEquals(true, res.getData().get("success"));
     }
 
     @Test

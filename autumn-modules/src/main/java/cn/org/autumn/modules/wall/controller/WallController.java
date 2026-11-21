@@ -6,6 +6,7 @@ import cn.org.autumn.model.SecurityOpsConfig;
 import cn.org.autumn.modules.ops.service.OpsCertService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
+import cn.org.autumn.modules.sys.support.ClearTokenSupport;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
@@ -60,8 +61,28 @@ public class WallController {
         SecurityOpsConfig ops = sysConfigService.getSecurityOpsConfig();
         String configured = ops != null ? ops.getClearToken() : null;
         String token = request.getHeader("x-clear-authentication");
-        if (StringUtils.isBlank(configured) || StringUtils.isBlank(token) || !configured.equals(token)) {
-            throw new AException("需要运维 clear Token 确认", 403);
+        String clientKey = "wall:" + StringUtils.defaultString(IPUtils.getIp(request), "-");
+        try {
+            ClearTokenSupport.assertMatches(configured, token, clientKey);
+        } catch (AException e) {
+            if (e.getMessage() != null && e.getMessage().contains("未配置")) {
+                throw new AException("需要运维 clear Token 确认", 403);
+            }
+            if (e.getMessage() != null && e.getMessage().contains("不正确")) {
+                throw new AException("需要运维 clear Token 确认", 403);
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * 异地/网段加白须 clearToken；仅认领当前 IP 时可直接写。
+     */
+    private void assertRemoteAdminIpWrite(String ip, HttpServletRequest request) {
+        String current = IPUtils.getIp(request);
+        boolean remote = StringUtils.isBlank(current) || !current.equals(ip) || (ip != null && ip.contains("/"));
+        if (remote) {
+            assertClearToken(request);
         }
     }
 
@@ -421,9 +442,14 @@ public class WallController {
         }
         SecurityOpsConfig ops = sysConfigService.getSecurityOpsConfig();
         String configured = ops != null ? ops.getClearToken() : null;
-        if (StringUtils.isBlank(configured) || !configured.equals(secret.trim())) {
+        String clientKey = "unlock:" + StringUtils.defaultString(ip, "-");
+        if (StringUtils.isBlank(configured)
+                || !ClearTokenSupport.matches(configured, secret.trim(), clientKey)) {
             adminAccessGuard.warnDenied("admin_ip_unlock", "ipadminwhiteUnlock", request, "临时安全密码错误");
             throw new AException("临时安全密码无效", 403);
+        }
+        if (IPUtils.normalizeAdminWhiteEntry(ip) == null) {
+            throw new AException("无效的管理IP：须为单 IP，或 IPv4 CIDR≥/24、IPv6 CIDR≥/64", 400);
         }
         IpAdminWhiteEntity entity = ipAdminWhiteService.create(ip, "unlock", "临时安全密码认领");
         if (entity == null) {
@@ -466,10 +492,20 @@ public class WallController {
     @PostMapping("/ipadminwhite/add")
     public Map<String, Object> addIpAdminWhite(@RequestParam String ip, HttpServletRequest request) {
         requireOps(request, "ipadminwhiteAdd");
+        assertRemoteAdminIpWrite(ip, request);
+        if (IPUtils.normalizeAdminWhiteEntry(ip) == null) {
+            Map<String, Object> fail = new HashMap<>();
+            fail.put("success", false);
+            fail.put("msg", "无效的管理IP：须为单 IP，或 IPv4 CIDR≥/24、IPv6 CIDR≥/64");
+            return fail;
+        }
         IpAdminWhiteEntity entity = ipAdminWhiteService.create(ip, "手动添加", "手动添加");
         adminAccessGuard.auditWithIp(request, "wall.ipadminwhite.add", "ip=" + ip);
         if (null == entity) {
-            return Collections.singletonMap("fail", false);
+            Map<String, Object> fail = new HashMap<>();
+            fail.put("success", false);
+            fail.put("msg", "写入管理IP失败");
+            return fail;
         }
         return Collections.singletonMap("success", true);
     }

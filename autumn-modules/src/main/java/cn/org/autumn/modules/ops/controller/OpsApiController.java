@@ -10,6 +10,7 @@ import cn.org.autumn.modules.ops.service.OpsRuntimeSnapshotService;
 import cn.org.autumn.modules.ops.service.OpsSessionService;
 import cn.org.autumn.modules.sys.service.SysConfigService;
 import cn.org.autumn.modules.sys.support.AdminAccessGuard;
+import cn.org.autumn.modules.sys.support.ClearTokenSupport;
 import cn.org.autumn.modules.wall.entity.IpAdminWhiteEntity;
 import cn.org.autumn.modules.wall.entity.IpBlackEntity;
 import cn.org.autumn.modules.wall.entity.IpWhiteEntity;
@@ -155,10 +156,15 @@ public class OpsApiController {
                                                     HttpServletRequest request) {
         OpsSessionService.OpsSession session = requireOpsSession(request);
         String ip = resolveIp(body, request);
+        String current = IPUtils.getIp(request);
+        boolean remoteOrCidr = StringUtils.isBlank(current) || !current.equals(ip) || ip.contains("/");
+        if (remoteOrCidr) {
+            assertClearToken(body, request);
+        }
         boolean existed = ipAdminWhiteService.getByIp(ip) != null;
         IpAdminWhiteEntity entity = ipAdminWhiteService.create(ip, "ops-cert", "ops-cert certId=" + session.getCertId());
         if (entity == null) {
-            throw new AException("写入管理IP失败", 500);
+            throw new AException("写入管理IP失败（须为单 IP 或 IPv4/≥24、IPv6/≥64 网段）", 500);
         }
         adminAccessGuard.auditWithIp(request, "ops.adminip.add", "ip=" + ip + " certId=" + session.getCertId());
         Map<String, Object> data = adminIpRow(entity);
@@ -201,6 +207,7 @@ public class OpsApiController {
         entity.setForbidden(forbidden);
         entity.setUpdateTime(new Date());
         ipAdminWhiteService.updateById(entity);
+        ipAdminWhiteService.applyForbidden(ip, forbidden);
         adminAccessGuard.auditWithIp(request, "ops.adminip.setForbidden",
                 "ip=" + ip + " forbidden=" + forbidden + " certId=" + session.getCertId());
         return Response.ok(Map.of("ip", ip, "forbidden", forbidden, "success", true));
@@ -645,10 +652,10 @@ public class OpsApiController {
     }
 
     /**
-     * 运维 App 配置/修改清除确认令牌（不下发明文）。
+     * 运维 App 轮换清除确认令牌（不下发明文）。
      * <ul>
-     *   <li>服务端尚未配置：已认证运维会话可直接设置 {@code clearToken}</li>
-     *   <li>已配置：须提供正确 {@code oldClearToken}，再写入新 {@code clearToken}</li>
+     *   <li>服务端尚未配置：<strong>拒绝</strong>（须由 Web 超管在安全配置中首次写入，防止 OpsEnroll→自设令牌→reveal）</li>
+     *   <li>已配置：须提供正确 {@code oldClearToken}，再写入新 {@code clearToken}（长度≥16）</li>
      * </ul>
      */
     @PostMapping("/gate/setClearToken")
@@ -656,32 +663,27 @@ public class OpsApiController {
                                                           HttpServletRequest request) {
         OpsSessionService.OpsSession session = requireOpsSession(request);
         String next = str(body, "clearToken");
-        if (StringUtils.isBlank(next)) {
-            throw new AException("请填写清除确认令牌", 400);
-        }
-        if (next.length() < 4 || next.length() > 256) {
-            throw new AException("清除确认令牌长度须为 4～256", 400);
-        }
-        if (next.chars().anyMatch(Character::isWhitespace)) {
-            throw new AException("清除确认令牌不能包含空白字符", 400);
-        }
+        ClearTokenSupport.validateNewToken(next);
         SecurityOpsConfig current = sysConfigService.getSecurityOpsConfig();
         if (current == null) {
             current = new SecurityOpsConfig();
         }
         String configured = current.getClearToken();
-        boolean firstTime = StringUtils.isBlank(configured);
-        if (!firstTime) {
-            String old = str(body, "oldClearToken");
-            if (StringUtils.isBlank(old)) {
-                old = str(body, "clearTokenOld");
-            }
-            if (StringUtils.isBlank(old) || !configured.equals(old)) {
-                throw new AException("原清除确认令牌不正确", 403);
-            }
-            if (configured.equals(next)) {
-                return Response.ok(Map.of("clearTokenConfigured", true, "changed", false));
-            }
+        // 禁止运维会话首次铸造 clearToken（打断 OpsEnroll→自设令牌→reveal 超管口令链）；
+        // 须由 Web 超管在安全配置中先写入，运维 App 仅可轮换。
+        if (StringUtils.isBlank(configured)) {
+            throw new AException("清除确认令牌须由系统管理员在安全配置中首次设置，运维会话不可初始化", 403);
+        }
+        String old = str(body, "oldClearToken");
+        if (StringUtils.isBlank(old)) {
+            old = str(body, "clearTokenOld");
+        }
+        String clientKey = "ops-set:" + StringUtils.defaultString(IPUtils.getIp(request), session.getCertId());
+        if (!ClearTokenSupport.matches(configured, old, clientKey)) {
+            throw new AException("原清除确认令牌不正确", 403);
+        }
+        if (ClearTokenSupport.constantTimeEquals(configured, next)) {
+            return Response.ok(Map.of("clearTokenConfigured", true, "changed", false));
         }
         SecurityOpsConfig toSave = new SecurityOpsConfig();
         toSave.setClearToken(next);
@@ -691,7 +693,7 @@ public class OpsApiController {
         toSave.setAdminIpEnable(current.isAdminIpEnable());
         sysConfigService.saveSecurityOpsConfig(toSave);
         adminAccessGuard.auditWithIp(request, "ops.gate.setClearToken",
-                "firstTime=" + firstTime + " certId=" + session.getCertId());
+                "firstTime=false certId=" + session.getCertId());
         return Response.ok(Map.of("clearTokenConfigured", true, "changed", true));
     }
 
@@ -826,19 +828,23 @@ public class OpsApiController {
     }
 
     private void assertClearToken(Map<String, Object> body) {
+        assertClearToken(body, null);
+    }
+
+    private void assertClearToken(Map<String, Object> body, HttpServletRequest request) {
         String clearToken = str(body, "clearToken");
         SecurityOpsConfig ops = sysConfigService.getSecurityOpsConfig();
         String configured = ops != null ? ops.getClearToken() : null;
-        // 空配置 = 拒绝一切依赖 clearToken 的危险操作（与 SECURITY_OPS_CONFIG 语义一致）
         if (StringUtils.isBlank(configured)) {
             throw new AException("服务端尚未配置清除确认令牌", 403);
         }
         if (StringUtils.isBlank(clearToken)) {
             throw new AException("请填写清除确认令牌", 400);
         }
-        if (!configured.equals(clearToken)) {
-            throw new AException("清除确认令牌不正确", 403);
-        }
+        String clientKey = "ops:" + (request != null
+                ? StringUtils.defaultString(IPUtils.getIp(request), "-")
+                : "-");
+        ClearTokenSupport.assertMatches(configured, clearToken, clientKey);
     }
 
     /**

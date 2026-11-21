@@ -9,7 +9,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -29,6 +32,20 @@ public class IPUtils {
      */
     public static final String HOST_LAN_IP_PROP = "host.lan.ip";
 
+    /**
+     * 可信反向代理列表（逗号/空白分隔的 IP 或 IPv4 CIDR）。
+     * 未配置时 {@link #getIp(HttpServletRequest)} <strong>忽略</strong> X-Forwarded-For 等头，仅用 {@code remoteAddr}，
+     * 防止客户端伪造管理 IP / 防火墙身份。
+     */
+    public static final String TRUSTED_PROXIES_PROP = "autumn.client-ip.trusted-proxies";
+    /** 同 {@link #TRUSTED_PROXIES_PROP} 的环境变量风格键。 */
+    public static final String TRUSTED_PROXIES_ENV = "AUTUMN_CLIENT_IP_TRUSTED_PROXIES";
+
+    /** 管理白名单 IPv4 CIDR 允许的最宽前缀（越大越窄；/24 = 最多 256 地址）。 */
+    public static final int ADMIN_IPV4_MIN_PREFIX = 24;
+    /** 管理白名单 IPv6 CIDR 允许的最宽前缀。 */
+    public static final int ADMIN_IPV6_MIN_PREFIX = 64;
+
     //判断是否字符串是ipv6
     public static boolean isIPV6(String ip) {
         if (StringUtils.isBlank(ip)) {
@@ -46,45 +63,157 @@ public class IPUtils {
         return pattern1.matcher(address).matches() || pattern2.matcher(address).matches();
     }
 
+    /**
+     * 解析客户端 IP。
+     * <p>
+     * 配置 {@link #TRUSTED_PROXIES_PROP} 后：仅当 TCP 对端 ∈ 可信列表时，才从 XFF <strong>右侧</strong>剥离可信跳。
+     * 未配置时：公网 {@code remoteAddr} <strong>忽略</strong> XFF（防伪造）；若 {@code remoteAddr} 为回环/私网
+     * （典型本机 Nginx / Docker 网桥），则信任 XFF <strong>最右侧一跳</strong>为客户端（须由边缘 Nginx
+     * <strong>覆盖</strong> {@code X-Forwarded-For $remote_addr}，勿 append 客户端原值）。
+     */
     public static String getIp(HttpServletRequest request) {
         if (null == request) {
             return "";
         }
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                ip = request.getHeader("Proxy-Client-IP");
+        String remote = trimHop(request.getRemoteAddr());
+        List<String> trusted = trustedProxyEntries();
+        if (trusted.isEmpty()) {
+            if (!isInternalKeepIp(remote)) {
+                return remote;
             }
-            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                ip = request.getHeader("WL-Proxy-Client-IP");
-            }
-            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                ip = request.getHeader("HTTP_CLIENT_IP");
-            }
-            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                ip = request.getHeader("HTTP_X_FORWARDED_FOR");
-            }
-            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                ip = request.getHeader("X-Real-IP");
-            }
-            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                ip = request.getRemoteAddr();
-            }
+            return clientIpFromPrivateRemote(request, remote);
         }
-        // 多跳 XFF：始终取首个非 unknown hop，并 trim（兼容短链与空格）
-        if (ip != null && ip.contains(",")) {
-            String[] ips = ip.split(",");
-            for (String s : ips) {
-                String hop = s == null ? "" : s.trim();
-                if (!hop.isEmpty() && !"unknown".equalsIgnoreCase(hop)) {
-                    ip = hop;
-                    break;
+        if (!isTrustedProxyHop(remote, trusted)) {
+            return remote;
+        }
+        return stripTrustedFromXff(request, remote, trusted);
+    }
+
+    /**
+     * 未配 trusted-proxies、且 TCP 对端为私网/回环时：取 XFF 最右有效 hop（一跳）；无则 X-Real-IP；再无则 remote。
+     */
+    private static String clientIpFromPrivateRemote(HttpServletRequest request, String remote) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (StringUtils.isNotBlank(xff)) {
+            String[] hops = xff.split(",");
+            for (int i = hops.length - 1; i >= 0; i--) {
+                String hop = trimHop(hops[i]);
+                if (hop.isEmpty() || "unknown".equalsIgnoreCase(hop)) {
+                    continue;
                 }
+                return hop;
             }
-        } else if (ip != null) {
-            ip = ip.trim();
         }
-        return ip == null ? "" : ip;
+        String real = trimHop(request.getHeader("X-Real-IP"));
+        if (StringUtils.isNotBlank(real) && !"unknown".equalsIgnoreCase(real)) {
+            return real;
+        }
+        return remote;
+    }
+
+    private static String stripTrustedFromXff(HttpServletRequest request, String remote, List<String> trusted) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (StringUtils.isBlank(xff)) {
+            String real = trimHop(request.getHeader("X-Real-IP"));
+            if (StringUtils.isNotBlank(real) && !"unknown".equalsIgnoreCase(real)
+                    && !isTrustedProxyHop(real, trusted)) {
+                return real;
+            }
+            return remote;
+        }
+        String[] hops = xff.split(",");
+        for (int i = hops.length - 1; i >= 0; i--) {
+            String hop = trimHop(hops[i]);
+            if (hop.isEmpty() || "unknown".equalsIgnoreCase(hop)) {
+                continue;
+            }
+            if (!isTrustedProxyHop(hop, trusted)) {
+                return hop;
+            }
+        }
+        return remote;
+    }
+
+    /** 读取可信代理配置（可测：空 = 不信任转发头）。 */
+    public static List<String> trustedProxyEntries() {
+        String raw = Config.getEnv(TRUSTED_PROXIES_ENV);
+        if (StringUtils.isBlank(raw)) {
+            raw = Config.getEnv(TRUSTED_PROXIES_PROP);
+        }
+        if (StringUtils.isBlank(raw)) {
+            return Collections.emptyList();
+        }
+        List<String> out = new ArrayList<>();
+        for (String part : raw.split("[,;\\s]+")) {
+            String p = part == null ? "" : part.trim();
+            if (!p.isEmpty()) {
+                out.add(p);
+            }
+        }
+        return out;
+    }
+
+    public static boolean isTrustedProxyHop(String hop, List<String> trusted) {
+        if (StringUtils.isBlank(hop) || trusted == null || trusted.isEmpty()) {
+            return false;
+        }
+        for (String entry : trusted) {
+            if (entry.contains("/")) {
+                if (isIp(hop) && isInRange(hop, entry)) {
+                    return true;
+                }
+            } else if (entry.equalsIgnoreCase(hop)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String trimHop(String s) {
+        return s == null ? "" : s.trim();
+    }
+
+    /**
+     * 校验管理白名单条目：单 IP 或足够窄的 CIDR（IPv4 ≥ /24，IPv6 ≥ /64）。
+     *
+     * @return 规范化条目；非法返回 null
+     */
+    public static String normalizeAdminWhiteEntry(String raw) {
+        if (StringUtils.isBlank(raw)) {
+            return null;
+        }
+        String ip = raw.trim();
+        if (!ip.contains("/")) {
+            if (isIp(ip) || isIPV6(ip)) {
+                return ip;
+            }
+            return null;
+        }
+        int slash = ip.lastIndexOf('/');
+        if (slash <= 0 || slash >= ip.length() - 1) {
+            return null;
+        }
+        String host = ip.substring(0, slash).trim();
+        String prefixStr = ip.substring(slash + 1).trim();
+        int prefix;
+        try {
+            prefix = Integer.parseInt(prefixStr);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        if (isIp(host)) {
+            if (prefix < ADMIN_IPV4_MIN_PREFIX || prefix > 32) {
+                return null;
+            }
+            return host + "/" + prefix;
+        }
+        if (isIPV6(host)) {
+            if (prefix < ADMIN_IPV6_MIN_PREFIX || prefix > 128) {
+                return null;
+            }
+            return host + "/" + prefix;
+        }
+        return null;
     }
 
     public static boolean isIp(String ip) {
@@ -95,20 +224,32 @@ public class IPUtils {
     }
 
     /**
-     * ip 地址所属网段判断
+     * ip 地址所属网段判断（仅 IPv4）。前缀须为 1～32；{@code /0} 不匹配任何地址（避免 int 移位回绕）。
      */
     public static boolean isInRange(String ip, String cidr) {
-        if (!isIp(ip)) {
+        if (!isIp(ip) || StringUtils.isBlank(cidr) || !cidr.contains("/")) {
             return false;
         }
-
+        int slash = cidr.lastIndexOf('/');
+        String cidrIp = cidr.substring(0, slash).trim();
+        String prefixStr = cidr.substring(slash + 1).trim();
+        if (!isIp(cidrIp)) {
+            return false;
+        }
+        int type;
+        try {
+            type = Integer.parseInt(prefixStr);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        if (type < 1 || type > 32) {
+            return false;
+        }
         String[] ips = ip.split("\\.");
         int ipAddr = (Integer.parseInt(ips[0]) << 24)
                 | (Integer.parseInt(ips[1]) << 16)
                 | (Integer.parseInt(ips[2]) << 8) | Integer.parseInt(ips[3]);
-        int type = Integer.parseInt(cidr.replaceAll(".*/", ""));
-        int mask = 0xFFFFFFFF << (32 - type);
-        String cidrIp = cidr.replaceAll("/.*", "");
+        int mask = type == 32 ? 0xFFFFFFFF : (0xFFFFFFFF << (32 - type));
         String[] cidrIps = cidrIp.split("\\.");
         int cidrIpAddr = (Integer.parseInt(cidrIps[0]) << 24)
                 | (Integer.parseInt(cidrIps[1]) << 16)

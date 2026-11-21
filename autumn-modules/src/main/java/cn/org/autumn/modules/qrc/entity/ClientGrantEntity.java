@@ -6,10 +6,13 @@ import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 import java.util.Date;
 import lombok.Getter;
 import lombok.Setter;
+
+import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
 
 @Getter
 @Setter
@@ -38,6 +41,7 @@ public class ClientGrantEntity implements UuidBased, Serializable {
     private String webhook;
 
     @Column(length = 128, comment = "Webhook:签名密钥")
+    @JsonProperty(access = WRITE_ONLY)
     private String secret;
 
     @Column(length = 500, comment = "DeepLink:scheme白名单CSV")

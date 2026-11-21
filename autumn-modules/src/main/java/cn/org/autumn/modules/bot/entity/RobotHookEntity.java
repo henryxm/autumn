@@ -7,10 +7,13 @@ import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.Date;
+
+import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
 
 @Getter
 @Setter
@@ -45,6 +48,7 @@ public class RobotHookEntity implements UuidBased {
     private String callback;
 
     @Column(length = 128, comment = "密钥:回调签名校验")
+    @JsonProperty(access = WRITE_ONLY)
     private String secret;
 
     @Column(length = 500, comment = "事件:订阅事件CSV")

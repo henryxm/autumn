@@ -7,10 +7,13 @@ import cn.org.autumn.table.annotation.Table;
 import cn.org.autumn.table.data.DataType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.Date;
+
+import static com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY;
 
 @Getter
 @Setter
@@ -34,6 +37,7 @@ public class RobotTokenEntity implements UuidBased {
     private String robot;
 
     @Column(length = 128, comment = "摘要:令牌SHA256哈希", isUnique = true)
+    @JsonProperty(access = WRITE_ONLY)
     private String token;
 
     @Column(length = 16, comment = "前缀:明文令牌前缀便于检索")
