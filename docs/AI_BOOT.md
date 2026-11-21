@@ -168,7 +168,7 @@ public class ScopeDefinitionEntity { ... }
 - 规范梳理/团队协作：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_GOVERNANCE.md`
 - 安全改造/攻防演练：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_SECURITY.md`
 - **多库 / Wrapper / Provider / 换库排查：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_DATABASE.md`（PG 专项再叠 `docs/AI_POSTGRESQL.md`）**
-- **新增 Mapper 手写 SQL / SqlProvider：`docs/AI_BOOT.md + docs/AI_DATABASE.md`（§3～§5）+ `docs/AI_POSTGRESQL.md`（PG 细节）**
+- **新增 Mapper 手写 SQL / SqlProvider：`docs/AI_BOOT.md + docs/AI_DATABASE.md`（§3～§5；比较符/`SelectInLangDriver`/`BETWEEN` 见 §3.1）+ `docs/AI_POSTGRESQL.md`（PG 细节）**
 - **业务仓库升级 autumn：`docs/AI_BOOT.md + docs/AI_MAP.md + docs/AI_STANDARDS.md + docs/AI_UPGRADE.md`（多库时叠 `docs/AI_DATABASE.md`；PG 再叠 `docs/AI_POSTGRESQL.md`）**
 - 仅对照 PG 清单与兼容性、少读其它文档时：可直接打开 `docs/AI_POSTGRESQL.md`（仍建议与 `docs/AI_MAP.md` 中表结构/方言章节交叉核对）。
 
@@ -179,7 +179,7 @@ public class ScopeDefinitionEntity { ... }
 
 - **配置**：`autumn.database` 与主数据源 **JDBC URL** 共同决定 `DatabaseType`（`DatabaseHolder#resolveType`）；TiDB / OceanBase MySQL 等与 `jdbc:mysql` 重叠时须按 **`docs/AI_DATABASE.md` §2** 配置。
 - **路由**：`DatabaseType` + `RoutingRelationalTableOperations` / `RoutingRuntimeSqlDialect`；注解建表仅对 **mysql / mariadb / postgresql** 执行同步。
-- **方言与 SQL**：底层为 `RuntimeSqlDialect`；**默认**业务 SQL 应对已支持类型全量兼容（**`docs/AI_DATABASE.md` §1**）。**手写 SQL 必须**走 **Provider**，并推荐 **`extends RuntimeSql`**，使用 `quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList` 等（**`docs/AI_DATABASE.md` §3～§5**；示例见 **`docs/AI_POSTGRESQL.md`**）。`PostgresQuerySql` 负责 PG DDL/元数据。
+- **方言与 SQL**：底层为 `RuntimeSqlDialect`；**默认**业务 SQL 应对已支持类型全量兼容（**`docs/AI_DATABASE.md` §1**）。**手写 SQL 必须**走 **Provider**，并推荐 **`extends RuntimeSql`**，使用 `quote`、`limitOne`、`likeContainsAny`、`columnValueInCommaSeparatedList`、闭区间 **`columnBetween`** 等（**`docs/AI_DATABASE.md` §3～§5 / §3.1**；示例见 **`docs/AI_POSTGRESQL.md`**）。`@Lang(SelectInLangDriver)` 时勿靠裸 `<=` 碰旧驱动 XML；`PostgresQuerySql` 负责 PG DDL/元数据。
 - **类型兼容**：新建 PG 库时 `tinyint(1)` 布尔元数据可落 **`boolean`** 列；**已有 `smallint` 列**可与实体 **`int` 0/1** 对齐，或 **`ALTER ... TYPE boolean USING (...)`**。
 - **MyBatis**：避免同一字段 **`getX(int)` + `boolean isX()`** 并存导致 `Reflector` 冲突；分页 **`COUNT` 不带 `ORDER BY`**（见 `BaseService.selectCountWithoutOrderBy`）。
 - **构建**：JDK 9+ 需 Lombok **`annotationProcessorPaths`**；多模块运行前建议 **`mvn clean install -pl … -am`**，避免本地仓库旧 JAR 与源码不一致。

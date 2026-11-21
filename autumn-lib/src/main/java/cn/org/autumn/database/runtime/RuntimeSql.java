@@ -184,4 +184,17 @@ public class RuntimeSql implements QueryIndex {
     public String updateWithJoin(String targetTable, String targetAlias, String joinTable, String joinAlias, String joinOn, String quotedColumn, String extraWhere) {
         return dialect().sqlUpdateWithJoin(targetTable, targetAlias, joinTable, joinAlias, joinOn, quotedColumn, extraWhere);
     }
+
+    /**
+     * 闭区间：{@code quotedColumn BETWEEN fromPh AND toPh}。
+     * <p>
+     * 在 {@code @Lang(SelectInLangDriver)} 场景<strong>优先</strong>于 {@code col &gt;= #{a} AND col &lt;= #{b}}，
+     * 避免历史驱动未转义时 {@code <=} 触发 {@code SAXParseException}；语义与闭区间比较符等价。
+     * 占位符须含 {@code #{} }（如 {@code #{dayFrom}}）。列名须已 {@link #quote(String)}。
+     *
+     * @see cn.org.autumn.mybatis.SelectInLangDriver
+     */
+    public String columnBetween(String quotedColumn, String fromPlaceholder, String toPlaceholder) {
+        return quotedColumn + " BETWEEN " + fromPlaceholder + " AND " + toPlaceholder;
+    }
 }

@@ -89,6 +89,7 @@ public class SysUserDaoSql extends RuntimeSql {
 
     /**
      * 批量按手机号查用户。{@code IN (#{mobiles})} 由 {@link cn.org.autumn.mybatis.SelectInLangDriver} 展开。
+     * {@code >=} 由驱动 XML 转义；闭区间请优先 {@link #columnBetween}（见 AI_DATABASE §3.1）。
      */
     public String getByPhones() {
         return "SELECT * FROM " + tbl() + " WHERE " + quote("mobile") + " IN (#{mobiles}) AND " + quote("status") + " >= 0";

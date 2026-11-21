@@ -105,6 +105,60 @@
 
 5. **历史与框架内置**注解 SQL 仅允许在治理计划中逐步迁移；**新增与变更一律 Provider**。
 
+6. **`IN (#{param})` + `@Lang(SelectInLangDriver)`**：见 **§3.1**（比较符 / XML / `BETWEEN` 标准写法）。
+
+### 3.1 比较符与 `SelectInLangDriver`（防 SAXParseException）
+
+#### 背景
+
+`@Lang(SelectInLangDriver.class)` 会把 Provider SQL 包进 `<script>…</script>` 再按 **XML** 解析，并把 `IN (#{p})` 换成 `<foreach>`。  
+SQL 里的裸 **`<=` / `<` / `<>`** 含有 `<`，在旧驱动下会直接触发：
+
+`SAXParseException: 元素内容必须由格式正确的字符数据或标记组成`（常见于 column ~ 数百）。
+
+框架现已在注入 foreach **之前**对文本做 XML 转义，并**保留**已有 `&lt;` / `&gt;` / `&amp;` / `&#…;`（防双重转义）。
+
+#### 标准写法（按优先级）
+
+| 场景 | 推荐写法 | 说明 |
+|------|----------|------|
+| 闭区间 `[a,b]` + 任意 Provider | **`columnBetween(quote("col"), "#{from}", "#{to}")`** 或手写 `BETWEEN #{from} AND #{to}` | **首选**；无 `<`，与 LangDriver 无关也安全 |
+| 开/半开区间、单边比较 + **无** `@Lang(SelectInLangDriver)` | 裸写 `col < #{x}` / `col >= #{x}` | 普通 Provider 走 RawSqlSource，不包 `<script>` |
+| 同上 + **有** `@Lang(SelectInLangDriver)` | 仍可裸写 `<=` / `<`（由驱动转义） | 依赖 autumn-lib 已含转义的版本 |
+| 历史存量 | 已写 `&lt;=` 可保留 | 驱动不二次转义；**新代码不要手写实体** |
+
+#### 禁止 / 易错
+
+| 反模式 | 后果 |
+|--------|------|
+| `@Lang(SelectInLangDriver)` + 裸 `<=`，却跑**未转义**的旧 autumn-lib | 启动/运行期 SAXParseException（本次 dimina 月活汇总即此） |
+| 新代码手写 `&lt;=`「自己转义」又叠未识别实体的二次 `&amp;lt;=`（旧自定义转义） | SQL 变成字面量 `&lt;=` |
+| 闭区间拆成 `>=` + `<=` 却忘记加 `@Lang` 仅对 IN 生效… | IN 不展开；或加了 Lang 后旧驱动炸 XML |
+| 把比较符写进注解 `@Select("… <= …")` | 违反 Provider 强制；且注解 SQL 同样可能走 XML |
+
+#### 检查清单（Agent / 评审）
+
+- [ ] 方法是否 `@Lang(SelectInLangDriver)`？若是，闭区间是否优先 `columnBetween` / `BETWEEN`？
+- [ ] 是否同时出现 `IN (#{…})` 与 `<=` / `<` / `<>`？部署的 autumn-lib 是否已含 SelectInLangDriver 转义？
+- [ ] 新代码是否避免手写 `&lt;=`？
+- [ ] 无 Lang 的 Provider 仍可用裸比较符，勿无故改成实体编码。
+
+#### 示例
+
+```java
+// ✅ 闭区间标准（推荐，尤其带 SelectInLangDriver）
+return "SELECT … FROM " + tbl()
+    + " WHERE " + quote("app_uuid") + " IN (#{appUuids})"
+    + " AND " + columnBetween(quote("stat_day"), "#{dayFrom}", "#{dayTo}");
+
+// ✅ 单边（有 Lang 时依赖驱动转义；无 Lang 时天然安全）
+return "DELETE FROM " + tbl() + " WHERE " + quote("stat_day") + " < #{statDay}";
+
+// ❌ 旧雷区：有 Lang + 裸 <= 且框架未转义
+// + " AND " + quote("stat_day") + " >= #{dayFrom}"
+// + " AND " + quote("stat_day") + " <= #{dayTo}"
+```
+
 ---
 
 ## 4. EntityWrapper / Condition 使用规范（跨库安全）

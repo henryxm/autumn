@@ -667,6 +667,7 @@ autumn.table.index:
 | `select` 表名与实体表名不一致 | 合并对不上表，查询侧索引静默不生效 |
 | 用 `IndexedSelect` 拼 JOIN/UNION/投影/聚合 | 超出 §1.8；应字符串 Provider |
 | `.in` 无 `@Lang(SelectInLangDriver)` | IN 集合不展开，查询失败 |
+| `@Lang(SelectInLangDriver)` + SQL 含裸 `<=`/`<>`（旧驱动未转义） | `SAXParseException` 破 `<script>`；现驱动已转义且保留 `&lt;`；闭区间标准见 **`AI_DATABASE` §3.1** / `columnBetween` |
 | 把 `.expression` 当 WHERE | SQL 无过滤条件 |
 | `rawWhere` 无括号 OR / 拼运行时字面量 | 非法 SQL 或 memo 膨胀 |
 
