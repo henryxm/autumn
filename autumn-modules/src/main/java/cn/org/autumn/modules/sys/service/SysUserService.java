@@ -36,6 +36,7 @@ import cn.org.autumn.handler.MessageHandler;
 import cn.org.autumn.service.RedisListenerService;
 import cn.org.autumn.site.AccountFactory;
 import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.utils.Input;
 import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -669,6 +670,8 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         if (display != null) {
             display.setCreateTime(src.getCreateTime());
             display.setUpdateTime(src.getUpdateTime());
+            // 历史昵称出站归一化（不写回库）
+            display.setNickname(Input.nick(display.getNickname()));
         }
         return display;
     }
