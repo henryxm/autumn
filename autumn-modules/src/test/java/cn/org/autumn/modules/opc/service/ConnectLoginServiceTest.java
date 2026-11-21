@@ -48,7 +48,7 @@ public class ConnectLoginServiceTest {
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         app = new ConnectAppEntity();
         app.setUuid("ca1");
         app.setAppId("app_test");

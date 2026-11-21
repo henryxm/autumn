@@ -7,8 +7,8 @@ import cn.org.autumn.service.DistributedLockService;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.time.Duration;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RBucket;
@@ -62,7 +62,7 @@ public final class JobSequential {
         int current;
         if (StringUtils.isBlank(token)) {
             current = 0;
-            bucket.set("0", TOKEN_TTL_SECONDS, TimeUnit.SECONDS);
+            bucket.set("0", Duration.ofSeconds(TOKEN_TTL_SECONDS));
         } else {
             try {
                 current = Integer.parseInt(token.trim());
@@ -71,7 +71,7 @@ public final class JobSequential {
             }
             if (current < 0 || current >= members.size()) {
                 current = 0;
-                bucket.set("0", TOKEN_TTL_SECONDS, TimeUnit.SECONDS);
+                bucket.set("0", Duration.ofSeconds(TOKEN_TTL_SECONDS));
             }
         }
         // 令牌指向的成员已不在 online 列表时不会出现（下标已夹紧）；仅本机轮次执行
@@ -84,7 +84,7 @@ public final class JobSequential {
         Callable<Void> body = () -> {
             action.run();
             int next = (index + 1) % members.size();
-            bucket.set(String.valueOf(next), TOKEN_TTL_SECONDS, TimeUnit.SECONDS);
+            bucket.set(String.valueOf(next), Duration.ofSeconds(TOKEN_TTL_SECONDS));
             return null;
         };
         if (locks == null || !locks.isClusterMutexAvailable()) {

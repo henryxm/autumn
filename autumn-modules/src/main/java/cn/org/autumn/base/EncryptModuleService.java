@@ -164,14 +164,19 @@ public abstract class EncryptModuleService<M extends BaseMapper<T>, T> extends M
         if (entities == null) {
             return;
         }
-        encrypt.onWrite(entities instanceof List ? (List<T>) entities : new ArrayList<>(entities));
+        encrypt.onWrite(asList(entities));
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<T> asList(Collection<T> entities) {
+        return entities instanceof List ? (List<T>) entities : new ArrayList<>(entities);
     }
 
     private List<T> restoreAfterWrite(Collection<T> entities) {
         if (entities == null) {
             return Collections.emptyList();
         }
-        return restoreAfterWrite(entities instanceof List ? (List<T>) entities : new ArrayList<>(entities));
+        return restoreAfterWrite(asList(entities));
     }
 
     /**
@@ -215,6 +220,7 @@ public abstract class EncryptModuleService<M extends BaseMapper<T>, T> extends M
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void mirrorEncryptCache(String naming, Object cacheKey, Object loaded) {
         Class<?> clazz = getModelClass();
         if (clazz == null || cacheKey == null || loaded == null) {

@@ -44,7 +44,7 @@ public class ConnectBindServiceTest {
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         connectBindService = new ConnectBindService();
         ReflectionTestUtils.setField(connectBindService, "baseMapper", connectBindDao);
         ReflectionTestUtils.setField(connectBindService, "sysUserService", sysUserService);

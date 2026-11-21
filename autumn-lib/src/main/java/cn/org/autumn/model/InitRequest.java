@@ -29,7 +29,7 @@ public class InitRequest implements Serializable {
      * 客户端公钥（Base64编码，支持PEM格式）
      */
     @NotBlank(message = "客户端公钥不能为空")
-    @Schema(name = "publicKey", description = "客户端公钥（Base64编码，支持PEM格式）", required = true, example = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC...")
+    @Schema(name = "publicKey", description = "客户端公钥（Base64编码，支持PEM格式）", requiredMode = Schema.RequiredMode.REQUIRED, example = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC...")
     private String publicKey;
 
     /**
@@ -37,6 +37,6 @@ public class InitRequest implements Serializable {
      * 客户端可以自定义过期时间，如果不提供则由后端控制
      * 如果提供，必须大于当前时间，且不能超过最大有效期（默认7天）
      */
-    @Schema(name = "expireTime", description = "客户端公钥过期时间戳（毫秒），可选，如果不提供则由后端控制", required = false, example = "1704672000000")
+    @Schema(name = "expireTime", description = "客户端公钥过期时间戳（毫秒），可选，如果不提供则由后端控制", requiredMode = Schema.RequiredMode.NOT_REQUIRED, example = "1704672000000")
     private Long expireTime;
 }

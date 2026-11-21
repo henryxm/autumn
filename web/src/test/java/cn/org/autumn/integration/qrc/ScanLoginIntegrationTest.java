@@ -62,7 +62,7 @@ public class ScanLoginIntegrationTest extends IntegrationTest {
         scanTicketService.scan(ticket.getUuid(), scanner);
 
         ResponseEntity<String> response = restTemplate.getForEntity("http://127.0.0.1:" + port + "/qrc/scanticket/web/ticket/status?uuid=" + ticket.getUuid(), String.class);
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(200, response.getStatusCode().value());
         Response<TicketStatusResult> parsed = gson.fromJson(response.getBody(), STATUS_RESULT);
         assertNotNull(parsed);
         assertEquals(0, parsed.getCode());
@@ -141,7 +141,7 @@ public class ScanLoginIntegrationTest extends IntegrationTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
         ResponseEntity<String> response = restTemplate.exchange("http://127.0.0.1:" + port + "/qrc/scanticket/web/ticket/create", HttpMethod.POST, entity, String.class);
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(200, response.getStatusCode().value());
         Response<TicketCreateResult> parsed = gson.fromJson(response.getBody(), CREATE_RESULT);
         assertNotNull(parsed);
         assertEquals(0, parsed.getCode());
@@ -168,7 +168,7 @@ public class ScanLoginIntegrationTest extends IntegrationTest {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         ResponseEntity<String> createResp = restTemplate.exchange(baseUrl + "/qrc/api/v1/ticket/open/create", HttpMethod.POST, new HttpEntity<>(openBody, headers), String.class);
-        assertEquals(200, createResp.getStatusCodeValue());
+        assertEquals(200, createResp.getStatusCode().value());
         Response<TicketCreateResult> created = gson.fromJson(createResp.getBody(), CREATE_RESULT);
         assertNotNull(created);
         assertEquals(0, created.getCode());
@@ -187,7 +187,7 @@ public class ScanLoginIntegrationTest extends IntegrationTest {
         statusData.put("clientSecret", "it-secret");
         statusBody.put("data", statusData);
         ResponseEntity<String> statusResp = restTemplate.exchange(baseUrl + "/qrc/api/v1/ticket/open/status", HttpMethod.POST, new HttpEntity<>(statusBody, headers), String.class);
-        assertEquals(200, statusResp.getStatusCodeValue());
+        assertEquals(200, statusResp.getStatusCode().value());
         Response<TicketStatusResult> status = gson.fromJson(statusResp.getBody(), STATUS_RESULT);
         assertNotNull(status);
         assertEquals(0, status.getCode());

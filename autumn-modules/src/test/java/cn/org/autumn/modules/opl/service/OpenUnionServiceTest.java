@@ -13,6 +13,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.util.concurrent.Callable;
 
+@SuppressWarnings("unchecked")
 public class OpenUnionServiceTest {
 
     @InjectMocks
@@ -29,7 +30,7 @@ public class OpenUnionServiceTest {
 
     @Before
     public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         ReflectionTestUtils.setField(openUnionService, "baseMapper", openUnionDao);
         Mockito.when(distributedLockService.withLockUnchecked(Mockito.any(String.class), Mockito.any(Callable.class)))
                 .thenAnswer(invocation -> {

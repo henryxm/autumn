@@ -37,7 +37,7 @@ public class RpQrcStatusIntegrationTest extends IntegrationTest {
         ResponseEntity<String> resp = restTemplate.getForEntity(
                 "http://127.0.0.1:" + port + "/client/oauth2/qrc/web/ticket/status?uuid=" + uuid,
                 String.class);
-        assertEquals(200, resp.getStatusCodeValue());
+        assertEquals(200, resp.getStatusCode().value());
         JSONObject body = JSON.parseObject(resp.getBody());
         assertNotNull(body);
         assertEquals(0, body.getIntValue("code"));

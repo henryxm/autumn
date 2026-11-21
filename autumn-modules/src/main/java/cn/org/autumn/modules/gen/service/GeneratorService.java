@@ -52,7 +52,7 @@ public class GeneratorService implements InitFactory.Init {
 
     public PageUtils queryPage(Map<String, Object> params) {
         Page<TableMeta> page = new Page<>();
-        Query query = new Query(params);
+        Query<?> query = new Query<>(params);
         page.setRecords(queryList(query));
         page.setTotal(relationalTableOperations.getTableCount());
         page.setCurrent(query.getCurrPage());
@@ -60,7 +60,7 @@ public class GeneratorService implements InitFactory.Init {
         return new PageUtils(page);
     }
 
-    public List<TableMeta> queryList(Query query) {
+    public List<TableMeta> queryList(Query<?> query) {
         String tableName = "";
         int offset = 0;
         int limit = 10;

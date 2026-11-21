@@ -40,7 +40,7 @@ import org.springframework.stereotype.Component;
 public class RedisShiroSessionDAO extends EnterpriseCacheSessionDAO implements LoopJob.TenMinute, DisposableBean {
 
     @Autowired(required = false)
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired(required = false)
     private SysShiroSessionService sysShiroSessionService;

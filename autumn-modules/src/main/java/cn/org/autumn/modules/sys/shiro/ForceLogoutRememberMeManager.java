@@ -16,10 +16,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 @Slf4j
 public class ForceLogoutRememberMeManager extends CookieRememberMeManager {
 
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
     private SysConfigService sysConfigService;
 
-    public void setRedisTemplate(RedisTemplate redisTemplate) {
+    public void setRedisTemplate(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 

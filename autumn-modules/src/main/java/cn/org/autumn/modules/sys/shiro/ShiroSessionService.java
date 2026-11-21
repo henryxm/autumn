@@ -41,7 +41,7 @@ public class ShiroSessionService {
     private static final int MAX_FORCE_LOGOUT_SCAN = 20_000;
 
     @Autowired(required = false)
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
     private SysConfigService sysConfigService;

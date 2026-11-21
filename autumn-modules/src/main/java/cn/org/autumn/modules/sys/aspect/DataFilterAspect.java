@@ -59,8 +59,8 @@ public class DataFilterAspect {
             if (sysUserRoleService.isSystemAdministrator(user)) {
                 return;
             }
-            @SuppressWarnings("rawtypes")
-            Map map = (Map) params;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = (Map<String, Object>) params;
             map.put(Constant.SQL_FILTER, getSQLFilter(user, point));
             return;
         }

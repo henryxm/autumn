@@ -38,7 +38,7 @@ public class LoginRedirectIntegrationTest extends IntegrationTest {
                 HttpMethod.GET,
                 new HttpEntity<>(jsonHeaders),
                 String.class);
-        assertEquals(401, unauthorized.getStatusCodeValue());
+        assertEquals(401, unauthorized.getStatusCode().value());
 
         JSONObject login = postLogin();
         IntegrationJson.assertSuccess(login);
@@ -72,7 +72,7 @@ public class LoginRedirectIntegrationTest extends IntegrationTest {
                 HttpMethod.POST,
                 new HttpEntity<>(form, headers),
                 String.class);
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(200, response.getStatusCode().value());
         return IntegrationJson.parse(response.getBody());
     }
 

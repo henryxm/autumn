@@ -77,7 +77,7 @@ public class RpFederatedLoginIntegrationTest extends IntegrationTest {
         Map<String, Object> createBody = new HashMap<>();
         createBody.put("data", new HashMap<>());
         ResponseEntity<String> createResp = restTemplate.exchange(baseUrl + "/client/oauth2/qrc/web/ticket/create", HttpMethod.POST, new HttpEntity<>(createBody, headers), String.class);
-        assertEquals(200, createResp.getStatusCodeValue());
+        assertEquals(200, createResp.getStatusCode().value());
         Response<TicketCreateResult> created = gson.fromJson(createResp.getBody(), CREATE_RESULT);
         assertNotNull(created);
         assertEquals(0, created.getCode());
@@ -85,7 +85,7 @@ public class RpFederatedLoginIntegrationTest extends IntegrationTest {
         assertEquals(Intent.OAUTH_DEVICE, created.getData().getIntent());
 
         ResponseEntity<String> streamResp = restTemplate.exchange(baseUrl + "/client/oauth2/qrc/web/ticket/stream?uuid=" + created.getData().getUuid(), HttpMethod.GET, new HttpEntity<>(headers), String.class);
-        assertTrue(streamResp.getStatusCode().is2xxSuccessful() || streamResp.getStatusCodeValue() == 200);
+        assertTrue(streamResp.getStatusCode().is2xxSuccessful() || streamResp.getStatusCode().value() == 200);
 
         SysUserEntity scanner = sysUserService.getByUuid(adminUuid);
         scanTicketService.scan(created.getData().getUuid(), scanner);

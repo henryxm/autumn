@@ -1,5 +1,6 @@
 package cn.org.autumn.handler;
 
+import java.util.Objects;
 import cn.org.autumn.config.ApplicationInitializationProgress;
 import cn.org.autumn.model.Error;
 import cn.org.autumn.model.Response;
@@ -105,7 +106,7 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
         if (throwable instanceof TemplateNotFoundException) {
             return true;
         }
-        String message = StringUtils.defaultString(throwable.getMessage(), "");
+        String message = Objects.toString(throwable.getMessage(), "");
         return message.contains("TemplateNotFoundException") || message.contains("Template not found");
     }
 
@@ -170,7 +171,7 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
         if (className.startsWith("freemarker.")) {
             return true;
         }
-        String msg = StringUtils.defaultString(t.getMessage(), "");
+        String msg = Objects.toString(t.getMessage(), "");
         if (msg.contains("freemarker.")) {
             return true;
         }
@@ -183,14 +184,14 @@ public class FreemarkerViewExceptionResolver extends AbstractHandlerExceptionRes
     private void logFreemarkerException(HttpServletRequest request, Exception ex, Throwable freemarkerThrowable) {
         String method = request != null ? request.getMethod() : "-";
         String uri = request != null ? request.getRequestURI() : "-";
-        String query = request != null ? StringUtils.defaultString(request.getQueryString(), "") : "";
-        String accept = request != null ? StringUtils.defaultString(request.getHeader("Accept"), "") : "";
+        String query = request != null ? Objects.toString(request.getQueryString(), "") : "";
+        String accept = request != null ? Objects.toString(request.getHeader("Accept"), "") : "";
         if (freemarkerThrowable instanceof TemplateException) {
             TemplateException te = (TemplateException) freemarkerThrowable;
-            log.error("FreeMarker view render failed, method={}, uri={}{}{}, accept={}, template={}, line={}, column={}, blamedExpression={}, message={}", method, uri, StringUtils.isBlank(query) ? "" : "?", query, accept, StringUtils.defaultString(te.getTemplateSourceName(), "-"), te.getLineNumber(), te.getColumnNumber(), StringUtils.defaultString(te.getBlamedExpressionString(), "-"), StringUtils.defaultString(te.getMessage(), "-"), ex);
+            log.error("FreeMarker view render failed, method={}, uri={}{}{}, accept={}, template={}, line={}, column={}, blamedExpression={}, message={}", method, uri, StringUtils.isBlank(query) ? "" : "?", query, accept, Objects.toString(te.getTemplateSourceName(), "-"), te.getLineNumber(), te.getColumnNumber(), Objects.toString(te.getBlamedExpressionString(), "-"), Objects.toString(te.getMessage(), "-"), ex);
             return;
         }
-        log.error("FreeMarker resource render failed, method={}, uri={}{}{}, accept={}, exceptionType={}, message={}", method, uri, StringUtils.isBlank(query) ? "" : "?", query, accept, freemarkerThrowable.getClass().getName(), StringUtils.defaultString(freemarkerThrowable.getMessage(), "-"), ex);
+        log.error("FreeMarker resource render failed, method={}, uri={}{}{}, accept={}, exceptionType={}, message={}", method, uri, StringUtils.isBlank(query) ? "" : "?", query, accept, freemarkerThrowable.getClass().getName(), Objects.toString(freemarkerThrowable.getMessage(), "-"), ex);
     }
 
     /**

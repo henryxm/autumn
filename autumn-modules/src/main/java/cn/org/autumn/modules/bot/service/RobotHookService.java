@@ -244,7 +244,7 @@ public class RobotHookService extends ModuleService<RobotHookDao, RobotHookEntit
     }
 
     private String generateHookSecret() {
-        return RandomStringUtils.randomAlphanumeric(32);
+        return RandomStringUtils.secure().nextAlphanumeric(32);
     }
 
     private boolean consume(RobotHookDispatchTask task) {

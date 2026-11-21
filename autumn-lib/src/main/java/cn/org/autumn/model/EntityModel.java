@@ -7,7 +7,7 @@ public interface EntityModel<T> extends Parameterized {
     default T copy() {
         try {
             Class<?> clazz = type(0);
-            T t = (T) clazz.newInstance();
+            T t = (T) clazz.getDeclaredConstructor().newInstance();
             BeanUtils.copyProperties(t, this);
             return t;
         } catch (Throwable e) {

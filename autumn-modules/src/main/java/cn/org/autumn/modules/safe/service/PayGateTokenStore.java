@@ -42,7 +42,7 @@ public class PayGateTokenStore implements LoopJob.OneMinute {
     public String issueGateToken(String userUuid, long amountCent, String orderId, String authMode) {
         PayCredentialConfig config = safeConfig.get();
         int minutes = config.getGateTokenMinutes() > 0 ? config.getGateTokenMinutes() : 5;
-        String token = RandomStringUtils.randomAlphanumeric(32);
+        String token = RandomStringUtils.secure().nextAlphanumeric(32);
         long expireAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(minutes);
         GateEntry entry = new GateEntry(userUuid, amountCent, orderId, authMode, expireAt);
         if (redisOpen && redisTemplate != null) {

@@ -10,7 +10,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RMap;
@@ -302,7 +302,7 @@ public class Registry implements LoadFactory.Must {
             entry.put("beat", System.currentTimeMillis());
             entry.put("profile", p);
             map.put(p.getUuid(), entry.toJSONString());
-            map.expire(MAP_TTL_SECONDS, TimeUnit.SECONDS);
+            map.expire(Duration.ofSeconds(MAP_TTL_SECONDS));
             subscribeCmd();
         } catch (Exception e) {
             log.debug("registry beat failed: {}", e.toString());

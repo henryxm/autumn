@@ -1,5 +1,6 @@
 package cn.org.autumn.view;
 
+import java.util.Objects;
 import cn.org.autumn.config.ViewHandler;
 import cn.org.autumn.install.InstallMode;
 import cn.org.autumn.site.ViewFactory;
@@ -168,7 +169,7 @@ public class ViewTemplateSupport {
                 return name;
             }
         }
-        String suffix = StringUtils.defaultString(viewSuffix, ".html");
+        String suffix = Objects.toString(viewSuffix, ".html");
         if (StringUtils.isNotBlank(suffix) && !name.endsWith(suffix)) {
             return name + suffix;
         }
@@ -216,7 +217,7 @@ public class ViewTemplateSupport {
             return false;
         }
         String normalized = templatePath.startsWith("/") ? templatePath.substring(1) : templatePath;
-        String suffix = StringUtils.defaultString(viewSuffix, ".html");
+        String suffix = Objects.toString(viewSuffix, ".html");
         LinkedHashSet<String> paths = new LinkedHashSet<>();
         paths.add(normalized);
         if (StringUtils.isNotBlank(suffix) && !normalized.endsWith(suffix)) {

@@ -79,7 +79,7 @@ public class WebOauthLoginServiceTest {
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         webAuth = new WebAuthenticationEntity();
         webAuth.setUuid("wa1");
         webAuth.setClientId("test");

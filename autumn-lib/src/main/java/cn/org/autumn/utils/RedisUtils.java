@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class RedisUtils {
     @Autowired(required = false)
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
     /**
      * 默认过期时长，单位：秒
      */

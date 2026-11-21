@@ -1,6 +1,6 @@
 package cn.org.autumn.auth.model;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.io.Serializable;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,23 +13,23 @@ import lombok.Setter;
 public class AuthRealNameInfo implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String name;
 
     private Integer age;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String gender;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String birthday;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String address;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String idNumber;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String ethnicity;
 }

@@ -79,7 +79,7 @@ public class ShiroConfig {
     @Bean
     @DependsOn("fieldEncryptRuntimeService")
     public RememberMeManager rememberMeManager(SimpleCookie rememberMeCookie,
-                                               @Autowired(required = false) RedisTemplate redisTemplate,
+                                               @Autowired(required = false) RedisTemplate<String, Object> redisTemplate,
                                                @Autowired(required = false) StringRedisTemplate stringRedisTemplate,
                                                @Autowired(required = false) ProfileStore profileStore,
                                                Environment environment,

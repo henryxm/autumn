@@ -34,6 +34,7 @@ public class RedisServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void testGetKeys() {
         System.out.println("=== 测试获取键列表 ===");
         Map<String, Object> keysData = redisService.getKeys(0, "*", 1, 10);

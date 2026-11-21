@@ -32,7 +32,7 @@ public class OpenIdentityServiceTest {
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         ReflectionTestUtils.setField(openIdentityService, "baseMapper", openIdentityDao);
         Mockito.when(oplExtensionService.resolveOpenId(Mockito.any(), Mockito.anyString(), Mockito.anyString())).thenAnswer(invocation -> invocation.getArguments()[2]);
     }

@@ -191,6 +191,7 @@ public class ClassTools{
 	 * @param fieldName
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	public static <T, E> List<E> getPropertyValueList(List<T> objList, String fieldName){
 		List<E> list = new ArrayList<E>();
 		try{

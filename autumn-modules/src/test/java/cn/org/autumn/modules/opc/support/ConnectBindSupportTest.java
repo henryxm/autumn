@@ -21,7 +21,7 @@ public class ConnectBindSupportTest {
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         connectBindSupport = new ConnectBindSupport();
         ReflectionTestUtils.setField(connectBindSupport, "openPlatformService", openPlatformService);
     }

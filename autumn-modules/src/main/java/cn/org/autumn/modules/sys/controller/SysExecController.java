@@ -602,7 +602,7 @@ public class SysExecController {
         } else {
             // 尝试使用默认构造函数创建
             try {
-                return (Collection<Object>) collectionType.newInstance();
+                return (Collection<Object>) collectionType.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
                 // 如果失败，返回ArrayList作为默认值
                 return new ArrayList<>();

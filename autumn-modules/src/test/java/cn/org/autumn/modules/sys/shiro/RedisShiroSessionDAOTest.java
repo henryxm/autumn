@@ -39,13 +39,14 @@ import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.apache.shiro.subject.support.DefaultSubjectContext;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class RedisShiroSessionDAOTest {
 
     @Mock
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Mock
-    private ValueOperations valueOperations;
+    private ValueOperations<String, Object> valueOperations;
 
     @Mock
     private SysShiroSessionService sysShiroSessionService;

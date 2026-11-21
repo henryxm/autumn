@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import cn.org.autumn.modules.client.model.ScanLoginCredentialContext;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class AuthLoginProviderServiceTest {
 
     @Mock

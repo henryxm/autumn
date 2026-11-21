@@ -58,7 +58,7 @@ public class RobotTokenService extends ModuleService<RobotTokenDao, RobotTokenEn
     }
 
     public String generatePlainToken() {
-        return TOKEN_PREFIX + RandomStringUtils.randomAlphanumeric(40);
+        return TOKEN_PREFIX + RandomStringUtils.secure().nextAlphanumeric(40);
     }
 
     public String tokenPrefixOf(String plainToken) {

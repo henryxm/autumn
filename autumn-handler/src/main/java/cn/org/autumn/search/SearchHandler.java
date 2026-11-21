@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 public interface SearchHandler {
     List<IType> types();
 
+    @SuppressWarnings("unchecked")
     default Object search(Object value) {
         if (value instanceof IPage) {
             try {

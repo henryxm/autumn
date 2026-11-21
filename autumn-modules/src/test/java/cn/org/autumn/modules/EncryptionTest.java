@@ -42,6 +42,7 @@ public class EncryptionTest {
     private final Map<String, Object> memoryCache = new ConcurrentHashMap<>();
 
     @Before
+    @SuppressWarnings("unchecked")
     public void setUp() {
         memoryCache.clear();
         CacheService cacheService = mock(CacheService.class);

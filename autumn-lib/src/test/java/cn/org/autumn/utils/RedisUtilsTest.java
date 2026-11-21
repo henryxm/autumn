@@ -24,14 +24,14 @@ import static org.mockito.Mockito.when;
 class RedisUtilsTest {
 
     private RedisUtils redisUtils;
-    private RedisTemplate redisTemplate;
-    private ValueOperations valueOperations;
+    private RedisTemplate<String, Object> redisTemplate;
+    private ValueOperations<String, Object> valueOperations;
     private RedisConnectionFactory connectionFactory;
     private RedisConnection connection;
     private RedisStringCommands stringCommands;
 
     @BeforeEach
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings("unchecked")
     void setUp() {
         redisUtils = new RedisUtils();
         redisTemplate = mock(RedisTemplate.class);

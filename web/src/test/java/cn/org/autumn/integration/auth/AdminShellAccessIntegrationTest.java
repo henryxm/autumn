@@ -35,7 +35,7 @@ public class AdminShellAccessIntegrationTest extends IntegrationTest {
     void adminCanOpenIndexShell() {
         loginAs(sysUserService.getAdmin(), "admin");
         ResponseEntity<String> response = restTemplate.getForEntity(baseUrl() + "/index.html", String.class);
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(200, response.getStatusCode().value());
         String body = response.getBody() == null ? "" : response.getBody();
         assertFalse(body.contains("404") && body.length() < 500, "管理员不应落到短 404 页");
     }
@@ -49,10 +49,10 @@ public class AdminShellAccessIntegrationTest extends IntegrationTest {
         loginAs(username, password);
 
         ResponseEntity<String> index = restTemplate.getForEntity(baseUrl() + "/index.html", String.class);
-        assertEquals(404, index.getStatusCodeValue());
+        assertEquals(404, index.getStatusCode().value());
 
         ResponseEntity<String> main = restTemplate.getForEntity(baseUrl() + "/main.html", String.class);
-        assertEquals(404, main.getStatusCodeValue());
+        assertEquals(404, main.getStatusCode().value());
     }
 
     private void loginAs(String username, String password) {
@@ -67,7 +67,7 @@ public class AdminShellAccessIntegrationTest extends IntegrationTest {
                 HttpMethod.POST,
                 new HttpEntity<>(form, headers),
                 String.class);
-        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(200, response.getStatusCode().value());
         JSONObject login = IntegrationJson.parse(response.getBody());
         IntegrationJson.assertSuccess(login);
         assertTrue(login.getString("data") != null && !login.getString("data").isBlank());

@@ -268,6 +268,7 @@ public class LanguageService extends LanguageServiceGen implements LoadFactory.L
         return languageEntity;
     }
 
+    @SuppressWarnings("unchecked")
     private Map<String, LanguageEntity> merge(Object... objects) {
         Map<String, LanguageEntity> map = new LinkedHashMap<>();
         for (Object o : objects) {

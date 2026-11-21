@@ -11,6 +11,6 @@ import lombok.Setter;
 public class RobotUuidRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @Schema(name = "标识", description = "机器人业务uuid", required = true)
+    @Schema(name = "标识", description = "机器人业务uuid", requiredMode = Schema.RequiredMode.REQUIRED)
     private String uuid;
 }

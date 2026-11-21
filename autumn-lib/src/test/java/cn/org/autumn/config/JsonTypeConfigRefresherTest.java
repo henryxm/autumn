@@ -72,7 +72,7 @@ class JsonTypeConfigRefresherTest {
     @MethodSource("libJsonConfigClasses")
     void mergeMissingFields_fromEmptyObject(String className) throws Exception {
         Class<?> clazz = Class.forName(className);
-        JsonObject defaults = JsonTypeConfigRefresher.buildDefaultConfigJson(clazz, clazz.newInstance(), JsonTypeConfigRefresher.refreshGson());
+        JsonObject defaults = JsonTypeConfigRefresher.buildDefaultConfigJson(clazz, clazz.getDeclaredConstructor().newInstance(), JsonTypeConfigRefresher.refreshGson());
         JsonTypeConfigRefresher.MergeResult result = JsonTypeConfigRefresher.mergeMissingFields(className, "{}");
         JsonObject merged = JsonParser.parseString(result.getJson()).getAsJsonObject();
         for (Map.Entry<String, JsonElement> entry : defaults.entrySet()) {

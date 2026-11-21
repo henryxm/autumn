@@ -1,7 +1,8 @@
 package cn.org.autumn.modules.oss.cloud;
 
 import cn.org.autumn.exception.AException;
-import com.aliyun.oss.OSSClient;
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.CannedAccessControlList;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.aliyun.oss.model.SetBucketAclRequest;
@@ -10,7 +11,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 public class AliyunCloudStorageService extends CloudStorageService {
-    private OSSClient client;
+    private OSS client;
 
     public AliyunCloudStorageService(CloudStorageConfig config) {
         this.config = config;
@@ -20,7 +21,7 @@ public class AliyunCloudStorageService extends CloudStorageService {
     }
 
     private void init() {
-        client = new OSSClient(config.getAliyunEndPoint(), config.getAliyunAccessKeyId(),
+        client = new OSSClientBuilder().build(config.getAliyunEndPoint(), config.getAliyunAccessKeyId(),
                 config.getAliyunAccessKeySecret());
     }
 

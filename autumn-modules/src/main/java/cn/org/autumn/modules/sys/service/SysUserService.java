@@ -322,7 +322,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         String password = user.getPassword();
         user.setCreateTime(new Date());
         // PBKDF2 新哈希；保留 salt 列兼容遗留与其它场景
-        String salt = RandomStringUtils.randomAlphanumeric(20);
+        String salt = RandomStringUtils.secure().nextAlphanumeric(20);
         user.setSalt(salt);
         user.setPassword(ShiroUtils.hashPassword(password));
         if (StringUtils.isEmpty(user.getUuid()))
@@ -424,7 +424,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         String previousSalt = userEntity.getSalt();
         assertPasswordReusePolicy(userUuid, newPassword, previousHash, previousSalt);
         accountFactory.changing(userEntity);
-        String salt = RandomStringUtils.randomAlphanumeric(20);
+        String salt = RandomStringUtils.secure().nextAlphanumeric(20);
         userEntity.setSalt(salt);
         userEntity.setPassword(ShiroUtils.hashPassword(newPassword));
         boolean result = saveOrUpdate(userEntity);
@@ -451,7 +451,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         // 忘记密码等同自助路径，受 passwordReuseAllowed 约束；管理端 ADMIN_SET 不走此方法
         assertPasswordReusePolicy(userUuid, newPassword, previousHash, previousSalt);
         accountFactory.changing(userEntity);
-        String salt = RandomStringUtils.randomAlphanumeric(20);
+        String salt = RandomStringUtils.secure().nextAlphanumeric(20);
         userEntity.setSalt(salt);
         userEntity.setPassword(ShiroUtils.hashPassword(newPassword));
         boolean result = saveOrUpdate(userEntity);

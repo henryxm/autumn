@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.filter.DelegatingFilterProxy;
 
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.Filter;
 
 @Configuration
 public class FilterConfig {
@@ -17,8 +18,8 @@ public class FilterConfig {
     private HostSessionCookieFilter hostSessionCookieFilter;
 
     @Bean
-    public FilterRegistrationBean hostSessionCookieFilterRegistration() {
-        FilterRegistrationBean registration = new FilterRegistrationBean();
+    public FilterRegistrationBean<HostSessionCookieFilter> hostSessionCookieFilterRegistration() {
+        FilterRegistrationBean<HostSessionCookieFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(hostSessionCookieFilter);
         registration.addUrlPatterns("/*");
         registration.setName("hostSessionCookieFilter");
@@ -28,8 +29,8 @@ public class FilterConfig {
     }
 
     @Bean
-    public FilterRegistrationBean shiroFilterRegistration() {
-        FilterRegistrationBean registration = new FilterRegistrationBean();
+    public FilterRegistrationBean<Filter> shiroFilterRegistration() {
+        FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new DelegatingFilterProxy("shiroFilter"));
         //该值缺省为false，表示生命周期由SpringApplicationContext管理，设置为true则表示由ServletContainer管理
         registration.addInitParameter("targetFilterLifecycle", "true");
@@ -41,8 +42,8 @@ public class FilterConfig {
     }
 
     @Bean
-    public FilterRegistrationBean xssFilterRegistration() {
-        FilterRegistrationBean registration = new FilterRegistrationBean();
+    public FilterRegistrationBean<XssFilter> xssFilterRegistration() {
+        FilterRegistrationBean<XssFilter> registration = new FilterRegistrationBean<>();
         registration.setDispatcherTypes(DispatcherType.REQUEST);
         registration.setFilter(new XssFilter());
         registration.addUrlPatterns("/*");

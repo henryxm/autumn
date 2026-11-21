@@ -306,6 +306,7 @@ public class LogFileService {
         }
     }
 
+    @SuppressWarnings("unchecked")
     File resolveActiveFileFromLogback() {
         try {
             LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();

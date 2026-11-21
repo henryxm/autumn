@@ -64,7 +64,7 @@ public class OpenApiServerScanLoginIntegrationTest extends IntegrationTest {
         openBody.put("data", data);
 
         ResponseEntity<String> createResp = restTemplate.exchange(baseUrl + "/qrc/api/v1/ticket/open/create", HttpMethod.POST, new HttpEntity<>(openBody, headers), String.class);
-        assertEquals(200, createResp.getStatusCodeValue());
+        assertEquals(200, createResp.getStatusCode().value());
         Response<TicketCreateResult> created = gson.fromJson(createResp.getBody(), CREATE_RESULT);
         assertNotNull(created);
         assertEquals(0, created.getCode());
@@ -85,7 +85,7 @@ public class OpenApiServerScanLoginIntegrationTest extends IntegrationTest {
         statusBody.put("data", statusData);
 
         ResponseEntity<String> statusResp = restTemplate.exchange(baseUrl + "/qrc/api/v1/ticket/open/status", HttpMethod.POST, new HttpEntity<>(statusBody, headers), String.class);
-        assertEquals(200, statusResp.getStatusCodeValue());
+        assertEquals(200, statusResp.getStatusCode().value());
         Response<TicketStatusResult> status = gson.fromJson(statusResp.getBody(), STATUS_RESULT);
         assertNotNull(status);
         assertEquals(0, status.getCode());
@@ -121,7 +121,7 @@ public class OpenApiServerScanLoginIntegrationTest extends IntegrationTest {
         cancelBody.put("data", cancelData);
 
         ResponseEntity<String> cancelResp = restTemplate.exchange(baseUrl + "/qrc/api/v1/ticket/open/cancel", HttpMethod.POST, new HttpEntity<>(cancelBody, headers), String.class);
-        assertEquals(200, cancelResp.getStatusCodeValue());
+        assertEquals(200, cancelResp.getStatusCode().value());
         Response<TicketStatusResult> cancelled = gson.fromJson(cancelResp.getBody(), STATUS_RESULT);
         assertEquals(0, cancelled.getCode());
         assertEquals(TicketStatus.CANCELLED, cancelled.getData().getStatus());

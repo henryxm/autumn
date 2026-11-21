@@ -40,6 +40,7 @@ public class SysMenuController extends SysAbstractController {
     @Lazy
     SuperPositionModelService superPositionModelService;
 
+    @SuppressWarnings("unchecked")
     public void r(SysMenuEntity sysMenuEntity, Map<String, String> language, Map<String, SuperPositionModelEntity> spms) {
         if (StringUtils.isNotEmpty(sysMenuEntity.getLanguageName()) && language.containsKey(sysMenuEntity.getLanguageName())) {
             sysMenuEntity.setName(language.get(sysMenuEntity.getLanguageName()));

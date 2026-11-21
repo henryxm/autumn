@@ -92,7 +92,7 @@ public class RpOpenFederationIntegrationTest extends IntegrationTest {
         createBody.put("data", data);
 
         ResponseEntity<String> createResp = restTemplate.exchange(baseUrl + "/client/oauth2/qrc/web/ticket/create", HttpMethod.POST, new HttpEntity<>(createBody, headers), String.class);
-        assertEquals(200, createResp.getStatusCodeValue());
+        assertEquals(200, createResp.getStatusCode().value());
         Response<TicketCreateResult> created = gson.fromJson(createResp.getBody(), CREATE_RESULT);
         assertNotNull(created);
         assertEquals(0, created.getCode());
@@ -133,7 +133,7 @@ public class RpOpenFederationIntegrationTest extends IntegrationTest {
         createBody.put("data", createData);
 
         ResponseEntity<String> createResp = restTemplate.exchange(baseUrl + "/qrc/scanticket/web/ticket/create", HttpMethod.POST, new HttpEntity<>(createBody, headers), String.class);
-        assertEquals(200, createResp.getStatusCodeValue());
+        assertEquals(200, createResp.getStatusCode().value());
         Response<TicketCreateResult> created = gson.fromJson(createResp.getBody(), CREATE_RESULT);
         assertNotNull(created);
         assertEquals(0, created.getCode());

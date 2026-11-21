@@ -41,7 +41,7 @@ public class PayCredentialTokenStore implements LoopJob.OneMinute {
     public String issueVerifyToken(String userUuid, String method, long amountCent, String orderId) {
         PayCredentialConfig config = safeConfig.get();
         int minutes = config.getVerifyTokenMinutes() > 0 ? config.getVerifyTokenMinutes() : 5;
-        String token = RandomStringUtils.randomAlphanumeric(32);
+        String token = RandomStringUtils.secure().nextAlphanumeric(32);
         long expireAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(minutes);
         VerifyEntry entry = new VerifyEntry(userUuid, method, amountCent, orderId == null ? "" : orderId, expireAt);
         if (redisOpen && redisTemplate != null) {
@@ -77,7 +77,7 @@ public class PayCredentialTokenStore implements LoopJob.OneMinute {
     public String issueChallenge(String userUuid, String deviceId) {
         PayCredentialConfig config = safeConfig.get();
         int minutes = config.getChallengeMinutes() > 0 ? config.getChallengeMinutes() : 5;
-        String challenge = RandomStringUtils.randomAlphanumeric(32);
+        String challenge = RandomStringUtils.secure().nextAlphanumeric(32);
         String composite = userUuid + ":" + deviceId;
         long expireAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(minutes);
         if (redisOpen && redisTemplate != null) {

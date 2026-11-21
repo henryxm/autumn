@@ -53,7 +53,7 @@ public class AsQrcSseIntegrationTest extends IntegrationTest {
         ResponseEntity<String> statusResp = restTemplate.getForEntity(
                 "http://127.0.0.1:" + port + "/qrc/scanticket/web/ticket/status?uuid=" + ticket.getUuid(),
                 String.class);
-        assertEquals(200, statusResp.getStatusCodeValue());
+        assertEquals(200, statusResp.getStatusCode().value());
         JSONObject body = JSON.parseObject(statusResp.getBody());
         assertEquals(0, body.getIntValue("code"));
         JSONObject data = body.getJSONObject("data");
@@ -80,6 +80,6 @@ public class AsQrcSseIntegrationTest extends IntegrationTest {
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class);
-        assertTrue(streamResp.getStatusCode().is2xxSuccessful() || streamResp.getStatusCodeValue() == 200);
+        assertTrue(streamResp.getStatusCode().is2xxSuccessful() || streamResp.getStatusCode().value() == 200);
     }
 }

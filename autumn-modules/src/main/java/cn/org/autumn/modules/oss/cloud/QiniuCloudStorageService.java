@@ -21,6 +21,11 @@ public class QiniuCloudStorageService extends CloudStorageService {
         init();
     }
 
+    /**
+     * 钉死 qiniu-java-sdk 7.2.29：继续走 {@link Zone#autoZone()}，与历史机房探测路径一致
+     *（{@link com.qiniu.storage.Region#autoRegion()} 虽可用，但是 AutoRegion 新实例而非 AutoZone 单例）。
+     */
+    @SuppressWarnings("deprecation")
     private void init() {
         uploadManager = new UploadManager(new Configuration(Zone.autoZone()));
         token = Auth.create(config.getQiniuAccessKey(), config.getQiniuSecretKey()).

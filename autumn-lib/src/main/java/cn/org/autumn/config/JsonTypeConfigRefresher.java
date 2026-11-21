@@ -31,7 +31,7 @@ public final class JsonTypeConfigRefresher {
 
     public static MergeResult mergeMissingFields(String className, String storedValue) throws Exception {
         Class<?> clazz = Class.forName(className.trim());
-        Object defaultInstance = clazz.newInstance();
+        Object defaultInstance = clazz.getDeclaredConstructor().newInstance();
         Gson gson = refreshGson();
         JsonObject defaultJson = buildDefaultConfigJson(clazz, defaultInstance, gson);
         JsonObject storedJson = StringUtils.isBlank(storedValue) ? new JsonObject() : JsonParser.parseString(storedValue.trim()).getAsJsonObject();
@@ -44,7 +44,7 @@ public final class JsonTypeConfigRefresher {
         Object mergedObject = gson.fromJson(merged, clazz);
         List<String> fixes = applyConfigPostProcess(mergedObject);
         String mergedJson = gson.toJson(mergedObject);
-        String before = StringUtils.defaultString(storedValue, "").trim();
+        String before = Objects.toString(storedValue, "").trim();
         MergeResult outcome = new MergeResult();
         outcome.json = mergedJson;
         outcome.addedFields = addedFields;
@@ -129,7 +129,7 @@ public final class JsonTypeConfigRefresher {
             if (isNestedConfigType(field.getType())) {
                 Object nested = field.get(instance);
                 if (nested == null) {
-                    nested = field.getType().newInstance();
+                    nested = field.getType().getDeclaredConstructor().newInstance();
                 }
                 JsonObject nestedJson;
                 if (json.has(key) && json.get(key).isJsonObject()) {

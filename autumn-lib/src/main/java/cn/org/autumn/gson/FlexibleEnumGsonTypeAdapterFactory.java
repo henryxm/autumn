@@ -58,6 +58,7 @@ public class FlexibleEnumGsonTypeAdapterFactory implements TypeAdapterFactory {
     /**
      * 逻辑与 Jackson 侧 {@code FlexibleEnumDeserializer} / {@code FlexibleEnumJsonSupport} 保持一致，避免加密解密链路行为分叉。
      */
+    @SuppressWarnings({"unchecked", "rawtypes"})
     static Enum<?> readEnum(Class<? extends Enum> ec, JsonElement element) {
         if (element == null || element.isJsonNull()) {
             return null;

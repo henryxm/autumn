@@ -168,11 +168,13 @@ public class EncryptModuleServiceTest {
         Assert.assertEquals("page-plain", fromSelectPage.getRecords().get(0).secret);
     }
 
+    @SuppressWarnings("unchecked")
     private static BaseMapper<EncryptSampleEntity> singleRowMapper(EncryptSampleEntity row) {
         InvocationHandler handler = (proxy, method, args) -> dispatchChainQueryMapper(method, row, args);
         return (BaseMapper<EncryptSampleEntity>) Proxy.newProxyInstance(BaseMapper.class.getClassLoader(), new Class[]{BaseMapper.class}, handler);
     }
 
+    @SuppressWarnings("unchecked")
     private static BaseMapper<PlainEntity> plainRowMapper(PlainEntity row) {
         InvocationHandler handler = (proxy, method, args) -> dispatchChainQueryMapper(method, row, args);
         return (BaseMapper<PlainEntity>) Proxy.newProxyInstance(BaseMapper.class.getClassLoader(), new Class[]{BaseMapper.class}, handler);

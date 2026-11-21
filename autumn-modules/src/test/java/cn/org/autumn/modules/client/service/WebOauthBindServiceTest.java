@@ -50,7 +50,7 @@ public class WebOauthBindServiceTest {
 
     @Before
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
         webOauthBindService = new WebOauthBindService();
         ReflectionTestUtils.setField(webOauthBindService, "baseMapper", webOauthBindDao);
         ReflectionTestUtils.setField(webOauthBindService, "sysUserService", sysUserService);

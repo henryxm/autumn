@@ -28,7 +28,7 @@ public final class PayCredentialSupport {
     }
 
     public static String newSalt() {
-        return RandomStringUtils.randomAlphanumeric(20);
+        return RandomStringUtils.secure().nextAlphanumeric(20);
     }
 
     public static String hashPin(String pin, String salt) {

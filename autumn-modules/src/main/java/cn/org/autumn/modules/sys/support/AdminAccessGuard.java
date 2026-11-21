@@ -693,6 +693,7 @@ public class AdminAccessGuard {
     }
 
     /** @deprecated 使用 {@link #shouldRequireSystemAdminForGen(Class)} */
+    @Deprecated
     public boolean isGenGlobalController(Class<?> type) {
         return shouldRequireSystemAdminForGen(type);
     }

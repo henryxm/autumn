@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.oauth.service;
 
+import java.util.Objects;
 import cn.org.autumn.base.ModuleService;
 import cn.org.autumn.modules.oauth.dao.SecurityRequestDao;
 import cn.org.autumn.modules.oauth.entity.SecurityRequestEntity;
@@ -330,8 +331,8 @@ public class SecurityRequestService extends ModuleService<SecurityRequestDao, Se
         item.put("pass", pass);
         item.put("reason", reason);
         item.put("auth", mask(auth));
-        item.put("method", StringUtils.defaultString(method, "-"));
-        item.put("uri", StringUtils.defaultString(uri, "-"));
+        item.put("method", Objects.toString(method, "-"));
+        item.put("uri", Objects.toString(uri, "-"));
         item.put("userAgent", brief(userAgent));
         item.put("agentHeader", mask(agentHeader));
         item.put("expectedAgent", mask(expectedAgent));

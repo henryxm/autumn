@@ -94,14 +94,16 @@ public class FieldEncryptMigrationService {
         if (batchSize <= 0) {
             batchSize = 200;
         }
+        @SuppressWarnings("rawtypes")
         BaseMapper mapper = resolveMapper(entityClass);
         MigrationResult result = new MigrationResult(entityClassName, dryRun, encrypt ? "migrate" : "restore");
         int offset = 0;
         final int limit = batchSize;
         while (true) {
             final int off = offset;
+            @SuppressWarnings({"rawtypes", "unchecked"})
             List rows = FieldEncryptContext.runSkip(() -> {
-                QueryWrapper<?> qw = new QueryWrapper<>();
+                QueryWrapper qw = new QueryWrapper<>();
                 qw.orderByAsc(WrapperColumns.columnInWrapper("id"));
                 qw.last("LIMIT " + limit + " OFFSET " + off);
                 return mapper.selectList(qw);
@@ -135,6 +137,7 @@ public class FieldEncryptMigrationService {
         }
         Class<?> entityClass = prepareEntityClass(entityClassName);
         assertWriteOrReadReady(encrypt);
+        @SuppressWarnings("rawtypes")
         BaseMapper mapper = resolveMapper(entityClass);
         Serializable pk = parseId(id);
         Object row = FieldEncryptContext.runSkip(() -> mapper.selectById(pk));
@@ -159,6 +162,7 @@ public class FieldEncryptMigrationService {
         return result;
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private void persistRow(BaseMapper mapper, Object row, boolean encrypt) {
         if (encrypt) {
             FieldEncryptContext.runSkip(() -> {

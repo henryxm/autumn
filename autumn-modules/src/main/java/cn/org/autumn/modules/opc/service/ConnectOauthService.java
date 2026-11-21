@@ -88,6 +88,7 @@ public class ConnectOauthService {
     /**
      * @deprecated 远端预取需 token grantedScope，请用 {@link #fetchUserInfoForBind(ConnectAppEntity, String, String)}
      */
+    @Deprecated
     public OpcUserInfoResult fetchUserInfoForBind(ConnectAppEntity app, String accessToken) {
         return fetchUserInfoForBind(app, accessToken, null);
     }

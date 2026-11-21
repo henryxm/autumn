@@ -38,7 +38,7 @@ public final class RobotMessageSupport {
         if (trimmed.getBytes(StandardCharsets.UTF_8).length > MAX_PAYLOAD_BYTES)
             throw new CodeException("业务载荷超过大小限制");
         try {
-            JsonElement element = new JsonParser().parse(trimmed);
+            JsonElement element = JsonParser.parseString(trimmed);
             if (element == null || element.isJsonNull())
                 return null;
             return element.toString();

@@ -26,7 +26,7 @@ public class Response<T> extends DefaultEncrypt implements IResult {
     @Schema(name = "返回数据", title = "响应数据", description = "响应数据")
     private T data;
 
-    @Schema(name = "状态码", title = "响应代码", description = "响应代码", required = true)
+    @Schema(name = "状态码", title = "响应代码", description = "响应代码", requiredMode = Schema.RequiredMode.REQUIRED)
     private int code;
 
     @Schema(name = "反馈信息", title = "错误信息", description = "错误信息:成功时为空或为success")

@@ -2213,7 +2213,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
 
     public <X> X convert(Class<X> clazz, T entity) {
         try {
-            X x = clazz.newInstance();
+            X x = clazz.getDeclaredConstructor().newInstance();
             BeanUtils.copyProperties(x, entity);
             return x;
         } catch (Exception e) {
@@ -2419,7 +2419,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
                 return new ArrayList<>();
             List<X> xList = new ArrayList<>();
             for (T t : list) {
-                X x = clazz.newInstance();
+                X x = clazz.getDeclaredConstructor().newInstance();
                 BeanUtils.copyProperties(x, t);
                 xList.add(x);
             }
@@ -2528,7 +2528,7 @@ public abstract class BaseCacheService<M extends BaseMapper<T>, T> extends BaseQ
     @SuppressWarnings("unchecked")
     private T createEntityWithFields(Class<?> clazz, Map<String, Object> fieldValues) {
         try {
-            T entity = (T) clazz.newInstance();
+            T entity = (T) clazz.getDeclaredConstructor().newInstance();
             for (Map.Entry<String, Object> entry : fieldValues.entrySet()) {
                 Field field = findField(clazz, entry.getKey());
                 if (field != null) {

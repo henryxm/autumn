@@ -14,6 +14,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+@SuppressWarnings("unchecked")
 public class PayGateServiceTest {
 
     private PayGateService payGateService;

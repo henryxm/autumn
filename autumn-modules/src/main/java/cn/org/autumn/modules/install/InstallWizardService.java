@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.install;
 
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.install.InstallRestartCoordinator;
@@ -166,7 +167,7 @@ public class InstallWizardService {
             String cat = conn.getCatalog();
             String sc = conn.getSchema();
             if (StringUtils.isNotBlank(cat) || StringUtils.isNotBlank(sc)) {
-                introLines.add("当前目录/模式：" + StringUtils.defaultString(cat, "—") + " / " + StringUtils.defaultString(sc, "—") + "。");
+                introLines.add("当前目录/模式：" + Objects.toString(cat, "—") + " / " + Objects.toString(sc, "—") + "。");
             }
             introLines.add("共检测到 " + total + " 张数据表。");
             if (truncated) {

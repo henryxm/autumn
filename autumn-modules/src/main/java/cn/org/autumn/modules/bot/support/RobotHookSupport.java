@@ -66,7 +66,7 @@ public final class RobotHookSupport {
         if (StringUtils.isBlank(dataJson))
             return null;
         try {
-            JsonElement element = new JsonParser().parse(dataJson.trim());
+            JsonElement element = JsonParser.parseString(dataJson.trim());
             if (element == null || element.isJsonNull())
                 return null;
             return gson.fromJson(element, Object.class);

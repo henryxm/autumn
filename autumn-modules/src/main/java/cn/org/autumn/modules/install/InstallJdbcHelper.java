@@ -1,5 +1,6 @@
 package cn.org.autumn.modules.install;
 
+import java.util.Objects;
 import cn.org.autumn.database.DatabaseType;
 import cn.org.autumn.modules.install.dto.InstallConnectionForm;
 import org.apache.commons.lang3.StringUtils;
@@ -240,8 +241,8 @@ public final class InstallJdbcHelper {
         H2CompatibilityMode h2Mode = H2CompatibilityMode.fromForm(form);
         ensureModeSupported(type, mode);
 
-        String host = StringUtils.defaultString(form.getHost(), "localhost").trim();
-        String db = StringUtils.defaultString(form.getDatabaseName(), "").trim();
+        String host = Objects.toString(form.getHost(), "localhost").trim();
+        String db = Objects.toString(form.getDatabaseName(), "").trim();
 
         int port = parsePort(form.getPort(), defaultPort(type));
         String driver = StringUtils.isNotBlank(form.getDriverClassName())

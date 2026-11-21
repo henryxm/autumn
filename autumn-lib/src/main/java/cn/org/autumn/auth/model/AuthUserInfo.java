@@ -1,6 +1,6 @@
 package cn.org.autumn.auth.model;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.io.Serializable;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,28 +13,28 @@ import lombok.Setter;
 public class AuthUserInfo implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String uuid;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String openId;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String unionId;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String nickname;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String icon;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String username;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String mobile;
 
-    @JsonSerialize(include = JsonSerialize.Inclusion.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String email;
 
     private Integer verified;
