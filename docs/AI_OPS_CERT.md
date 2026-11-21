@@ -153,8 +153,10 @@ reset / wall opscert/reset (T4，不依赖 ops session)
 
 列表约定（三表相同）：
 
-- 请求：`page`（从 1）、`limit`（默认 20，最大 100）；`add` 可传 `claimCurrent=true` 认领当前访问 IP
-- 响应：`count`、`page`、`limit`、`hasMore`、`list[]`（`ip` / `tag` / `description` / 状态字段 / `createTime` 毫秒时间戳）
+- 请求：`page`（从 1）、`limit`（默认 20，最大 100）
+  - 可选状态过滤（等值，须为整数 0/1；缺省不筛）：管理 IP / 白名单传 `forbidden`；黑名单传 `available`（**0=生效** / **1=停用**）
+- 响应：`count`、`page`、`limit`、`hasMore`、`list[]`（`ip` / `tag` / `description` / 状态字段 / `createTime` 毫秒时间戳）；`count`/`hasMore` 与过滤条件一致
+- `add`：管理/白可传 `claimCurrent=true` 认领当前访问 IP；响应为**完整行**（与 list 行同字段）+ `success` + `existed`（`true`=写入前已存在，幂等返回原行）
 - `setForbidden` body：`ip` + `forbidden`∈{0,1}
 - `setAvailable` body：`ip` + `available`∈{0,1}（黑名单：**0=生效**）
 

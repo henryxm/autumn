@@ -142,17 +142,11 @@ public class OpsApiController {
                                                      HttpServletRequest request) {
         requireOpsSession(request);
         Map<String, Object> params = pageParams(body);
+        putOptional01(params, body, "forbidden");
         PageUtils page = ipAdminWhiteService.queryPage(params);
-        List<Map<String, Object>> rows = page.getList().stream().map(o -> {
-            IpAdminWhiteEntity e = (IpAdminWhiteEntity) o;
-            Map<String, Object> m = new HashMap<>();
-            m.put("ip", e.getIp());
-            m.put("tag", e.getTag());
-            m.put("description", e.getDescription());
-            m.put("forbidden", e.getForbidden() == null ? 0 : e.getForbidden());
-            m.put("createTime", e.getCreateTime() == null ? null : e.getCreateTime().getTime());
-            return m;
-        }).collect(Collectors.toList());
+        List<Map<String, Object>> rows = page.getList().stream()
+                .map(o -> adminIpRow((IpAdminWhiteEntity) o))
+                .collect(Collectors.toList());
         return Response.ok(pageData(page, rows));
     }
 
@@ -161,12 +155,16 @@ public class OpsApiController {
                                                     HttpServletRequest request) {
         OpsSessionService.OpsSession session = requireOpsSession(request);
         String ip = resolveIp(body, request);
+        boolean existed = ipAdminWhiteService.getByIp(ip) != null;
         IpAdminWhiteEntity entity = ipAdminWhiteService.create(ip, "ops-cert", "ops-cert certId=" + session.getCertId());
         if (entity == null) {
             throw new AException("写入管理IP失败", 500);
         }
         adminAccessGuard.auditWithIp(request, "ops.adminip.add", "ip=" + ip + " certId=" + session.getCertId());
-        return Response.ok(Map.of("ip", entity.getIp(), "success", true));
+        Map<String, Object> data = adminIpRow(entity);
+        data.put("success", true);
+        data.put("existed", existed);
+        return Response.ok(data);
     }
 
     @PostMapping("/adminip/remove")
@@ -224,17 +222,11 @@ public class OpsApiController {
                                                      HttpServletRequest request) {
         requireOpsSession(request);
         Map<String, Object> params = pageParams(body);
+        putOptional01(params, body, "forbidden");
         PageUtils page = ipWhiteService.queryPage(params);
-        List<Map<String, Object>> rows = page.getList().stream().map(o -> {
-            IpWhiteEntity e = (IpWhiteEntity) o;
-            Map<String, Object> m = new HashMap<>();
-            m.put("ip", e.getIp());
-            m.put("tag", e.getTag());
-            m.put("description", e.getDescription());
-            m.put("forbidden", e.getForbidden() == null ? 0 : e.getForbidden());
-            m.put("createTime", e.getCreateTime() == null ? null : e.getCreateTime().getTime());
-            return m;
-        }).collect(Collectors.toList());
+        List<Map<String, Object>> rows = page.getList().stream()
+                .map(o -> ipWhiteRow((IpWhiteEntity) o))
+                .collect(Collectors.toList());
         return Response.ok(pageData(page, rows));
     }
 
@@ -243,12 +235,16 @@ public class OpsApiController {
                                                     HttpServletRequest request) {
         OpsSessionService.OpsSession session = requireOpsSession(request);
         String ip = resolveIp(body, request);
+        boolean existed = ipWhiteService.getByIp(ip) != null;
         IpWhiteEntity entity = ipWhiteService.create(ip, "ops-cert", "ops-cert certId=" + session.getCertId());
         if (entity == null) {
             throw new AException("写入用户白名单失败", 500);
         }
         adminAccessGuard.auditWithIp(request, "ops.ipwhite.add", "ip=" + ip + " certId=" + session.getCertId());
-        return Response.ok(Map.of("ip", entity.getIp(), "success", true));
+        Map<String, Object> data = ipWhiteRow(entity);
+        data.put("success", true);
+        data.put("existed", existed);
+        return Response.ok(data);
     }
 
     @PostMapping("/ipwhite/remove")
@@ -295,17 +291,11 @@ public class OpsApiController {
                                                      HttpServletRequest request) {
         requireOpsSession(request);
         Map<String, Object> params = pageParams(body);
+        putOptional01(params, body, "available");
         PageUtils page = ipBlackService.queryPage(params);
-        List<Map<String, Object>> rows = page.getList().stream().map(o -> {
-            IpBlackEntity e = (IpBlackEntity) o;
-            Map<String, Object> m = new HashMap<>();
-            m.put("ip", e.getIp());
-            m.put("tag", e.getTag());
-            m.put("description", e.getDescription());
-            m.put("available", e.getAvailable() == null ? 0 : e.getAvailable());
-            m.put("createTime", e.getCreateTime() == null ? null : e.getCreateTime().getTime());
-            return m;
-        }).collect(Collectors.toList());
+        List<Map<String, Object>> rows = page.getList().stream()
+                .map(o -> ipBlackRow((IpBlackEntity) o))
+                .collect(Collectors.toList());
         return Response.ok(pageData(page, rows));
     }
 
@@ -320,12 +310,16 @@ public class OpsApiController {
         if (IpBlackService.isPolicyIp(ip)) {
             throw new AException("0.0.0.0 为黑名单策略阈值，请调用 firewallCount 接口", 400);
         }
+        boolean existed = ipBlackService.getByIp(ip) != null;
         IpBlackEntity entity = ipBlackService.create(ip, "ops-cert", "ops-cert certId=" + session.getCertId());
         if (entity == null) {
             throw new AException("写入用户黑名单失败", 500);
         }
         adminAccessGuard.auditWithIp(request, "ops.ipblack.add", "ip=" + ip + " certId=" + session.getCertId());
-        return Response.ok(Map.of("ip", entity.getIp(), "success", true));
+        Map<String, Object> data = ipBlackRow(entity);
+        data.put("success", true);
+        data.put("existed", existed);
+        return Response.ok(data);
     }
 
     @PostMapping("/ipblack/remove")
@@ -938,6 +932,22 @@ public class OpsApiController {
         if (raw == null) {
             throw new AException(key + " 不能为空", 400);
         }
+        return parse01(raw, key);
+    }
+
+    /** list 可选过滤：body 含 key 时写入 params（0/1）；缺省不筛。 */
+    private static void putOptional01(Map<String, Object> params, Map<String, Object> body, String key) {
+        if (body == null || !body.containsKey(key) || body.get(key) == null) {
+            return;
+        }
+        Object raw = body.get(key);
+        if (raw instanceof String && StringUtils.isBlank((String) raw)) {
+            return;
+        }
+        params.put(key, parse01(raw, key));
+    }
+
+    private static int parse01(Object raw, String key) {
         int v;
         if (raw instanceof Number) {
             v = ((Number) raw).intValue();
@@ -952,6 +962,36 @@ public class OpsApiController {
             throw new AException(key + " 须为 0 或 1", 400);
         }
         return v;
+    }
+
+    private static Map<String, Object> adminIpRow(IpAdminWhiteEntity e) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("ip", e.getIp());
+        m.put("tag", e.getTag());
+        m.put("description", e.getDescription());
+        m.put("forbidden", e.getForbidden() == null ? 0 : e.getForbidden());
+        m.put("createTime", e.getCreateTime() == null ? null : e.getCreateTime().getTime());
+        return m;
+    }
+
+    private static Map<String, Object> ipWhiteRow(IpWhiteEntity e) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("ip", e.getIp());
+        m.put("tag", e.getTag());
+        m.put("description", e.getDescription());
+        m.put("forbidden", e.getForbidden() == null ? 0 : e.getForbidden());
+        m.put("createTime", e.getCreateTime() == null ? null : e.getCreateTime().getTime());
+        return m;
+    }
+
+    private static Map<String, Object> ipBlackRow(IpBlackEntity e) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("ip", e.getIp());
+        m.put("tag", e.getTag());
+        m.put("description", e.getDescription());
+        m.put("available", e.getAvailable() == null ? 0 : e.getAvailable());
+        m.put("createTime", e.getCreateTime() == null ? null : e.getCreateTime().getTime());
+        return m;
     }
 
     private static int parsePositiveInt(Object raw, int defaultValue) {
