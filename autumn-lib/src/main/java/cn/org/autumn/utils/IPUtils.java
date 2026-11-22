@@ -33,9 +33,15 @@ public class IPUtils {
     public static final String HOST_LAN_IP_PROP = "host.lan.ip";
 
     /**
-     * 可信反向代理列表（逗号/空白分隔的 IP 或 IPv4 CIDR）。
-     * 未配置时 {@link #getIp(HttpServletRequest)} <strong>忽略</strong> X-Forwarded-For 等头，仅用 {@code remoteAddr}，
-     * 防止客户端伪造管理 IP / 防火墙身份。
+     * 可选：可信反向代理列表（逗号/空白分隔的 IP 或 IPv4 CIDR）。
+     * <p>
+     * <strong>未配置（默认）</strong>：{@link #getIp(HttpServletRequest)} 沿用历史语义——优先
+     * {@code X-Forwarded-For} <strong>最左</strong>有效 hop，再回退其它代理头 / {@code remoteAddr}
+     * （阿里云 SLB+Nginx 等场景与加固前行为一致，避免把 {@code 100.125.x} 当作用户 IP）。
+     * <p>
+     * <strong>已配置</strong>：进入防伪造严格模式——仅当 TCP 对端 ∈ 列表时才从 XFF 右侧剥离可信跳
+     * （适用于直连公网、需防客户端伪造管理 IP 的部署；须含本机 Nginx 与云 SLB 网段，如
+     * {@code 100.64.0.0/10}）。
      */
     public static final String TRUSTED_PROXIES_PROP = "autumn.client-ip.trusted-proxies";
     /** 同 {@link #TRUSTED_PROXIES_PROP} 的环境变量风格键。 */
@@ -64,25 +70,20 @@ public class IPUtils {
     }
 
     /**
-     * 解析客户端 IP。
+     * 解析客户端 IP（登录日志、防火墙、管理 IP 认领等共用）。
      * <p>
-     * 配置 {@link #TRUSTED_PROXIES_PROP} 后：仅当 TCP 对端 ∈ 可信列表时，才从 XFF <strong>右侧</strong>剥离可信跳。
-     * 未配置时：公网 {@code remoteAddr} <strong>忽略</strong> XFF（防伪造）；若 {@code remoteAddr} 为回环/私网
-     * （典型本机 Nginx / Docker 网桥），则信任 XFF <strong>最右侧一跳</strong>为客户端（须由边缘 Nginx
-     * <strong>覆盖</strong> {@code X-Forwarded-For $remote_addr}，勿 append 客户端原值）。
+     * 默认与加固前一致：见 {@link #classicClientIp(HttpServletRequest)}。
+     * 仅当显式配置 {@link #TRUSTED_PROXIES_PROP} 时启用右侧剥离严格模式（防直连伪造）。
      */
     public static String getIp(HttpServletRequest request) {
         if (null == request) {
             return "";
         }
-        String remote = trimHop(request.getRemoteAddr());
         List<String> trusted = trustedProxyEntries();
         if (trusted.isEmpty()) {
-            if (!isInternalKeepIp(remote)) {
-                return remote;
-            }
-            return clientIpFromPrivateRemote(request, remote);
+            return classicClientIp(request);
         }
+        String remote = trimHop(request.getRemoteAddr());
         if (!isTrustedProxyHop(remote, trusted)) {
             return remote;
         }
@@ -90,25 +91,44 @@ public class IPUtils {
     }
 
     /**
-     * 未配 trusted-proxies、且 TCP 对端为私网/回环时：取 XFF 最右有效 hop（一跳）；无则 X-Real-IP；再无则 remote。
+     * 历史默认语义（510ab885 之前）：优先 XFF 最左有效 hop，再回退常见代理头，最后 {@code remoteAddr}。
+     * 云 SLB 场景下最左一般为真实用户，右侧常为 {@code 100.125.x} 等基建地址。
      */
-    private static String clientIpFromPrivateRemote(HttpServletRequest request, String remote) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (StringUtils.isNotBlank(xff)) {
-            String[] hops = xff.split(",");
-            for (int i = hops.length - 1; i >= 0; i--) {
-                String hop = trimHop(hops[i]);
-                if (hop.isEmpty() || "unknown".equalsIgnoreCase(hop)) {
-                    continue;
-                }
-                return hop;
+    public static String classicClientIp(HttpServletRequest request) {
+        if (null == request) {
+            return "";
+        }
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("WL-Proxy-Client-IP");
+            }
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("HTTP_CLIENT_IP");
+            }
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+            }
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("X-Real-IP");
+            }
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getRemoteAddr();
             }
         }
-        String real = trimHop(request.getHeader("X-Real-IP"));
-        if (StringUtils.isNotBlank(real) && !"unknown".equalsIgnoreCase(real)) {
-            return real;
+        if (ip != null && ip.contains(",")) {
+            String[] ips = ip.split(",");
+            for (String s : ips) {
+                String hop = trimHop(s);
+                if (!hop.isEmpty() && !"unknown".equalsIgnoreCase(hop)) {
+                    return hop;
+                }
+            }
+        } else if (ip != null) {
+            ip = ip.trim();
         }
-        return remote;
+        return ip == null ? "" : ip;
     }
 
     private static String stripTrustedFromXff(HttpServletRequest request, String remote, List<String> trusted) {
@@ -352,6 +372,38 @@ public class IPUtils {
         }
     }
 
+    /**
+     * 基础设施 hop：私网/回环/链路本地/组播保留段，以及 CGNAT（含云 SLB）。
+     * 用于未配 trusted-proxies 时判断是否解析 XFF，以及从 XFF 右侧剥离 SLB 自身地址。
+     */
+    public static boolean isInfrastructureHop(String ip) {
+        return isInternalKeepIp(ip) || isCarrierGradeNatIp(ip);
+    }
+
+    /**
+     * RFC 6598 共享地址空间 {@code 100.64.0.0/10}（CGNAT）。
+     * 阿里云 SLB/ALB 对后端常见 {@code 100.125.x.x} 等，每次连接可能变化，不得当作用户 IP。
+     */
+    public static boolean isCarrierGradeNatIp(String ip) {
+        if (ip == null) {
+            return false;
+        }
+        ip = ip.trim();
+        if (!ip.startsWith("100.")) {
+            return false;
+        }
+        String[] parts = ip.split("\\.");
+        if (parts.length < 2) {
+            return false;
+        }
+        try {
+            int second = Integer.parseInt(parts[1]);
+            return second >= 64 && second <= 127;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     public static boolean isInternalKeepIp(String ip) {
         if (ip == null) return false;
         ip = ip.trim();
@@ -372,6 +424,8 @@ public class IPUtils {
                 }
             }
         }
+        // CGNAT / 云 SLB（100.64/10）；与 isCarrierGradeNatIp 一致，避免防火墙把 SLB 当访客
+        if (isCarrierGradeNatIp(ip)) return true;
         // IPv4 link-local
         if (ip.startsWith("169.254.")) return true;
         // IPv4 multicast

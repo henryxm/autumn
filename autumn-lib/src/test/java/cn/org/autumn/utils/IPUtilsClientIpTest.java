@@ -18,33 +18,33 @@ class IPUtilsClientIpTest {
     }
 
     @Test
-    void getIp_ignoresXffWithoutTrustedProxies_publicRemote() {
+    void getIp_default_usesXffLeftmost_likeHistory() {
         MockHttpServletRequest req = new MockHttpServletRequest();
-        req.setRemoteAddr("198.51.100.10");
-        req.addHeader("X-Forwarded-For", "203.0.113.1, 10.0.0.1");
-        assertEquals("198.51.100.10", IPUtils.getIp(req));
+        // 阿里云 SLB：remote 常为 100.125.x，真实用户在 XFF 最左
+        req.setRemoteAddr("100.125.12.34");
+        req.addHeader("X-Forwarded-For", "203.0.113.77, 100.125.9.8");
+        assertEquals("203.0.113.77", IPUtils.getIp(req));
     }
 
     @Test
-    void getIp_privateRemote_takesRightmostXffHop() {
+    void getIp_default_fallsBackToXRealIpThenRemote() {
         MockHttpServletRequest req = new MockHttpServletRequest();
-        req.setRemoteAddr("127.0.0.1");
-        req.addHeader("X-Forwarded-For", "203.0.113.50");
+        req.setRemoteAddr("198.51.100.10");
+        req.addHeader("X-Real-IP", "203.0.113.50");
         assertEquals("203.0.113.50", IPUtils.getIp(req));
     }
 
     @Test
-    void getIp_privateRemote_multiHop_usesRightmost() {
+    void getIp_default_multiHop_trimsLeftmost() {
         MockHttpServletRequest req = new MockHttpServletRequest();
         req.setRemoteAddr("10.0.0.2");
-        // 边缘须覆盖为单跳；若误 append，取最右（直连代理所见客户端）
-        req.addHeader("X-Forwarded-For", "198.51.100.1, 203.0.113.9");
+        req.addHeader("X-Forwarded-For", " 203.0.113.9 , 10.0.0.5");
         assertEquals("203.0.113.9", IPUtils.getIp(req));
     }
 
     @Test
-    void getIp_stripsTrustedProxiesFromRight() {
-        System.setProperty(IPUtils.TRUSTED_PROXIES_PROP, "10.0.0.0/8,127.0.0.1");
+    void getIp_stripsTrustedProxiesFromRight_whenConfigured() {
+        System.setProperty(IPUtils.TRUSTED_PROXIES_PROP, "10.0.0.0/8,127.0.0.1,100.64.0.0/10");
         MockHttpServletRequest req = new MockHttpServletRequest();
         req.setRemoteAddr("10.0.0.5");
         req.addHeader("X-Forwarded-For", "203.0.113.9, 10.0.0.5");
@@ -52,12 +52,22 @@ class IPUtilsClientIpTest {
     }
 
     @Test
-    void getIp_untrustedRemoteIgnoresXffEvenIfConfigured() {
+    void getIp_untrustedRemoteIgnoresXff_whenTrustedConfigured() {
         System.setProperty(IPUtils.TRUSTED_PROXIES_PROP, "10.0.0.0/8");
         MockHttpServletRequest req = new MockHttpServletRequest();
         req.setRemoteAddr("198.51.100.20");
         req.addHeader("X-Forwarded-For", "203.0.113.1");
         assertEquals("198.51.100.20", IPUtils.getIp(req));
+    }
+
+    @Test
+    void classicClientIp_matchesHistoricalAliyunCase() {
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setRemoteAddr("100.125.1.2");
+        req.addHeader("X-Forwarded-For", "198.51.100.7, 100.125.1.2");
+        assertEquals("198.51.100.7", IPUtils.classicClientIp(req));
+        assertTrue(IPUtils.isCarrierGradeNatIp("100.125.1.2"));
+        assertTrue(IPUtils.isInfrastructureHop("100.125.1.2"));
     }
 
     @Test

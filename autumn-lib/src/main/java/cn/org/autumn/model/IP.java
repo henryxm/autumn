@@ -79,7 +79,7 @@ public class IP implements Serializable {
     }
 
     /**
-     * 与 {@link IPUtils#getIp} 统一（默认仅 remoteAddr；配置可信代理后按右侧剥离 XFF）。
+     * 与 {@link IPUtils#getIp} 统一（默认 XFF 最左历史语义；仅配置 trusted-proxies 时走严格模式）。
      */
     public static String getIp(HttpServletRequest request) {
         if (request == null) {

@@ -540,7 +540,7 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
 
 - **生成 CRUD / 管理 API 与管理 IP（硬约束）**：  
   - 强制语义：**系统管理员**；当 **`SECURITY_OPS_CONFIG.adminIpEnable=true`** 时另须 **`wall_ip_admin_white`**（`IpAdminWhiteEntity`）。`adminIpEnable` **默认 false**（wall「管理IP校验」可开；关须 clearToken）。  
-  - 客户端 IP：`IPUtils.getIp` 配 `autumn.client-ip.trusted-proxies` 后按列表剥离 XFF；未配时公网仅 `remoteAddr`，私网/回环取 XFF 最右一跳（边缘须覆盖而非 append）。  
+  - 客户端 IP：`IPUtils.getIp` **默认**历史语义（XFF 最左）；仅显式配置 `autumn.client-ip.trusted-proxies` 时右侧剥离防伪造。安全加固不得把云 SLB 的 `100.125.x` 当作用户 IP。  
   - 自助 gen（usr/safe/bot/qrc）一般不强制；**`SENSITIVE_SELF_GEN_CONTROLLERS`**（UserProfile/LoginLog/Robot*/ScanTicket/ClientGrant/Token/PIN 等全表）仍强制超管+管理 IP；Web 扫码子类扩展方法不连坐。  
   - Web 扫码建票绑定浏览器 Cookie `autumn_qrc_bind`；OAuth code/refresh 须归属 `client_id`；CSRF 仅对校验通过的 API Token 豁免。  
   - 框架切面 **`GenAdminAccessAspect`** 织入 `*..modules..controller..*` 与 `*..controller.gen..*`（**不限** `cn.org.autumn` 前缀）；判定 `shouldRequireAdminIpApi`，执行 `requireGenAdmin`。  

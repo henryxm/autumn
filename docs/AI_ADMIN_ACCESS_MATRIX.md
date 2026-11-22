@@ -16,7 +16,7 @@
 
 生产 profile **勿**叠 `dev`/`h2`/`sqlite`：`Config.isDev()` 下 `checkAdmin` 会短路。`adminIpEnable=false`（默认）时非 dev 也不验管理 IP。
 
-客户端 IP：配置 `autumn.client-ip.trusted-proxies` 后按列表从 XFF 右侧剥离。未配置时：公网 `remoteAddr` **忽略** XFF；回环/私网 `remoteAddr`（本机 Nginx / Docker）取 XFF **最右一跳**。Nginx 应对后端 **覆盖** `X-Forwarded-For $remote_addr`，勿 append 客户端原值。
+客户端 IP：`IPUtils.getIp` **默认恢复历史语义**（`X-Forwarded-For` 最左有效 hop → 其它代理头 → `remoteAddr`），与加固前一致，阿里云 SLB 的 `100.125.x` 不会被当成用户 IP。仅当显式配置 `autumn.client-ip.trusted-proxies` 时进入防伪造严格模式（对端须 ∈ 列表才右侧剥离；列表宜含本机 Nginx + `100.64.0.0/10`）。
 
 ---
 
