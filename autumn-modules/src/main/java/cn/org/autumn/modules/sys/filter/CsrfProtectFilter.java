@@ -88,6 +88,8 @@ public class CsrfProtectFilter implements Filter {
         if (path.startsWith("/http/proxy/v1")
                 || path.startsWith("/bot/api/v1")
                 || path.startsWith("/oauth2/")
+                || path.startsWith("/qrc/scanticket/web/")
+                || path.startsWith("/client/oauth2/qrc/web/")
                 || path.startsWith("/sys/login")
                 || path.startsWith("/sys/register")
                 || path.startsWith("/sys/forgotpassword")

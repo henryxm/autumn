@@ -408,7 +408,9 @@ Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化
 
 ## 3. PC 网页登录（`ScanTicketController`，`/qrc/scanticket/web`）
 
-匿名；返回 **`R`**。供 `login.html` 等同源页面使用。
+匿名；返回 **`R`**。供 `login.html` 等同源页面使用。Shiro anon；**CSRF 豁免**（`CsrfProtectFilter`）。
+
+建票响应会 `Set-Cookie`：`autumn_qrc_bind_{uuid}`（及兼容名 `autumn_qrc_bind`）。`stream` / `status` / `exchange` **须**携带匹配 Cookie，否则 `8630`/`8631`。Cookie Domain 规则见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §3.2（Rfc6265 **无前导点**）。
 
 ### POST `/qrc/scanticket/web/ticket/create`
 
@@ -428,7 +430,7 @@ Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化
 | `intent` | 否 | 默认 `SELF_WEB_LOGIN` |
 | `payload` | 否 | 扩展载荷；桌面客户端可传 `loginDeviceUuid`（扫码授权目标电脑 Login.uuid）绑定 `usr_user_token` 设备行 |
 
-**响应 `data`**：同 `TicketCreateResult`（§2 open/create）。
+**响应 `data`**：同 `TicketCreateResult`（§2 open/create）。旁路：`Set-Cookie` 浏览器绑定（见上）。
 
 ---
 

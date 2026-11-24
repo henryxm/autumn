@@ -24,6 +24,9 @@ import java.util.HashMap;
  * 防止仅凭 uuid / exchange 在其它浏览器抢登。
  * <p>
  * Cookie 按 uuid 分名（{@code autumn_qrc_bind_{uuid}}），多标签互不覆盖；
+ * Domain 经 {@link HostSessionCookieSupport#resolveCookieDomain}（Rfc6265 <strong>无前导点</strong>）；
+ * {@code addCookie} 若因非法 Domain 抛错则降级 host-only，避免建票失败、登录页二维码空白
+ * （典型误配置：{@code CLUSTER_ROOT_DOMAIN=.bighub.cn} 或旧逻辑写成 {@code Domain=.bighub.cn}）。
  * 同源票写入 ticket payload；RP 远程票写入 Redis/本机旁路（与票同 TTL 量级）。
  * 升级前已发出、payload 无 {@code browserBind} 的短命票据放行至过期。
  */
@@ -145,14 +148,32 @@ public class ScanBrowserBindSupport {
         cookie.setPath("/");
         cookie.setMaxAge((int) (LOCAL_BIND_TTL_MS / 1000));
         applyDomainAndSameSite(request, cookie);
-        response.addCookie(cookie);
+        addCookieSafe(response, cookie);
         // 兼容旧单 Cookie（后开标签仍会覆盖，但旧页可读新格式）
         Cookie legacy = new Cookie(COOKIE_NAME, uuid + "." + secret);
         legacy.setHttpOnly(true);
         legacy.setPath("/");
         legacy.setMaxAge((int) (LOCAL_BIND_TTL_MS / 1000));
         applyDomainAndSameSite(request, legacy);
-        response.addCookie(legacy);
+        addCookieSafe(response, legacy);
+    }
+
+    /**
+     * Domain 非法（如误带前导点）时降级为 host-only，避免建票整单失败、二维码空白。
+     */
+    private static void addCookieSafe(HttpServletResponse response, Cookie cookie) {
+        if (response == null || cookie == null) {
+            return;
+        }
+        try {
+            response.addCookie(cookie);
+        } catch (IllegalArgumentException ex) {
+            try {
+                cookie.setDomain(null);
+                response.addCookie(cookie);
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     private void applyDomainAndSameSite(HttpServletRequest request, Cookie cookie) {
@@ -170,6 +191,10 @@ public class ScanBrowserBindSupport {
                 cookie.setDomain(domain);
             }
         } catch (Exception ignored) {
+            try {
+                cookie.setDomain(null);
+            } catch (Exception ignored2) {
+            }
         }
     }
 

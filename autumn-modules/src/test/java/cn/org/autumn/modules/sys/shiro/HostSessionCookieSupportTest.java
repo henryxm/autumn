@@ -20,7 +20,10 @@ class HostSessionCookieSupportTest {
 
     @Test
     void resolveCookieDomain_usesClusterRootForSubdomain() {
-        assertEquals(".x.com", HostSessionCookieSupport.resolveCookieDomain("auth.x.com", "x.com"));
+        // Rfc6265：无前导点（Tomcat 拒绝 Domain=.x.com）
+        assertEquals("x.com", HostSessionCookieSupport.resolveCookieDomain("auth.x.com", "x.com"));
+        assertEquals("bighub.cn", HostSessionCookieSupport.resolveCookieDomain("bighub.cn", "bighub.cn"));
+        assertEquals("bighub.cn", HostSessionCookieSupport.resolveCookieDomain("bighub.cn", ".bighub.cn"));
         assertNull(HostSessionCookieSupport.resolveCookieDomain("a.com", "x.com"));
     }
 
@@ -49,6 +52,6 @@ class HostSessionCookieSupportTest {
         HostSessionCookieHolder holder = HostSessionCookieSupport.resolveHolder(
                 "auth.x.com", Arrays.asList("auth.x.com"), "x.com");
         assertEquals("x.com", holder.getName());
-        assertEquals(".x.com", holder.getDomain());
+        assertEquals("x.com", holder.getDomain());
     }
 }

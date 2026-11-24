@@ -52,6 +52,20 @@ class CsrfProtectFilterExemptTest {
     }
 
     @Test
+    void pathExempt_scanWebTicketCreate() {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/qrc/scanticket/web/ticket/create");
+        Boolean exempt = ReflectionTestUtils.invokeMethod(filter, "isExempt", req);
+        assertTrue(Boolean.TRUE.equals(exempt));
+    }
+
+    @Test
+    void pathExempt_clientOauth2QrcWeb() {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/client/oauth2/qrc/web/ticket/create");
+        Boolean exempt = ReflectionTestUtils.invokeMethod(filter, "isExempt", req);
+        assertTrue(Boolean.TRUE.equals(exempt));
+    }
+
+    @Test
     void validOauthAccessToken_exempt() {
         MockHttpServletRequest req = new MockHttpServletRequest("POST", "/sys/user/update");
         req.addHeader("Authorization", "Bearer real-access-token-xyz");

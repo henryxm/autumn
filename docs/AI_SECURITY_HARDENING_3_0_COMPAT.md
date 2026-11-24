@@ -359,9 +359,9 @@
 - [ ] gen CRUD：非超管调 `*.controller.gen.*` → 403；`adminIpEnable=true` 时管理 IP 未加白亦 403；**usr/safe/bot/qrc**（及 SPI `selfGenModules`）一般不强制超管；**例外** `SENSITIVE_SELF_GEN_CONTROLLERS`（UserProfile/LoginLog/Robot*/ScanTicket/ClientGrant/Token/PIN 等全表）强制超管+管理 IP；secret/Token JSON `WRITE_ONLY`  
 - [ ] **clearToken**：长度≥16；常量时间比较+失败锁定；运维 App **不可首次铸造**（须 Web 超管配置）；`/sys/ops/admin-bootstrap/reveal` 另须运维会话或超管 Session  
 - [ ] **Shield#test**：仅 403 探测，不再 `put` 护盾放行集  
-- [ ] **CSRF**：假长 `Token`/`Bearer` 头**不能**豁免；仅校验通过的用户 Token / OAuth access / `rbt_` 豁免  
+- [ ] **CSRF**：假长 `Token`/`Bearer` 头**不能**豁免；仅校验通过的用户 Token / OAuth access / `rbt_` 豁免；`/qrc/scanticket/web/**` 与 `/client/oauth2/qrc/web/**` 豁免（登录扫码）；未登录拉 `/sys/session/self/csrf` 的 401 **不**表示扫码坏了  
 - [ ] **OAuth token**：authorization_code / refresh_token 须 `TokenStore.clientId` 匹配当前 `client_id`；**空 clientId 存量票**在密钥已校验时允许兑换并补写归属  
-- [ ] **Web 扫码**：建票下发 `autumn_qrc_bind_{uuid}`（兼写旧 `autumn_qrc_bind`）；status/stream/exchange/cancel 须匹配；多标签互不覆盖；RP 旁路键 `qrc:browser_bind:`（Redis）；升级前无 `browserBind` 的短命票放行至过期；子类 `web*` **不**因敏感 Gen 名连坐超管门禁  
+- [ ] **Web 扫码**：建票下发 `autumn_qrc_bind_{uuid}`（兼写旧 `autumn_qrc_bind`）；Cookie Domain 为 Rfc6265 **无前导点**（非法 Domain 降级 host-only，避免 `invalid domain [.bighub.cn]` 导致二维码空白）；status/stream/exchange/cancel 须匹配；`/qrc/scanticket/web/**` CSRF 豁免；未登录 `GET /sys/session/self/csrf` 401 **与出码无关**  
 - [ ] **多域名 + Nginx**：默认无需改 IP 解析即可拿到用户 IP；若要防直连伪造再配 `autumn.client-ip.trusted-proxies`（含 `100.64.0.0/10`）；多 Origin 写入 `corsAllowedOrigins`；Cookie POST 带 `X-CSRF-Token`  
 - [ ] 子项目 `modules/{biz}/**` **页面**：默认非超管可开（登录由 Spm）；`adminLockdown=true` 或 `@PageAware(admin=true)` 时仅超管  
 - [ ] 普通用户自助：`/sys/session/self/list`、`self/ping`、`/sys/user/info|password` 仍 200（本人数据）  

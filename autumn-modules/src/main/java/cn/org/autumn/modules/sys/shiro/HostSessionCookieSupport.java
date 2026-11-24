@@ -25,6 +25,10 @@ public final class HostSessionCookieSupport {
         if (colon > 0) {
             h = h.substring(0, colon);
         }
+        // CLUSTER_ROOT_DOMAIN 误写成 .bighub.cn 时剥掉前导点，避免 Rfc6265 校验失败
+        while (h.startsWith(".")) {
+            h = h.substring(1);
+        }
         return h;
     }
 
@@ -56,6 +60,7 @@ public final class HostSessionCookieSupport {
 
     /**
      * 站点绑定多个互不相关的 registrable 域名（如 a.com 与 b.com）。
+     * 同根兄弟子域（auth.x.com 与 app.x.com）视为相关，不触发 host-only 隔离。
      */
     public static boolean hasMultipleIndependentDomains(List<String> domains) {
         if (domains == null || domains.size() <= 1) {
@@ -68,16 +73,37 @@ public final class HostSessionCookieSupport {
                 if (StringUtils.isBlank(a) || StringUtils.isBlank(b)) {
                     continue;
                 }
-                if (!isSubdomainOf(a, b) && !isSubdomainOf(b, a)) {
-                    return true;
+                if (isSubdomainOf(a, b) || isSubdomainOf(b, a) || sameRegistrableParent(a, b)) {
+                    continue;
                 }
+                return true;
             }
         }
         return false;
     }
 
+    /** 兄弟子域：父域相同且父域至少含一段点分后缀（排除 a.com/b.com 的父域 {@code com}）。 */
+    static boolean sameRegistrableParent(String a, String b) {
+        String pa = parentHost(a);
+        String pb = parentHost(b);
+        return StringUtils.isNotBlank(pa) && pa.equals(pb) && pa.contains(".");
+    }
+
+    private static String parentHost(String host) {
+        host = normalizeHost(host);
+        int dot = host.indexOf('.');
+        if (dot <= 0 || dot >= host.length() - 1) {
+            return "";
+        }
+        return host.substring(dot + 1);
+    }
+
     /**
      * 当前 Host 可用的 Cookie domain；无关域或独立域返回 null（host-only Cookie）。
+     * <p>
+     * 返回值<strong>无前导点</strong>（Rfc6265 / Tomcat {@code Rfc6265CookieProcessor}）；
+     * 勿再写成 {@code .example.com}，否则 {@code Set-Cookie} 阶段会抛
+     * {@code An invalid domain [.example.com] was specified for this cookie}。
      */
     public static String resolveCookieDomain(String requestHost, String clusterRoot) {
         requestHost = normalizeHost(requestHost);
@@ -86,7 +112,7 @@ public final class HostSessionCookieSupport {
             return null;
         }
         if (isSubdomainOf(requestHost, clusterRoot)) {
-            return clusterRoot.startsWith(".") ? clusterRoot : "." + clusterRoot;
+            return clusterRoot;
         }
         return null;
     }

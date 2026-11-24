@@ -1966,16 +1966,10 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
                 return;
             }
             String name = siteDomain;
-            String domain = rootDomain;
-            if (StringUtils.isNotBlank(rootDomain)) {
-                name = rootDomain;
-            }
-            if (StringUtils.isNotBlank(siteDomain) &&
-                    StringUtils.isNotBlank(rootDomain) &&
-                    siteDomain.endsWith(rootDomain) &&
-                    !rootDomain.startsWith(".") &&
-                    !siteDomain.equalsIgnoreCase(rootDomain)) {
-                domain = "." + rootDomain;
+            // Rfc6265：Cookie Domain 无前导点（裸根域名即可覆盖子域）
+            String domain = HostSessionCookieSupport.normalizeHost(rootDomain);
+            if (StringUtils.isNotBlank(domain)) {
+                name = domain;
             }
             if (StringUtils.isBlank(name))
                 name = HostSessionCookieSupport.DEFAULT_COOKIE_NAME;

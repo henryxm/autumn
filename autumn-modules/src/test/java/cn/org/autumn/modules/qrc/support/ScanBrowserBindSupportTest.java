@@ -3,6 +3,7 @@ package cn.org.autumn.modules.qrc.support;
 import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
+import cn.org.autumn.modules.sys.service.SysConfigService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -13,7 +14,9 @@ import jakarta.servlet.http.Cookie;
 import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -117,5 +120,53 @@ class ScanBrowserBindSupportTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie(ScanBrowserBindSupport.COOKIE_NAME, "leg-cookie.sec-xyz"));
         assertDoesNotThrow(() -> support.assertBound(ticket, request));
+    }
+
+    @Test
+    void bindOnCreate_clusterRootDomain_noLeadingDot() {
+        SysConfigService sysConfigService = mock(SysConfigService.class);
+        when(sysConfigService.getClusterRootDomain()).thenReturn("bighub.cn");
+        ReflectionTestUtils.setField(support, "sysConfigService", sysConfigService);
+
+        TicketSnapshot ticket = new TicketSnapshot();
+        ticket.setUuid("bh-1");
+        ticket.setPayload(new HashMap<>());
+        MockHttpServletRequest servlet = new MockHttpServletRequest();
+        servlet.addHeader("Host", "bighub.cn");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        support.bindOnCreate(ticket, servlet, response);
+
+        Cookie named = response.getCookie(ScanBrowserBindSupport.cookieNameForUuid("bh-1"));
+        assertNotNull(named);
+        assertEquals("bighub.cn", named.getDomain());
+        assertDoesNotThrow(() -> {
+            MockHttpServletRequest req = new MockHttpServletRequest();
+            req.setCookies(response.getCookies());
+            support.assertBound(ticket, req);
+        });
+    }
+
+    @Test
+    void addCookieSafe_invalidDomain_fallsBackHostOnly() {
+        Cookie cookie = new Cookie("autumn_qrc_bind_x", "sec");
+        cookie.setPath("/");
+        cookie.setDomain(".bighub.cn");
+        MockHttpServletResponse response = new MockHttpServletResponse() {
+            private boolean first = true;
+
+            @Override
+            public void addCookie(Cookie c) {
+                if (first && c.getDomain() != null && c.getDomain().startsWith(".")) {
+                    first = false;
+                    throw new IllegalArgumentException(
+                            "An invalid domain [" + c.getDomain() + "] was specified for this cookie");
+                }
+                super.addCookie(c);
+            }
+        };
+        ReflectionTestUtils.invokeMethod(support, "addCookieSafe", response, cookie);
+        Cookie stored = response.getCookie("autumn_qrc_bind_x");
+        assertNotNull(stored);
+        assertNull(stored.getDomain());
     }
 }

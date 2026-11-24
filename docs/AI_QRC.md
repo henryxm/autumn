@@ -76,10 +76,21 @@ QRC 模块（`cn.org.autumn.modules.qrc`）是**扫码交互编排层**，复用
 ## 5. 快速开始（同源 PC 登录）
 
 1. PC：`POST /qrc/scanticket/web/ticket/create`，body `{ "data": { "intent": "SELF_WEB_LOGIN" } }`
-2. 展示返回的 `qrUrl`
+2. 展示返回的 `qrUrl`（响应会下发 HttpOnly 绑定 Cookie，见下）
 3. APP：`POST /qrc/api/v1/ticket/scan` → `POST /qrc/api/v1/ticket/confirm`（Header 带用户 token）
-4. PC 轮询：`GET /qrc/scanticket/web/ticket/status?uuid=...`
+4. PC 轮询：`GET /qrc/scanticket/web/ticket/status?uuid=...`（须带建票 Cookie）
 5. PC：`POST /qrc/scanticket/web/session/exchange`，body `{ "data": { "exchange": "..." } }`
+
+### 5.1 Web 绑定 Cookie 与常见故障
+
+| 项 | 说明 |
+|----|------|
+| Cookie | `autumn_qrc_bind_{uuid}`（主）+ 兼容 `autumn_qrc_bind`；防跨浏览器抢登 |
+| Domain | 与 `CLUSTER_ROOT_DOMAIN` 对齐，**Rfc6265 无前导点**（写 `bighub.cn` 勿写 `.bighub.cn`） |
+| CSRF | 未登录 `GET /sys/session/self/csrf` **401 正常**，不挡出码；web 扫码路径已 CSRF 豁免 |
+| 症状「二维码空白 + invalid domain [.xxx]」 | 旧 Domain 带点被 Tomcat 拒绝 → 建票失败；见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §3.2 / §5 |
+
+实现：`ScanBrowserBindSupport`；多域名细则：`AI_MULTI_DOMAIN.md`。
 
 ## 6. QR 内容规范
 
