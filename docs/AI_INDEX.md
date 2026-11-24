@@ -57,7 +57,7 @@
 - **`docs/AI_QRC_CLIENT_API.md`**：**APP 扫码确认手册**
 - **`docs/AI_AUTH_LOGIN_MODES.md`**：**双轨授权登录开发手册**（OAuth2 `uuid` 与 OPL/OPC `openId` 并行体系、自连/第三方全拓扑、选型与防迷路）
 - **`docs/AI_AUTH_CONTEXT.md`**：**请求级 AuthContext**（身份来源 `AuthSource`、accessKey、Controller 注入 / `AuthContexts.current()`）
-- **`docs/AI_MULTI_DOMAIN.md`**：**多域名部署与授权页 Tab**（Rfc6265 Cookie Domain 无前导点、扫码 `autumn_qrc_bind_*`、CSRF 401 与出码无关、二维码空白排障）
+- **`docs/AI_MULTI_DOMAIN.md`**：**多域名部署与授权页 Tab**（会话 Cookie Domain、扫码绑定 host-only、RP pending+Redis、确认未登录/二次卡死、loopback 换证、CSRF 401）
 - **`docs/AI_AUTH_SCOPE.md`**：**授权 Scope 目录**（OAuth/OPL scope 对照、`AuthScopeCatalog`、`ScopeDefinitionEntity`、authorize UI、Admin API）
 - **`docs/AI_OAUTH_INTEGRATION.md`**：**OAuth2 第三方对接手册**（授权码模式、token、userInfo、账号绑定）
 - **`docs/AI_OPL_INTEGRATION.md`**：**OPL 开放平台对接手册**（appId/openId/unionId、OAuth2 `/open/oauth2/*`）

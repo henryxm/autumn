@@ -51,6 +51,20 @@
         return false;
     }
 
+    /** status/stream 会话丢失或绑定失败（含 8630/8631 文案）。 */
+    function isQrSessionLostMsg(msg) {
+        if (!msg) {
+            return false;
+        }
+        var m = String(msg);
+        return m.indexOf('扫码会话不存在') >= 0
+            || m.indexOf('不存在或已过期') >= 0
+            || m.indexOf('不匹配') >= 0
+            || m.indexOf('未绑定') >= 0
+            || m.indexOf('8630') >= 0
+            || m.indexOf('8631') >= 0;
+    }
+
     function normalizeQrMarkup(box, size) {
         if (!box) {
             return;
@@ -510,28 +524,49 @@
                             self.forceNavigate(target || '/');
                             return;
                         }
-                        // exchange 失败但本地可能已有会话：尝试刷新恢复
+                        // 失败只展示原因；禁止盲目 reload（否则未登录页死循环）
+                        var failMsg = (result && result.msg) ? String(result.msg) : '登录失败，请刷新二维码重试';
+                        self.qrPhase = 'pending';
                         if (self.appQuickActive) {
-                            self.appQuickHint = (result && result.msg) || '登录可能已完成，正在刷新…';
+                            self.appQuickBusy = false;
+                            self.appQuickPhase = 'idle';
+                            self.appQuickHint = failMsg;
                         }
-                        self.qrStatus = (result && result.msg) || '登录失败';
-                        window.setTimeout(function () {
-                            self.recoverAfterMissingSession();
-                        }, 400);
+                        self.qrStatus = failMsg;
+                        if (isQrSessionLostMsg(failMsg)) {
+                            self.handleQrSessionLost(failMsg);
+                        }
                     },
                     error: function () {
                         if (typeof onUnavailable === 'function') {
                             onUnavailable(true);
                         }
+                        self.qrPhase = 'pending';
                         if (self.appQuickActive) {
-                            self.appQuickHint = '网络异常，正在尝试刷新…';
+                            self.appQuickBusy = false;
+                            self.appQuickPhase = 'idle';
+                            self.appQuickHint = '网络异常，请刷新二维码重试';
                         }
-                        self.qrStatus = '网络异常，请刷新重试';
-                        window.setTimeout(function () {
-                            self.recoverAfterMissingSession();
-                        }, 500);
+                        self.qrStatus = '网络异常，请刷新二维码重试';
                     }
                 });
+            },
+            handleQrSessionLost: function (msg) {
+                var self = this;
+                self.stopNotify();
+                self.resetQrScannedState();
+                var text = msg || '扫码会话不存在或已过期，请刷新重试';
+                self.setQrStatus(text);
+                if (self.appQuickActive) {
+                    self.appQuickBusy = false;
+                    self.appQuickPhase = 'idle';
+                    self.appQuickHint = text;
+                }
+                window.setTimeout(function () {
+                    if (typeof self.refreshQrLogin === 'function') {
+                        self.refreshQrLogin();
+                    }
+                }, 800);
             },
             resetQrScannedState: function () {
                 this.qrPhase = 'pending';
@@ -756,11 +791,34 @@
             },
             pollAsStatus: function (onUnavailable) {
                 var self = this;
-                $.getJSON(prefix + '/ticket/status', { uuid: self.qrcUuid }, function (res) {
-                    if (!res || res.code !== 0 || !res.data) {
-                        return;
+                $.ajax({
+                    type: 'GET',
+                    url: prefix + '/ticket/status',
+                    data: { uuid: self.qrcUuid },
+                    dataType: 'json',
+                    success: function (res) {
+                        if (!res || res.code !== 0 || !res.data) {
+                            var msg = res && res.msg ? String(res.msg) : '';
+                            if (isQrSessionLostMsg(msg)) {
+                                self.handleQrSessionLost(msg);
+                            }
+                            return;
+                        }
+                        self.processAsStatusData(res.data, onUnavailable);
+                    },
+                    error: function (xhr) {
+                        var msg = '';
+                        if (xhr && xhr.responseJSON && xhr.responseJSON.msg) {
+                            msg = String(xhr.responseJSON.msg);
+                        }
+                        if (isQrSessionLostMsg(msg)) {
+                            self.handleQrSessionLost(msg);
+                            return;
+                        }
+                        if (typeof onUnavailable === 'function') {
+                            onUnavailable(true);
+                        }
                     }
-                    self.processAsStatusData(res.data, onUnavailable);
                 });
             },
             processAsStatusData: function (data, onUnavailable) {
@@ -1064,14 +1122,8 @@
                     success: function (res) {
                         if (!res || res.code !== 0 || !res.data) {
                             var msg = res && res.msg ? String(res.msg) : '';
-                            if (msg.indexOf('不存在') >= 0 || msg.indexOf('过期') >= 0) {
-                                if (self.qrPhase === 'scanned' || self.qrPhase === 'done') {
-                                    self.recoverAfterMissingSession();
-                                    return;
-                                }
-                                self.resetQrScannedState();
-                                self.setQrStatus(msg || '扫码会话不存在或已过期，请刷新重试');
-                                self.stopNotify();
+                            if (isQrSessionLostMsg(msg) || msg.indexOf('过期') >= 0) {
+                                self.handleQrSessionLost(msg || '扫码会话不存在或已过期，请刷新重试');
                             }
                             return;
                         }
@@ -1081,7 +1133,15 @@
                         }
                         self.handleRpStreamEvent(data, onUnavailable);
                     },
-                    error: function () {
+                    error: function (xhr) {
+                        var msg = '';
+                        if (xhr && xhr.responseJSON && xhr.responseJSON.msg) {
+                            msg = String(xhr.responseJSON.msg);
+                        }
+                        if (isQrSessionLostMsg(msg) || msg.indexOf('过期') >= 0) {
+                            self.handleQrSessionLost(msg || '扫码会话不存在或已过期，请刷新重试');
+                            return;
+                        }
                         if (typeof onUnavailable === 'function') {
                             onUnavailable(true);
                         }

@@ -107,7 +107,7 @@ public class RpQrcCallbackService {
         ScanLoginConfig config = sysConfigService.getConfigObject(ScanLoginConfig.CONFIG_KEY, ScanLoginConfig.class);
         int ttlSeconds = config == null ? 300 : config.getTicketTtlSeconds();
         pending.setExpiredAt(System.currentTimeMillis() + ttlSeconds * 1000L);
-        rpQrcPendingStore.save(pending);
+        rpQrcPendingStore.saveOrFail(pending);
         return created;
     }
 

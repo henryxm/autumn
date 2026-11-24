@@ -4,8 +4,6 @@ import cn.org.autumn.exception.AException;
 import cn.org.autumn.modules.qrc.model.TicketPayloads;
 import cn.org.autumn.modules.qrc.model.TicketSnapshot;
 import cn.org.autumn.modules.qrc.service.ScanTicketService;
-import cn.org.autumn.modules.sys.service.SysConfigService;
-import cn.org.autumn.modules.sys.shiro.HostSessionCookieSupport;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -24,9 +22,8 @@ import java.util.HashMap;
  * 防止仅凭 uuid / exchange 在其它浏览器抢登。
  * <p>
  * Cookie 按 uuid 分名（{@code autumn_qrc_bind_{uuid}}），多标签互不覆盖；
- * Domain 经 {@link HostSessionCookieSupport#resolveCookieDomain}（Rfc6265 <strong>无前导点</strong>）；
- * {@code addCookie} 若因非法 Domain 抛错则降级 host-only，避免建票失败、登录页二维码空白
- * （典型误配置：{@code CLUSTER_ROOT_DOMAIN=.bighub.cn} 或旧逻辑写成 {@code Domain=.bighub.cn}）。
+ * <strong>固定 host-only</strong>（不设 Domain）——create/status/stream/exchange 恒同源，
+ * 避免集群根 Domain 与 Host 不一致导致 8631。Shiro 会话 Cookie 仍可由 {@code CLUSTER_ROOT_DOMAIN} 跨子域。
  * 同源票写入 ticket payload；RP 远程票写入 Redis/本机旁路（与票同 TTL 量级）。
  * 升级前已发出、payload 无 {@code browserBind} 的短命票据放行至过期。
  */
@@ -41,9 +38,6 @@ public class ScanBrowserBindSupport {
 
     @Autowired
     private ScanTicketService scanTicketService;
-
-    @Autowired(required = false)
-    private SysConfigService sysConfigService;
 
     public void bindOnCreate(TicketSnapshot ticket, HttpServletResponse response) {
         bindOnCreate(ticket, null, response);
@@ -142,59 +136,26 @@ public class ScanBrowserBindSupport {
     }
 
     private void writeCookie(HttpServletRequest request, HttpServletResponse response, String uuid, String secret) {
-        // 按 uuid 分名，多标签互不覆盖；值仅为 secret
+        // 按 uuid 分名，多标签互不覆盖；值仅为 secret；host-only（不设 Domain）
         Cookie cookie = new Cookie(cookieNameForUuid(uuid), secret);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setMaxAge((int) (LOCAL_BIND_TTL_MS / 1000));
-        applyDomainAndSameSite(request, cookie);
-        addCookieSafe(response, cookie);
+        applySameSite(cookie);
+        response.addCookie(cookie);
         // 兼容旧单 Cookie（后开标签仍会覆盖，但旧页可读新格式）
         Cookie legacy = new Cookie(COOKIE_NAME, uuid + "." + secret);
         legacy.setHttpOnly(true);
         legacy.setPath("/");
         legacy.setMaxAge((int) (LOCAL_BIND_TTL_MS / 1000));
-        applyDomainAndSameSite(request, legacy);
-        addCookieSafe(response, legacy);
+        applySameSite(legacy);
+        response.addCookie(legacy);
     }
 
-    /**
-     * Domain 非法（如误带前导点）时降级为 host-only，避免建票整单失败、二维码空白。
-     */
-    private static void addCookieSafe(HttpServletResponse response, Cookie cookie) {
-        if (response == null || cookie == null) {
-            return;
-        }
-        try {
-            response.addCookie(cookie);
-        } catch (IllegalArgumentException ex) {
-            try {
-                cookie.setDomain(null);
-                response.addCookie(cookie);
-            } catch (Exception ignored) {
-            }
-        }
-    }
-
-    private void applyDomainAndSameSite(HttpServletRequest request, Cookie cookie) {
+    private static void applySameSite(Cookie cookie) {
         try {
             cookie.setAttribute("SameSite", "Lax");
         } catch (Exception ignored) {
-        }
-        if (request == null || sysConfigService == null) {
-            return;
-        }
-        try {
-            String host = HostSessionCookieSupport.resolveRequestHost(request);
-            String domain = HostSessionCookieSupport.resolveCookieDomain(host, sysConfigService.getClusterRootDomain());
-            if (StringUtils.isNotBlank(domain)) {
-                cookie.setDomain(domain);
-            }
-        } catch (Exception ignored) {
-            try {
-                cookie.setDomain(null);
-            } catch (Exception ignored2) {
-            }
         }
     }
 

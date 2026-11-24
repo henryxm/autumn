@@ -178,10 +178,11 @@ flowchart TB
 |------|------|------|
 | POST | `/ticket/create` | 代理 AS `open/create`（WEBHOOK payload），body `{ data: { callback, type?, id? } }` |
 | GET | `/ticket/stream?uuid=` | **SSE** 推送扫码状态（`SCANNED` / `COMPLETED` / 终端态） |
-| POST | `/ticket/cancel?uuid=` | 取消票据 |
-| POST | `/inbound` | AS Webhook 入站（`qrc.scanned` / `qrc.authorized`） |
-| POST | `/inbound` | AS Webhook 回调入口（签名校验） |
-| POST | `/ticket/cancel?uuid=` | 代理 AS `open/cancel` |
+| GET | `/ticket/status?uuid=` | 轮询降级（读本机 `RpQrcPendingStore`） |
+| POST | `/ticket/cancel?uuid=` | 取消票据（代理 AS `open/cancel`） |
+| POST | `/inbound` | AS Webhook 入站（`qrc.scanned` / `qrc.authorized`，签名校验） |
+
+`stream`/`status` 只读 RP **`RpQrcPendingStore`**（键 `rp:qrc:pending:`），**不查 AS 票**。多副本部署 **必须 Redis**，否则 create 与 stream 落不同节点会报「扫码会话不存在或已过期」。排障见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1。
 
 ### 5.2 浏览器 Redirect（B1）
 

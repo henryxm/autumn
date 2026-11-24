@@ -410,7 +410,7 @@ Web 浏览器用 `exchange` 调 `session/exchange`；PC/桌面客户端持久化
 
 匿名；返回 **`R`**。供 `login.html` 等同源页面使用。Shiro anon；**CSRF 豁免**（`CsrfProtectFilter`）。
 
-建票响应会 `Set-Cookie`：`autumn_qrc_bind_{uuid}`（及兼容名 `autumn_qrc_bind`）。`stream` / `status` / `exchange` **须**携带匹配 Cookie，否则 `8630`/`8631`。Cookie Domain 规则见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §3.2（Rfc6265 **无前导点**）。
+建票响应会 `Set-Cookie`：`autumn_qrc_bind_{uuid}`（及兼容名 `autumn_qrc_bind`）。`stream` / `status` / `exchange` **须**携带匹配 Cookie，否则 `8630`/`8631`。绑定 Cookie 为 **host-only**（不设 Domain），见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §3.2。
 
 ### POST `/qrc/scanticket/web/ticket/create`
 
@@ -639,6 +639,8 @@ Autumn 站点作 **RP** 时，浏览器不直接持有 `client_secret`，由本�
 请求/响应字段与 §3 PC Web（`ScanTicketController`）对齐，返回框架 **`R`**（`code` / `msg` / `data`）。  
 **`qrc.authorized` 入站** 按 `credentialType` 自动调用 **`WebOauthLoginService`**（classic）或 **`ConnectLoginService`**（open），浏览器经 SSE 接收 `redirectUrl`（见 **`docs/AI_AUTH_SITE_ROLES.md` §2**）。  
 前端 **`autumn-qrc-core.js`**（`mode: 'rp'` / open `as`）与配置见 **`docs/AI_AUTH_SITE_ROLES.md`**。
+
+**RP pending 存储（`RpQrcPendingStore`）**：键前缀 `rp:qrc:pending:`；**多节点必须 Redis**（`StringRedisTemplate`）。无 Redis 时仅本机内存，create 与 stream/status 落不同 pod 会报「扫码会话不存在或已过期」。建票 `saveOrFail`：Redis 写失败则建票失败；运维排障见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1。
 
 用户信息：`GET /oauth2/userInfo`（详见 **`docs/AI_OAUTH_INTEGRATION.md`**）。
 

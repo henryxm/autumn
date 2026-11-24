@@ -27,6 +27,8 @@ import org.springframework.stereotype.Component;
 /**
  * RP 待处理扫码会话：进程内内存 + Redis JSON 字符串（避免 JDK 序列化嵌套 DTO 失败）。
  * <p>
+ * <strong>多节点必须 Redis</strong>（{@link StringRedisTemplate}）：仅内存时 create 与 stream/status
+ * 落不同 pod 会报「扫码会话不存在或已过期」。
  * 终态 grace：{@link #saveTerminal} 缩短 {@code expiredAt}；Redis 依赖 TTL。
  * 秒级 {@link LoopJob.ThirtySecond} 仅扫描内存并入队，Redis/内存删除由 {@link TagTaskExecutor} drain（见 docs/AI_ASYNC_TASK.md §4.1）。
  */
@@ -46,6 +48,8 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
 
     private final AtomicReference<JobPhase> drainPhase = JobPhaseGate.create();
 
+    private final AtomicReference<Boolean> memoryOnlyWarned = new AtomicReference<>(Boolean.FALSE);
+
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
 
@@ -55,19 +59,46 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
     @Autowired
     private TagTaskExecutor asyncTaskExecutor;
 
+    /**
+     * 持久化 pending（状态更新等）。Redis 写失败仍保留本机内存并打 ERROR，不中断业务回调。
+     */
     public void save(RpQrcPendingSession session) {
+        saveInternal(session, false);
+    }
+
+    /**
+     * 建票专用：已注入 Redis 时写失败回滚内存并抛错，避免浏览器拿无效 uuid 去 stream。
+     */
+    public void saveOrFail(RpQrcPendingSession session) {
+        saveInternal(session, true);
+    }
+
+    /** 是否已接入 Redis（运维/单测）。 */
+    public boolean isRedisBacked() {
+        return stringRedisTemplate != null;
+    }
+
+    private void saveInternal(RpQrcPendingSession session, boolean failHardOnRedisError) {
         if (session == null || StringUtils.isBlank(session.getUuid())) {
             return;
         }
         memory.put(session.getUuid(), session);
         if (stringRedisTemplate == null) {
+            if (memoryOnlyWarned.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
+                log.warn("RP QRC pending 仅内存（无 StringRedisTemplate）：多节点集群下 stream/status 会读不到会话，请开启 Redis");
+            }
             return;
         }
         long ttl = resolveTtlSeconds(session.getExpiredAt());
         try {
             stringRedisTemplate.opsForValue().set(KEY_PREFIX + session.getUuid(), JSON.toJSONString(session), ttl, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.warn("RP QRC pending redis save failed uuid={}: {}", session.getUuid(), e.getMessage());
+            if (failHardOnRedisError) {
+                memory.remove(session.getUuid());
+                log.error("RP QRC pending redis save failed uuid={}: {}", session.getUuid(), e.getMessage());
+                throw new IllegalStateException("RP 扫码会话写入 Redis 失败，请检查集群 Redis", e);
+            }
+            log.error("RP QRC pending redis save soft-failed uuid={}: {}（本机内存仍可读）", session.getUuid(), e.getMessage());
         }
     }
 
@@ -120,7 +151,8 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
         }
         long grace = Math.max(1_000L, graceMs);
         session.setExpiredAt(System.currentTimeMillis() + grace);
-        save(session);
+        // 终态：Redis 失败仍保留本机 grace，供本节点 SSE/poll；不阻断 inbound 完成链
+        saveInternal(session, false);
     }
 
     public TicketStatusResult toStatusResult(RpQrcPendingSession session) {

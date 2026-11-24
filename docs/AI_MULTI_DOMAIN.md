@@ -36,7 +36,7 @@ CLUSTER_ROOT_DOMAIN=x.com
 
 - 访问 `a.com` / `b.com`：`HostSessionCookieFilter` 使用 **host-only** Cookie。
 - 访问 `auth.x.com`：Host 为集群根子域时，Cookie Domain=`x.com`（覆盖 `*.x.com`，含 apex 行为依浏览器）。
-- 扫码绑定 Cookie 与会话 Cookie **共用** `HostSessionCookieSupport.resolveCookieDomain`（见 §3.2）。
+- 会话 Cookie 仍经 `HostSessionCookieSupport.resolveCookieDomain`；**扫码绑定 Cookie 固定 host-only**（见 §3.2）。
 
 ---
 
@@ -59,7 +59,7 @@ CLUSTER_ROOT_DOMAIN=x.com
 
 后续 `status` / `stream` / `exchange` 须带匹配 Cookie，防仅凭 uuid 跨浏览器抢登。
 
-**Domain 规则**：与 §3.1 相同。若 `addCookie` 仍因非法 Domain 抛 `IllegalArgumentException`，框架降级为 **host-only**（不设 Domain），保证建票 HTTP 200 仍能出码。
+**Domain 规则**：**固定 host-only**（不设 `Domain`）。create/status/stream/exchange 恒同源，避免 `CLUSTER_ROOT_DOMAIN` 与 Host 不一致导致 8631。Shiro 会话 Cookie 仍可按 §3.1 跨子域。
 
 ### 3.3 扫码 QR URL（`ScanTicketService.buildQrUrl`）
 
@@ -98,10 +98,29 @@ CLUSTER_ROOT_DOMAIN=x.com
 
 ## 5. 排障：登录二维码空白
 
-1. Network → `POST .../ticket/create`：若 `code!=0` 且 `msg` 含 `invalid domain` → 检查 `CLUSTER_ROOT_DOMAIN` 是否带前导 `.`，并确认已部署含 Rfc6265 Domain 修复的版本。  
-2. Response `Set-Cookie`：应见 `autumn_qrc_bind_*`；`Domain=` 若存在须为 `bighub.cn` 而非 `.bighub.cn`。  
+1. Network → `POST .../ticket/create`：若 `code!=0` 且 `msg` 含 `invalid domain` → 检查会话 Cookie / 旧版本 Domain；绑定 Cookie 现已 host-only，不应再因前导点导致空白。  
+2. Response `Set-Cookie`：应见 `autumn_qrc_bind_*`，且**无** `Domain=`（host-only）。  
 3. Application → Cookies：刷新后应有绑定 Cookie。  
 4. `GET /sys/session/self/csrf` 401：可忽略，**不是**出码失败原因。
+
+## 5.1 排障：扫码确认后未登录 / 二次卡在「等待扫码」
+
+| 现象 | 主因 | 处理 |
+|------|------|------|
+| `stream`/`status` 报「扫码会话不存在或已过期」 | RP `RpQrcPendingStore` 读不到 pending（多副本无 Redis / Redis 写失败） | 生产 **必须** `autumn.redis.open` + 可用 Redis；键前缀 `rp:qrc:pending:`；无 Redis 时后台 WARN「仅内存」 |
+| 前端一直「等待扫码」 | 旧前端吞错不刷新 | 升级后会话丢失/863x 会提示并 `refreshQrLogin` |
+| 确认后跳转仍未登录 | exchange 失败却盲目 reload | 现展示 `msg`，禁止无条件 reload |
+| 控制台 csrf 401 / loopback `ERR_CERT_DATE_INVALID` | 与 pending 丢失可并存 | csrf 可忽略；证书见下节 |
+
+**RP pending**：`POST .../ticket/create` 成功后本机/Redis 须有会话；SSE/status **只读 RP 本机 pending**，不靠 AS 票。多节点缺 Redis 时 create 与 stream 落不同 pod → 二次扫码卡死。
+
+## 5.2 App 快捷登录 loopback 证书过期
+
+浏览器访问 `https://localhost.xsign.co:19283/...` 报 `ERR_CERT_DATE_INVALID` 时，按 Account 运维文档换证（**不在 autumn 仓重签 PEM**）：
+
+1. 权威步骤：[`minclouds-account/.../APP_LOOPBACK_TLS_CERT.md`](../../minclouds-account/autumn-account/docs/APP_LOOPBACK_TLS_CERT.md)、[`APP_LOCALHOST_BRIDGE.md`](../../minclouds-account/autumn-account/docs/APP_LOCALHOST_BRIDGE.md)  
+2. Account 后台：**登录与安全 → App 快捷登录证书**（`ACCOUNT_APP_LOOPBACK_TLS`）上传叶证/链/私钥；DNS A → `127.0.0.1`；超然信 PC **重新登录**拉证。  
+3. 与 RP pending / 绑定 Cookie **无关**；可与 csrf 401 同屏出现，排障以 Network + 后台 WARN 为准。
 
 ---
 

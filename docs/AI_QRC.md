@@ -86,9 +86,11 @@ QRC 模块（`cn.org.autumn.modules.qrc`）是**扫码交互编排层**，复用
 | 项 | 说明 |
 |----|------|
 | Cookie | `autumn_qrc_bind_{uuid}`（主）+ 兼容 `autumn_qrc_bind`；防跨浏览器抢登 |
-| Domain | 与 `CLUSTER_ROOT_DOMAIN` 对齐，**Rfc6265 无前导点**（写 `bighub.cn` 勿写 `.bighub.cn`） |
+| Domain | **host-only**（不设 Domain）；与会话 Cookie 的 `CLUSTER_ROOT_DOMAIN` 解耦 |
 | CSRF | 未登录 `GET /sys/session/self/csrf` **401 正常**，不挡出码；web 扫码路径已 CSRF 豁免 |
-| 症状「二维码空白 + invalid domain [.xxx]」 | 旧 Domain 带点被 Tomcat 拒绝 → 建票失败；见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §3.2 / §5 |
+| 症状「二维码空白 + invalid domain [.xxx]」 | 旧版绑定 Cookie 写了带点 Domain；现已 host-only；见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §3.2 / §5 |
+| 确认后未登录 / 二次「等待扫码」 | RP pending 丢（多节点须 Redis）或前端吞错；见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1 |
+| App Bridge `ERR_CERT_DATE_INVALID` | loopback 证书过期；换证见 Account `APP_LOOPBACK_TLS_CERT.md`（[`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.2） |
 
 实现：`ScanBrowserBindSupport`；多域名细则：`AI_MULTI_DOMAIN.md`。
 
