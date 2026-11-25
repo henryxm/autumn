@@ -82,9 +82,30 @@ public class ClientOauth2QrcController {
         response.setHeader("Cache-Control", "no-cache, no-transform");
         response.setHeader("Connection", "keep-alive");
         response.setHeader("X-Accel-Buffering", "no");
-        scanBrowserBindSupport.assertBoundByUuid(uuid, request);
-        log.debug("RP QRC stream subscribe uuid={}", uuid);
-        return scanLoginFacade.streamRpTicket(uuid);
+        try {
+            scanBrowserBindSupport.assertBoundByUuid(uuid, request);
+            log.debug("RP QRC stream subscribe uuid={}", uuid);
+            return scanLoginFacade.streamRpTicket(uuid);
+        } catch (Exception e) {
+            // 过期/未绑定票反复订阅是预期噪音：回一条 SESSION_EXPIRED 并结束，避免容器记 ERROR
+            logExpectedQrcMiss("stream", uuid, e);
+            return expiredSseEmitter();
+        }
+    }
+
+    private static SseEmitter expiredSseEmitter() {
+        SseEmitter emitter = new SseEmitter(3_000L);
+        try {
+            emitter.send(SseEmitter.event().name("status").data("{\"status\":\"SESSION_EXPIRED\"}"));
+            emitter.complete();
+        } catch (Exception ignored) {
+            try {
+                emitter.complete();
+            } catch (Exception ignore) {
+                // ignore
+            }
+        }
+        return emitter;
     }
 
     @GetMapping("/ticket/status")
@@ -97,9 +118,20 @@ public class ClientOauth2QrcController {
             scanBrowserBindSupport.assertBoundByUuid(uuid, request);
             return R.ok().put("data", scanLoginFacade.pollRpTicketStatus(uuid));
         } catch (Exception e) {
-            // pending miss 排障：保留 redisBacked，勿与「跳转未登录/SessionFixation」混为一谈
-            log.warn("RP QRC status failed uuid={} redisBacked={}: {}", uuid, rpQrcPendingStore.isRedisBacked(), e.getMessage());
+            // pending miss 排障：保留 redisBacked；「不存在或已过期」降为 DEBUG，避免登录页空转刷 WARN
+            logExpectedQrcMiss("status", uuid, e);
             return R.error(e.getMessage());
+        }
+    }
+
+    private void logExpectedQrcMiss(String channel, String uuid, Exception e) {
+        String msg = e == null ? "" : StringUtils.defaultString(e.getMessage());
+        boolean expected = msg.contains("扫码会话不存在") || msg.contains("不存在或已过期")
+                || msg.contains("未绑定") || msg.contains("不匹配");
+        if (expected) {
+            log.debug("RP QRC {} miss uuid={} redisBacked={}: {}", channel, uuid, rpQrcPendingStore.isRedisBacked(), msg);
+        } else {
+            log.warn("RP QRC {} failed uuid={} redisBacked={}: {}", channel, uuid, rpQrcPendingStore.isRedisBacked(), msg);
         }
     }
 

@@ -226,7 +226,11 @@
                     return false;
                 }
             },
-            refreshQrLogin: function () {
+            refreshQrLogin: function (opts) {
+                opts = opts || {};
+                if (!opts.auto) {
+                    this._qrcAutoRefreshCount = 0;
+                }
                 if (authorizeMode && this.authorizeLoggedIn && this.authorizeLogoutUrl) {
                     window.location.href = this.authorizeLogoutUrl;
                     return;

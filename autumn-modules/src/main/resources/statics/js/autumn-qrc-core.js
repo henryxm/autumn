@@ -556,6 +556,23 @@
                 self.stopNotify();
                 self.resetQrScannedState();
                 var text = msg || '扫码会话不存在或已过期，请刷新重试';
+                // 后台页签或连续自动续票过多时停住，避免登录页挂着无限 create+SSE+poll 打满 CPU/流量
+                var hidden = typeof document !== 'undefined' && document.hidden;
+                self._qrcAutoRefreshCount = (self._qrcAutoRefreshCount || 0) + 1;
+                var maxAuto = 3;
+                if (hidden || self._qrcAutoRefreshCount > maxAuto) {
+                    self.qrPhase = 'idle';
+                    var tip = hidden
+                        ? (text + '（页面在后台，请切回后点击刷新二维码）')
+                        : ('二维码多次过期，请点击刷新重试');
+                    self.setQrStatus(tip);
+                    if (self.appQuickActive) {
+                        self.appQuickBusy = false;
+                        self.appQuickPhase = 'idle';
+                        self.appQuickHint = tip;
+                    }
+                    return;
+                }
                 self.setQrStatus(text);
                 if (self.appQuickActive) {
                     self.appQuickBusy = false;
@@ -563,8 +580,13 @@
                     self.appQuickHint = text;
                 }
                 window.setTimeout(function () {
+                    if (typeof document !== 'undefined' && document.hidden) {
+                        self.qrPhase = 'idle';
+                        self.setQrStatus(text + '（页面在后台，请切回后点击刷新二维码）');
+                        return;
+                    }
                     if (typeof self.refreshQrLogin === 'function') {
-                        self.refreshQrLogin();
+                        self.refreshQrLogin({ auto: true });
                     }
                 }, 800);
             },
@@ -663,7 +685,9 @@
             },
             handleQrTerminalStatus: function (status) {
                 if (status === 'DENIED' || status === 'CANCELLED' || status === 'EXPIRED') {
+                    this.stopNotify();
                     this.resetQrScannedState();
+                    this.qrPhase = 'idle';
                     this.qrStatus = '扫码已取消或过期，请刷新重试';
                 }
             },
@@ -682,7 +706,12 @@
             stopPoll: function () {
                 this.stopNotify();
             },
-            refreshQrLogin: function () {
+            refreshQrLogin: function (opts) {
+                opts = opts || {};
+                // 用户手动刷新时重置自动续票计数
+                if (!opts.auto) {
+                    this._qrcAutoRefreshCount = 0;
+                }
                 this.resetQrScannedState();
                 this.startQrLogin();
             },
