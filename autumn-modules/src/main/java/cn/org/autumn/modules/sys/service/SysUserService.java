@@ -1350,6 +1350,7 @@ public class SysUserService extends ServiceImpl<SysUserDao, SysUserEntity> imple
         return null;
     }
 
+    /** Token 登录；默认 SessionFixation 换发。RP inbound 由 {@link cn.org.autumn.modules.sys.shiro.SessionFixationSupport#runWithoutRegeneration} 抑制。 */
     public void login(AuthenticationToken token) {
         Subject subject = ShiroUtils.getSubject();
         if (!subject.isAuthenticated()) {

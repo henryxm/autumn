@@ -18,6 +18,7 @@ import cn.org.autumn.modules.qrc.dto.ScannerBrief;
 import cn.org.autumn.modules.qrc.dto.TicketCreateResult;
 import cn.org.autumn.modules.qrc.model.DeliveryMode;
 import cn.org.autumn.modules.sys.service.SysConfigService;
+import cn.org.autumn.modules.sys.shiro.SessionFixationSupport;
 import cn.org.autumn.utils.HttpClientUtils;
 import cn.org.autumn.utils.WebPathUtils;
 import com.alibaba.fastjson2.JSON;
@@ -116,20 +117,29 @@ public class RpQrcCallbackService {
             throw new IllegalArgumentException("回调未包含授权码");
         }
         if (StringUtils.isBlank(pending.getBrowserSessionId())) {
+            log.warn("RP QRC complete SESSION_EXPIRED uuid={} browserSessionId=blank", pending.getUuid());
             markSessionExpired(pending);
             return;
         }
+        String sessionBrief = SessionFixationSupport.briefSessionId(pending.getBrowserSessionId());
         ScanLoginCredentialContext credential = scanLoginCredentialService.require(pending.getCredentialType(), pending.getCredentialId());
         final ScanLoginCredentialContext cred = credential;
         final String authCode = code;
-        boolean executed = rpQrcSessionContextService.runWithBrowserSession(pending.getBrowserSessionId(), () -> finishInboundLogin(pending, cred, authCode));
+        boolean executed;
+        try {
+            executed = rpQrcSessionContextService.runWithBrowserSession(pending.getBrowserSessionId(), () -> finishInboundLogin(pending, cred, authCode));
+        } catch (Exception e) {
+            log.warn("RP QRC complete failed uuid={} browserSessionId={} msg={}", pending.getUuid(), sessionBrief, e.getMessage());
+            throw e;
+        }
         if (!executed) {
-            log.warn("RP QRC complete failed: browser session expired uuid={}", pending.getUuid());
+            log.warn("RP QRC complete SESSION_EXPIRED uuid={} browserSessionId={}", pending.getUuid(), sessionBrief);
             markSessionExpired(pending);
             return;
         }
         rpQrcPendingStore.saveTerminal(pending, RpQrcPendingStore.TERMINAL_GRACE_MS);
-        log.debug("RP QRC complete success uuid={} redirect={}", pending.getUuid(), pending.getRedirectUrl());
+        log.info("RP QRC complete ok uuid={} browserSessionId={} redirect={} status={}",
+                pending.getUuid(), sessionBrief, pending.getRedirectUrl(), pending.getStatus());
         rpQrcEventStreamService.publish(pending);
     }
 

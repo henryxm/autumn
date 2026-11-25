@@ -91,6 +91,10 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
             return;
         }
         memory.put(session.getUuid(), session);
+        // 复活/续期时清掉可能已入队的过期清理，避免 saveTerminal 后被 drain 误删
+        if (removeQueue.remove(session.getUuid()) != null) {
+            log.debug("RP QRC pending removeQueue cleared uuid={}", session.getUuid());
+        }
         if (!isRedisBacked()) {
             if (failHardOnRedisError) {
                 memory.remove(session.getUuid());
@@ -234,11 +238,17 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
         });
     }
 
-    /** 异步 drain：清理本机内存并删 Redis（允许 IO）。 */
+    /** 异步 drain：清理本机内存并删 Redis（允许 IO）。删除前复查 expiredAt，避免与 save/saveTerminal 竞态误删。 */
     void drainExpired() {
+        long now = System.currentTimeMillis();
         List<String> uuids = new ArrayList<>(removeQueue.keySet());
         for (String uuid : uuids) {
             removeQueue.remove(uuid);
+            RpQrcPendingSession live = memory.get(uuid);
+            if (live != null && live.getExpiredAt() > now) {
+                log.debug("RP QRC pending drain skip revived uuid={}", uuid);
+                continue;
+            }
             try {
                 remove(uuid);
             } catch (Exception e) {

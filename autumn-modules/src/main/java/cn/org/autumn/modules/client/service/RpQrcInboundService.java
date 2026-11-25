@@ -68,6 +68,13 @@ public class RpQrcInboundService {
     }
 
     private void handleAuthorized(RpQrcPendingSession pending, JSONObject data) {
+        // 终态幂等：已 COMPLETED/DENIED 的重放 Webhook 不再二次换票登录
+        if (pending != null && ("COMPLETED".equalsIgnoreCase(pending.getStatus())
+                || "DENIED".equalsIgnoreCase(pending.getStatus())
+                || "CANCELLED".equalsIgnoreCase(pending.getStatus()))) {
+            log.info("RP QRC inbound authorized ignored (already terminal) uuid={} status={}", pending.getUuid(), pending.getStatus());
+            return;
+        }
         String code = data.getString("code");
         if (StringUtils.isBlank(code)) {
             throw new IllegalArgumentException("回调未包含授权码");

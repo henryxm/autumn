@@ -107,10 +107,10 @@ CLUSTER_ROOT_DOMAIN=x.com
 
 | 现象 | 主因 | 处理 |
 |------|------|------|
-| `stream`/`status` 报「扫码会话不存在或已过期」 | **RP** `RpQrcPendingStore.get` 为空（与 **AS/超然信票无关**） | 生产 **必须** `autumn.redis.open` + 可用 `RedisTemplate`；pending 与浏览器 bind **同走 `RedisUtils`**；键 `rp:qrc:pending:{uuid}`；建票用 `trySet`，失败直接拒票（禁止幽灵 uuid）。日志含 `redisBacked=` |
+| `stream`/`status` 报「扫码会话不存在或已过期」 | **RP** `RpQrcPendingStore.get` 为空（与 **AS/超然信票无关**） | 生产 **必须** `autumn.redis.open` + 可用 `RedisTemplate`；pending 与浏览器 bind **同走 `RedisUtils`**；键 `rp:qrc:pending:{uuid}`；建票用 `trySet`，失败直接拒票。日志含 `redisBacked=`。**不等于**「跳转后未登录」 |
 | 前端一直「等待扫码」 | 旧前端吞错不刷新 | 升级后会话丢失/863x 会提示并 `refreshQrLogin` |
-| 确认后跳转仍未登录 | exchange 失败却盲目 reload；或 inbound 同样读不到 pending | 现展示 `msg`，禁止无条件 reload；先查 RP Redis |
-| 控制台 csrf 401 / loopback `ERR_CERT_DATE_INVALID` | 与 pending 丢失可并存 | csrf 可忽略；证书见下节 |
+| **确认后跳转仍未登录**（已见扫码成功 / COMPLETED） | inbound 登录时 **SessionFixation 换发** 停掉 Cookie 中的旧 Session，Webhook **无法** Set-Cookie | 须 `RpQrcSessionContextService` + `SessionFixationSupport.runWithoutRegeneration`；见 §5.1.2 日志判据 |
+| 控制台 csrf 401 / loopback `ERR_CERT_DATE_INVALID` | 与 pending / Session 换发可并存 | csrf 可忽略；证书见下节 |
 
 **RP pending（模式 D）**：`POST .../ticket/create` 成功后任意副本须能读到 `rp:qrc:pending:{uuid}`（值为 **JSON 字符串**，经主 `RedisTemplate`/JDK 包装，不是 `StringRedisTemplate` 裸文本）；PC `status`/`stream` **只读 RP pending，从不问 AS**。升级超然信 **无法**消除本 WARN。
 
@@ -124,6 +124,26 @@ CLUSTER_ROOT_DOMAIN=x.com
 | 当前 | 回到 `RedisUtils`，值存 **JSON 字符串**；`isAvailable` + `trySet`；`get` **Redis 优先** | 同通道 + 可序列化 + 禁止幽灵 uuid |
 
 **回归红线（改码前必读 `RpQrcPendingStore` 类注释 Invariant）**：禁止再引入 `StringRedisTemplate` 分轨；禁止 `RedisUtils.set(session对象)` 整对象 JDK 序列化；禁止「内存优先 get」钉死他节点状态；建票禁止在 Redis 未写入时返回 uuid。滚动升级时旧 `StringRedisTemplate` 裸 JSON 键与现格式不兼容，在途票可失效，必要时 `DEL`/`SCAN` 清理 `rp:qrc:pending:*`。
+
+### 5.1.2 跳转后未登录：SessionFixation 与日志关键字
+
+模式 D：**不**走 `session/exchange`；AS Webhook → RP `completeOnInbound` → 在建票 `browserSessionId` 上 `establishSession` → SSE `COMPLETED` → 前端 `forceNavigate`。
+
+| 日志关键字 | 含义 |
+|------------|------|
+| `RP QRC browser session ok sessionId=… authenticated=true` | 抑制换发后 sessionId **未变**且已认证（成功主信号） |
+| `RP QRC browser session id changed` | WARN：suppress 未生效，仍换发 → 跳转必未登录 |
+| `RP QRC complete ok uuid=…` | inbound 登录+写终态成功 |
+| `RP QRC inbound ok uuid=… event=…` | Controller 入站成功 |
+| `RP QRC browser session missing` / `complete SESSION_EXPIRED` | Session 不在 DAO（非 fixation；查集群 Session Redis） |
+| `RP QRC status failed … 扫码会话不存在` | pending miss（§5.1）；**不是**跳转未登录主因 |
+| `create ok … redisBacked=false` | WARN：多副本 pending 风险（与 SessionFixation 无关） |
+
+成功一次确认：`browser session ok` + `authenticated=true` → `complete ok` → `inbound ok`。口令/B1 callback 仍换发（DEBUG `SessionFixation regenerated`）。日志中的 `sessionId=` 为 **SHA-256 短摘要**，非完整 Cookie 值。
+
+**威胁模型（接受的风险）**：模式 D inbound 不换发 SessionId，攻击者若预先植入受害者浏览器已知 Session Cookie，确认后可复用该会话。缓解：Webhook HMAC、pending 内 `browserSessionId` 不可由回调体伪造、bind Cookie 防抢票。与安全加固 **B-01** 的例外关系见 [`AI_SECURITY_HARDENING_3_0_COMPAT.md`](AI_SECURITY_HARDENING_3_0_COMPAT.md)。生产应对 `browser session id changed` 告警。
+
+**勿回滚**：`RedisUtils` pending 通道、host-only 绑定 Cookie、前端 session-lost（均为独立真修）；误诊的是把「跳转未登录」归到 pending。
 
 ## 5.2 App 快捷登录 loopback 证书过期
 
@@ -142,6 +162,7 @@ CLUSTER_ROOT_DOMAIN=x.com
 | `HostSessionCookieSupport` | `autumn-modules/.../sys/shiro/` |
 | `HostAwareSessionIdCookie` | `autumn-modules/.../sys/shiro/` |
 | `ScanBrowserBindSupport` | `autumn-modules/.../qrc/support/` |
+| `SessionFixationSupport` / `RpQrcSessionContextService` | inbound 禁换发；§5.1.2 |
 | `CsrfProtectFilter` | `autumn-modules/.../sys/filter/` |
 | `AuthAuthorizeLoginSupport` | `autumn-modules/.../oauth/oauth2/support/` |
 | `login.html` / `autumn-qrc-core.js` | 登录扫码 UI |

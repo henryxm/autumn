@@ -60,7 +60,12 @@ public class ClientOauth2QrcController {
             }
             if (created != null && StringUtils.isNotBlank(created.getUuid())) {
                 scanBrowserBindSupport.bindOnCreate(created.getUuid(), servlet, response);
-                log.info("RP QRC create ok uuid={} redisBacked={}", created.getUuid(), rpQrcPendingStore.isRedisBacked());
+                // redisBacked=false 才值得 INFO；正常路径 DEBUG，避免误诊噪音
+                if (rpQrcPendingStore.isRedisBacked()) {
+                    log.debug("RP QRC create ok uuid={} redisBacked=true", created.getUuid());
+                } else {
+                    log.warn("RP QRC create ok uuid={} redisBacked=false（多副本 status 会 miss）", created.getUuid());
+                }
             }
             return R.ok().put("data", created);
         } catch (Exception e) {
@@ -92,6 +97,7 @@ public class ClientOauth2QrcController {
             scanBrowserBindSupport.assertBoundByUuid(uuid, request);
             return R.ok().put("data", scanLoginFacade.pollRpTicketStatus(uuid));
         } catch (Exception e) {
+            // pending miss 排障：保留 redisBacked，勿与「跳转未登录/SessionFixation」混为一谈
             log.warn("RP QRC status failed uuid={} redisBacked={}: {}", uuid, rpQrcPendingStore.isRedisBacked(), e.getMessage());
             return R.error(e.getMessage());
         }
@@ -116,18 +122,52 @@ public class ClientOauth2QrcController {
     @PostMapping("/inbound")
     @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
     public R inbound(@RequestBody(required = false) String rawBody, HttpServletRequest servlet) {
+        String uuidHint = peekInboundUuid(rawBody);
+        String eventHint = peekInboundEvent(rawBody);
         try {
             if (StringUtils.isBlank(rawBody)) {
                 log.warn("RP QRC inbound rejected: empty body");
                 return R.error("回调体为空");
             }
-            log.debug("RP QRC inbound received bodyLen={} remote={}", rawBody.length(), servlet == null ? null : servlet.getRemoteAddr());
+            log.debug("RP QRC inbound received uuid={} event={} bodyLen={} remote={}",
+                    uuidHint, eventHint, rawBody.length(), servlet == null ? null : servlet.getRemoteAddr());
             scanLoginFacade.handleRpInbound(rawBody, readHeaders(servlet));
+            log.info("RP QRC inbound ok uuid={} event={}", uuidHint, eventHint);
             return R.ok();
         } catch (Exception e) {
-            log.warn("RP QRC inbound failed: {}", e.getMessage());
+            log.warn("RP QRC inbound fail uuid={} event={} msg={}", uuidHint, eventHint, e.getMessage());
             return R.error(e.getMessage());
         }
+    }
+
+    private static String peekInboundUuid(String rawBody) {
+        return peekJsonString(rawBody, "uuid");
+    }
+
+    private static String peekInboundEvent(String rawBody) {
+        return peekJsonString(rawBody, "event");
+    }
+
+    /** 轻量截取 JSON 字符串字段，仅用于日志，失败返回 null。 */
+    private static String peekJsonString(String rawBody, String field) {
+        if (StringUtils.isBlank(rawBody) || StringUtils.isBlank(field)) {
+            return null;
+        }
+        String key = "\"" + field + "\"";
+        int i = rawBody.indexOf(key);
+        if (i < 0) {
+            return null;
+        }
+        int colon = rawBody.indexOf(':', i + key.length());
+        if (colon < 0) {
+            return null;
+        }
+        int q1 = rawBody.indexOf('"', colon + 1);
+        int q2 = q1 >= 0 ? rawBody.indexOf('"', q1 + 1) : -1;
+        if (q1 < 0 || q2 <= q1) {
+            return null;
+        }
+        return rawBody.substring(q1 + 1, q2);
     }
 
     private static Map<String, String> readHeaders(HttpServletRequest request) {

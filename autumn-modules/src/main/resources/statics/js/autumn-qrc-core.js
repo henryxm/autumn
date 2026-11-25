@@ -899,7 +899,9 @@
                             }
                             self.forceNavigate(target || 'index.html');
                         } else {
+                            self.resetQrScannedState();
                             self.qrStatus = result.msg || '登录失败';
+                            self.qrPhase = 'idle';
                         }
                     },
                     error: function () {
@@ -907,10 +909,10 @@
                             onUnavailable(true);
                             return;
                         }
+                        // 禁止盲目 reload；与 finishSessionExchange 失败路径一致
+                        self.resetQrScannedState();
                         self.qrStatus = '网络异常，请刷新二维码重试';
-                        window.setTimeout(function () {
-                            self.recoverAfterMissingSession();
-                        }, 500);
+                        self.qrPhase = 'idle';
                     }
                 });
             },

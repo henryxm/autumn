@@ -89,7 +89,8 @@ QRC 模块（`cn.org.autumn.modules.qrc`）是**扫码交互编排层**，复用
 | Domain | **host-only**（不设 Domain）；与会话 Cookie 的 `CLUSTER_ROOT_DOMAIN` 解耦 |
 | CSRF | 未登录 `GET /sys/session/self/csrf` **401 正常**，不挡出码；web 扫码路径已 CSRF 豁免 |
 | 症状「二维码空白 + invalid domain [.xxx]」 | 旧版绑定 Cookie 写了带点 Domain；现已 host-only；见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §3.2 / §5 |
-| 确认后未登录 / 二次「等待扫码」 | RP pending 丢（多节点须 Redis）或前端吞错；见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1 |
+| 确认后跳转未登录 | **SessionFixation**（inbound 换发停 Cookie Session）；见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1.2 |
+| status「扫码会话不存在」/ 二次等待 | RP pending miss（多节点 Redis）或前端吞错；见同文 §5.1（**≠** 跳转未登录） |
 | App Bridge `ERR_CERT_DATE_INVALID` | loopback 证书过期；换证见 Account `APP_LOOPBACK_TLS_CERT.md`（[`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.2） |
 
 实现：`ScanBrowserBindSupport`；多域名细则：`AI_MULTI_DOMAIN.md`。

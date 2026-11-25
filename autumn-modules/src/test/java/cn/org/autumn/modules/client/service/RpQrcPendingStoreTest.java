@@ -210,4 +210,44 @@ class RpQrcPendingStoreTest {
         verify(redisUtils).trySet(eq("rp:qrc:pending:ok-1"), anyString(), anyLong());
         assertNotNull(rpQrcPendingStore.get("ok-1"));
     }
+
+    @Test
+    void saveTerminal_clearsRemoveQueueSoDrainDoesNotDelete() {
+        when(redisUtils.isAvailable()).thenReturn(false);
+
+        RpQrcPendingSession session = new RpQrcPendingSession();
+        session.setUuid("revive-1");
+        session.setStatus("PENDING");
+        session.setExpiredAt(System.currentTimeMillis() - 1_000L);
+        rpQrcPendingStore.save(session);
+        rpQrcPendingStore.enqueueExpiredKeys();
+
+        session.setStatus("COMPLETED");
+        session.setExpiredAt(System.currentTimeMillis() + 30_000L);
+        rpQrcPendingStore.saveTerminal(session, RpQrcPendingStore.TERMINAL_GRACE_MS);
+
+        rpQrcPendingStore.drainExpired();
+        assertNotNull(rpQrcPendingStore.get("revive-1"));
+        assertEquals("COMPLETED", rpQrcPendingStore.get("revive-1").getStatus());
+    }
+
+    @Test
+    void drainExpired_skipsWhenExpiredAtRevivedWithoutClearingQueue() {
+        when(redisUtils.isAvailable()).thenReturn(false);
+
+        RpQrcPendingSession session = new RpQrcPendingSession();
+        session.setUuid("race-1");
+        session.setStatus("PENDING");
+        session.setExpiredAt(System.currentTimeMillis() - 1_000L);
+        rpQrcPendingStore.save(session);
+        rpQrcPendingStore.enqueueExpiredKeys();
+
+        // 模拟 TOCTOU：入队后直接改 expiredAt（不走 saveInternal 清队）
+        session.setExpiredAt(System.currentTimeMillis() + 60_000L);
+        session.setStatus("COMPLETED");
+
+        rpQrcPendingStore.drainExpired();
+        assertNotNull(rpQrcPendingStore.get("race-1"));
+        assertEquals("COMPLETED", rpQrcPendingStore.get("race-1").getStatus());
+    }
 }

@@ -234,11 +234,12 @@ sequenceDiagram
 | 步骤 | 代码位置 | 说明 |
 |------|----------|------|
 | 建票记录 Session | `RpQrcCallbackService.createTicket` | `pending.setBrowserSessionId(request.getSession().getId())` |
-| 入站恢复 Subject | `RpQrcSessionContextService.runWithBrowserSession` | `ShiroSessionService.readSessionById` + `Subject.Builder` |
-| 完成 OAuth | `WebOauthLoginService.completeRemoteOAuthCallback` | 与 B1 `/client/oauth2/callback` 共用 `finishOAuthLogin` |
-| Session 失效 | `markSessionExpired` | SSE 推送 `SESSION_EXPIRED`，前端刷新二维码 |
+| 入站恢复 Subject | `RpQrcSessionContextService.runWithBrowserSession` | `readSessionById` + `Subject.Builder`；**必须**包在 `SessionFixationSupport.runWithoutRegeneration` 内 |
+| 完成 OAuth | `WebOauthLoginService.completeRemoteOAuthCallback` | 与 B1 `/client/oauth2/callback` 共用 `finishOAuthLogin` → `establishSession` |
+| **禁止 SessionFixation 换发** | `SessionFixationSupport` | Webhook 无法 Set-Cookie；换发会 `stop` Cookie 中旧 Session → **跳转未登录**。浏览器口令/B1 callback **仍换发** |
+| Session 失效 | `markSessionExpired` | SSE `SESSION_EXPIRED`；日志 `complete SESSION_EXPIRED` / `browser session missing` |
 
-**多实例 RP**：`RpQrcPendingStore` 经 **`RedisUtils`**（`autumn.redis.open` + `isAvailable`/`trySet`，与浏览器 bind 同通道）持久化键 `rp:qrc:pending:{uuid}`（**JSON 字符串**，禁止整对象 JDK 序列化、禁止再引入 `StringRedisTemplate` 分轨——历史回归见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1.1）。建票 `saveOrFail` 硬失败；`get` Redis 优先。PC `status`/`stream` **只读 RP pending，不查 AS 票**。`RpQrcEventStreamService` Pub/Sub（`rp:qrc:sse`）。SSE：`Cache-Control: no-cache`、`X-Accel-Buffering: no`。
+排障日志关键字见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1.2。多实例 pending Redis / 回归红线见同文 §5.1.1。SSE Pub/Sub：`rp:qrc:sse`；头：`Cache-Control: no-cache`、`X-Accel-Buffering: no`。
 
 **D 模式禁止路径（已删除，勿调用）**
 

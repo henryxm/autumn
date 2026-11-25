@@ -59,7 +59,7 @@
 
 | ID | 变更 | 说明 |
 |----|------|------|
-| **B-01** | 登录 Session Fixation | `subject.login` 后换发 SessionId，Cookie 名不变 |
+| **B-01** | 登录 Session Fixation | `subject.login` 后换发 SessionId，Cookie 名不变。**例外**：模式 D RP inbound（Webhook 无法 Set-Cookie）经 `SessionFixationSupport.runWithoutRegeneration` **不换发**，存在经典 fixation 残留窗口；见 `AI_MULTI_DOMAIN.md` §5.1.2。口令登录 / B1 浏览器 callback / AS exchange **仍换发** |
 | **B-02** | QRC Webhook SSRF | 拒私网/元数据；公网 URL 仍可用 |
 | **B-03** | nonce 防重放 | `putIfAbsent` + 可选 Redis；签名协议不变 |
 | **B-04** | `@Login` 拦截器 | 校验失败改为抛错，不再吞异常放行 |
