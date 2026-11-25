@@ -94,6 +94,9 @@ public class AExceptionHandler {
      * <p>
      * 循环视图路径异常仅面向 REST/API（{@code @RestControllerAdvice} 不处理页面渲染链）；
      * 页面请求由 {@link FreemarkerViewExceptionResolver} 负责，此处返回 JSON {@link Error#NOT_FOUND} 且不记 ERROR 日志。
+     * <p>
+     * DispatcherServlet 常把业务异常包装为 {@code NestedServletException}；若一律 500 会掩盖
+     * Shiro 无权限、{@link CodeException} 等，故先解包 cause 再映射。
      */
     @ExceptionHandler(ServletException.class)
     public ResponseEntity<Response<?>> handleServletException(ServletException e, HttpServletRequest request, HttpServletResponse response) {
@@ -104,12 +107,52 @@ public class AExceptionHandler {
                 log.debug("请求方式:{}, 路径:{}, IP:{}, 错误:循环视图路径异常，已静默处理", request.getMethod(), request.getRequestURI(), IPUtils.getIp(request));
             }
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.NOT_FOUND));
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("请求方式:{}, 路径:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getMessage(), e);
-            }
-            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.INTERNAL_SERVER_ERROR));
         }
+        ResponseEntity<Response<?>> unwrapped = mapUnwrappedServletCause(e, request, response);
+        if (unwrapped != null) {
+            return unwrapped;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("请求方式:{}, 路径:{}, 错误:{}", request.getMethod(), request.getRequestURI(), e.getMessage(), e);
+        }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.INTERNAL_SERVER_ERROR));
+    }
+
+    /**
+     * 解包 NestedServletException 等包装链：CodeException / AException / Shiro 鉴权失败。
+     * 不直接依赖 shiro 类型（autumn-lib 无 shiro），按类名识别。
+     */
+    private ResponseEntity<Response<?>> mapUnwrappedServletCause(Throwable e, HttpServletRequest request, HttpServletResponse response) {
+        Throwable cur = e;
+        while (cur != null) {
+            if (cur instanceof CodeException) {
+                return handleCodeException((CodeException) cur, request, response);
+            }
+            if (cur instanceof AException) {
+                return handleRRException((AException) cur, request, response);
+            }
+            String name = cur.getClass().getName();
+            if ("org.apache.shiro.authz.UnauthenticatedException".equals(name)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("请求方式:{}, 路径:{}, 错误:未登录", request.getMethod(), request.getRequestURI());
+                }
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.UNAUTHORIZED));
+            }
+            if ("org.apache.shiro.authz.UnauthorizedException".equals(name)
+                    || "org.apache.shiro.authz.AuthorizationException".equals(name)
+                    || (name.startsWith("org.apache.shiro.authz.") && name.endsWith("AuthorizationException"))) {
+                if (log.isDebugEnabled()) {
+                    log.debug("请求方式:{}, 路径:{}, 错误:无权限", request.getMethod(), request.getRequestURI());
+                }
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.FORBIDDEN));
+            }
+            Throwable next = cur.getCause();
+            if (next == cur) {
+                break;
+            }
+            cur = next;
+        }
+        return null;
     }
 
     /**
