@@ -119,7 +119,7 @@ public class AExceptionHandler {
     }
 
     /**
-     * 解包 NestedServletException 等包装链：CodeException / AException / Shiro 鉴权失败。
+     * 解包 NestedServletException 等包装链：CodeException / AException / Shiro 鉴权失败 / SQL 语法。
      * 不直接依赖 shiro 类型（autumn-lib 无 shiro），按类名识别。
      */
     private ResponseEntity<Response<?>> mapUnwrappedServletCause(Throwable e, HttpServletRequest request, HttpServletResponse response) {
@@ -130,6 +130,10 @@ public class AExceptionHandler {
             }
             if (cur instanceof AException) {
                 return handleRRException((AException) cur, request, response);
+            }
+            if (cur instanceof BadSqlGrammarException) {
+                log.error("请求失败:{}", cur.getMessage());
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Response.error(Error.NOT_IMPLEMENTED));
             }
             String name = cur.getClass().getName();
             if ("org.apache.shiro.authz.UnauthenticatedException".equals(name)) {
