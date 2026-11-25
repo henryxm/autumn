@@ -640,7 +640,7 @@ Autumn 站点作 **RP** 时，浏览器不直接持有 `client_secret`，由本�
 **`qrc.authorized` 入站** 按 `credentialType` 自动调用 **`WebOauthLoginService`**（classic）或 **`ConnectLoginService`**（open），浏览器经 SSE 接收 `redirectUrl`（见 **`docs/AI_AUTH_SITE_ROLES.md` §2**）。  
 前端 **`autumn-qrc-core.js`**（`mode: 'rp'` / open `as`）与配置见 **`docs/AI_AUTH_SITE_ROLES.md`**。
 
-**RP pending 存储（`RpQrcPendingStore`）**：键前缀 `rp:qrc:pending:`；**多节点必须 Redis**（`StringRedisTemplate`）。无 Redis 时仅本机内存，create 与 stream/status 落不同 pod 会报「扫码会话不存在或已过期」。建票 `saveOrFail`：Redis 写失败则建票失败；运维排障见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1。
+**RP pending 存储（`RpQrcPendingStore`）**：键前缀 `rp:qrc:pending:`；**多节点必须 Redis**（经 **`RedisUtils`** / `isAvailable`+`trySet`，与浏览器 bind 同通道；值=JSON 字符串）。建票 `saveOrFail` 硬失败；`get` Redis 优先。禁止 `StringRedisTemplate` 分轨与整对象 JDK 序列化（§5.1.1）。PC status/stream 只读 RP pending；「扫码会话不存在或已过期」≠ AS 票过期。见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1。
 
 用户信息：`GET /oauth2/userInfo`（详见 **`docs/AI_OAUTH_INTEGRATION.md`**）。
 

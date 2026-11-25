@@ -11,26 +11,33 @@ import cn.org.autumn.thread.JobPhaseGate;
 import cn.org.autumn.thread.TagRunnable;
 import cn.org.autumn.thread.TagTaskExecutor;
 import cn.org.autumn.thread.TagValue;
+import cn.org.autumn.utils.RedisUtils;
 import com.alibaba.fastjson2.JSON;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * RP 待处理扫码会话：进程内内存 + Redis JSON 字符串（避免 JDK 序列化嵌套 DTO 失败）。
+ * RP 待处理扫码会话（模式 D）：本机内存缓存 + {@link RedisUtils} 存 <strong>JSON 字符串</strong>。
  * <p>
- * <strong>多节点必须 Redis</strong>（{@link StringRedisTemplate}）：仅内存时 create 与 stream/status
- * 落不同 pod 会报「扫码会话不存在或已过期」。
- * 终态 grace：{@link #saveTerminal} 缩短 {@code expiredAt}；Redis 依赖 TTL。
- * 秒级 {@link LoopJob.ThirtySecond} 仅扫描内存并入队，Redis/内存删除由 {@link TagTaskExecutor} drain（见 docs/AI_ASYNC_TASK.md §4.1）。
+ * <strong>Invariant（破坏即回归「扫码会话不存在或已过期」）</strong>
+ * <ul>
+ *   <li>持久化通道必须与浏览器 bind（{@code ScanTicketService.putBrowserBind}）同为 {@link RedisUtils}
+ *       / {@code autumn.redis.open}，禁止再引入可选 {@code StringRedisTemplate} 分轨。</li>
+ *   <li>值必须是 JSON 文本再经 RedisTemplate 写入，禁止把 {@link RpQrcPendingSession} 整对象交给 JDK 序列化
+ *       （历史：ScannerBrief 不可序列化导致 inbound 500，见 commit a94c8acd；该次改走 StringRedisTemplate
+ *       又造成 bighub 多副本 pending miss，见 docs/AI_MULTI_DOMAIN.md §5.1）。</li>
+ *   <li>建票 {@link #saveOrFail}：Redis 不可用、{@link RedisUtils#trySet} 失败均硬失败并回滚内存，禁止幽灵 uuid。</li>
+ *   <li>{@link #get} 在 Redis 可用时<strong>优先读 Redis</strong>再回填内存，避免他节点更新后本机内存钉死旧状态。</li>
+ * </ul>
+ * PC {@code status}/{@code stream} 只读本 store，<strong>不查 AS 票</strong>；升级超然信无法消除 pending miss。
+ * 终态 grace：{@link #saveTerminal}；秒级入队 + {@link TagTaskExecutor} drain（docs/AI_ASYNC_TASK.md §4.1）。
  */
 @Slf4j
 @Component
@@ -50,8 +57,8 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
 
     private final AtomicReference<Boolean> memoryOnlyWarned = new AtomicReference<>(Boolean.FALSE);
 
-    @Autowired(required = false)
-    private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private RedisUtils redisUtils;
 
     @Autowired
     private SysConfigService sysConfigService;
@@ -61,21 +68,22 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
 
     /**
      * 持久化 pending（状态更新等）。Redis 写失败仍保留本机内存并打 ERROR，不中断业务回调。
+     * 多副本下软失败可能导致他节点 status 看不到 SCANNED/COMPLETED，应优先保证 Redis 健康。
      */
     public void save(RpQrcPendingSession session) {
         saveInternal(session, false);
     }
 
     /**
-     * 建票专用：已注入 Redis 时写失败回滚内存并抛错，避免浏览器拿无效 uuid 去 stream。
+     * 建票专用：无可用 Redis 或 {@link RedisUtils#trySet} 未写入时回滚内存并抛错，避免浏览器拿无效 uuid 去 stream。
      */
     public void saveOrFail(RpQrcPendingSession session) {
         saveInternal(session, true);
     }
 
-    /** 是否已接入 Redis（运维/单测）。 */
+    /** 是否已接入可用 Redis（运维/单测/可观测）。 */
     public boolean isRedisBacked() {
-        return stringRedisTemplate != null;
+        return redisUtils != null && redisUtils.isAvailable();
     }
 
     private void saveInternal(RpQrcPendingSession session, boolean failHardOnRedisError) {
@@ -83,15 +91,32 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
             return;
         }
         memory.put(session.getUuid(), session);
-        if (stringRedisTemplate == null) {
+        if (!isRedisBacked()) {
+            if (failHardOnRedisError) {
+                memory.remove(session.getUuid());
+                log.error("RP QRC pending saveOrFail rejected uuid={}: Redis 不可用（autumn.redis.open + RedisTemplate）", session.getUuid());
+                throw new IllegalStateException("RP 扫码会话需要 Redis（autumn.redis.open），当前不可用");
+            }
             if (memoryOnlyWarned.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
-                log.warn("RP QRC pending 仅内存（无 StringRedisTemplate）：多节点集群下 stream/status 会读不到会话，请开启 Redis");
+                log.warn("RP QRC pending 仅内存（RedisUtils 不可用）：多节点集群下 stream/status 会读不到会话，请开启 autumn.redis.open");
             }
             return;
         }
         long ttl = resolveTtlSeconds(session.getExpiredAt());
+        String key = KEY_PREFIX + session.getUuid();
         try {
-            stringRedisTemplate.opsForValue().set(KEY_PREFIX + session.getUuid(), JSON.toJSONString(session), ttl, TimeUnit.SECONDS);
+            // 必须用 trySet：set() 对 no-op/超大值静默跳过，硬失败路径不可依赖「无异常即成功」
+            boolean written = redisUtils.trySet(key, JSON.toJSONString(session), ttl);
+            if (!written) {
+                if (failHardOnRedisError) {
+                    memory.remove(session.getUuid());
+                    log.error("RP QRC pending redis trySet skipped uuid={}（不可用或超大值）", session.getUuid());
+                    throw new IllegalStateException("RP 扫码会话写入 Redis 失败，请检查集群 Redis");
+                }
+                log.error("RP QRC pending redis trySet soft-skipped uuid={}（本机内存仍可读；他节点可能 miss）", session.getUuid());
+            }
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
             if (failHardOnRedisError) {
                 memory.remove(session.getUuid());
@@ -102,28 +127,27 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
         }
     }
 
+    /**
+     * 读取 pending。Redis 可用时优先 Redis（多副本权威源），再回填本机；Redis miss 时回落本机内存
+     * （同节点 soft-save 场景）。勿改回「内存优先」——否则他节点 inbound 更新后本机 poll 钉死旧状态。
+     */
     public RpQrcPendingSession get(String uuid) {
         if (StringUtils.isBlank(uuid)) {
             return null;
         }
-        RpQrcPendingSession cached = memory.get(uuid);
-        if (cached != null) {
-            return cached;
-        }
-        if (stringRedisTemplate == null) {
-            return null;
-        }
-        try {
-            String raw = stringRedisTemplate.opsForValue().get(KEY_PREFIX + uuid);
-            RpQrcPendingSession fromRedis = parseSession(raw);
-            if (fromRedis != null) {
-                memory.put(uuid, fromRedis);
-                return fromRedis;
+        if (isRedisBacked()) {
+            try {
+                Object raw = redisUtils.get(KEY_PREFIX + uuid);
+                RpQrcPendingSession fromRedis = parseSession(raw);
+                if (fromRedis != null) {
+                    memory.put(uuid, fromRedis);
+                    return fromRedis;
+                }
+            } catch (Exception e) {
+                log.warn("RP QRC pending redis read failed uuid={}: {}", uuid, e.getMessage());
             }
-        } catch (Exception e) {
-            log.warn("RP QRC pending redis read failed uuid={}: {}", uuid, e.getMessage());
         }
-        return null;
+        return memory.get(uuid);
     }
 
     public void remove(String uuid) {
@@ -132,9 +156,9 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
         }
         memory.remove(uuid);
         removeQueue.remove(uuid);
-        if (stringRedisTemplate != null) {
+        if (isRedisBacked()) {
             try {
-                stringRedisTemplate.delete(KEY_PREFIX + uuid);
+                redisUtils.delete(KEY_PREFIX + uuid);
             } catch (Exception e) {
                 log.warn("RP QRC pending redis delete failed uuid={}: {}", uuid, e.getMessage());
             }
@@ -223,11 +247,18 @@ public class RpQrcPendingStore implements LoopJob.ThirtySecond {
         }
     }
 
-    private RpQrcPendingSession parseSession(String raw) {
-        if (StringUtils.isBlank(raw)) {
+    private RpQrcPendingSession parseSession(Object raw) {
+        if (raw == null) {
             return null;
         }
-        return JSON.parseObject(raw, RpQrcPendingSession.class);
+        if (raw instanceof RpQrcPendingSession) {
+            return (RpQrcPendingSession) raw;
+        }
+        String text = raw instanceof String ? (String) raw : String.valueOf(raw);
+        if (StringUtils.isBlank(text)) {
+            return null;
+        }
+        return JSON.parseObject(text, RpQrcPendingSession.class);
     }
 
     private long resolveTtlSeconds(long expiredAt) {

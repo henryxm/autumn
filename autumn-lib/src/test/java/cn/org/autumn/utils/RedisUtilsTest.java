@@ -79,7 +79,20 @@ class RedisUtilsTest {
     @Test
     void set_skipsOversizedString() {
         String big = "x".repeat(2000);
-        redisUtils.set("s", big, 60);
+        assertFalse(redisUtils.trySet("s", big, 60));
+        verify(valueOperations, never()).set(any(), any());
+    }
+
+    @Test
+    void trySet_returnsTrueWhenWritten() {
+        assertTrue(redisUtils.trySet("k", "v", 60));
+        verify(valueOperations).set("k", "v");
+    }
+
+    @Test
+    void trySet_returnsFalseWhenClosed() {
+        ReflectionTestUtils.setField(redisUtils, "open", false);
+        assertFalse(redisUtils.trySet("k", "v", 60));
         verify(valueOperations, never()).set(any(), any());
     }
 
@@ -88,5 +101,15 @@ class RedisUtilsTest {
         assertTrue(RedisUtils.isRedisDeserializationFailure(new SerializationException("Cannot deserialize")));
         assertTrue(RedisUtils.isRedisDeserializationFailure(new RuntimeException(new OutOfMemoryError("Java heap space"))));
         assertFalse(RedisUtils.isRedisDeserializationFailure(new IllegalStateException("other")));
+    }
+
+    @Test
+    void isAvailable_requiresOpenAndTemplate() {
+        assertTrue(redisUtils.isAvailable());
+        ReflectionTestUtils.setField(redisUtils, "open", false);
+        assertFalse(redisUtils.isAvailable());
+        ReflectionTestUtils.setField(redisUtils, "open", true);
+        ReflectionTestUtils.setField(redisUtils, "redisTemplate", null);
+        assertFalse(redisUtils.isAvailable());
     }
 }

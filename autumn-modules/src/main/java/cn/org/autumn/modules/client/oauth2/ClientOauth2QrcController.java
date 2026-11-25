@@ -3,6 +3,7 @@ package cn.org.autumn.modules.client.oauth2;
 import cn.org.autumn.annotation.SkipInterceptor;
 import cn.org.autumn.model.Request;
 import cn.org.autumn.modules.client.dto.RpQrcCreateRequest;
+import cn.org.autumn.modules.client.service.RpQrcPendingStore;
 import cn.org.autumn.modules.client.service.ScanLoginFacade;
 import cn.org.autumn.modules.qrc.dto.TicketCreateResult;
 import cn.org.autumn.modules.qrc.support.ScanBrowserBindSupport;
@@ -38,6 +39,9 @@ public class ClientOauth2QrcController {
     @Autowired
     ScanBrowserBindSupport scanBrowserBindSupport;
 
+    @Autowired
+    RpQrcPendingStore rpQrcPendingStore;
+
     @PostMapping("/ticket/create")
     @SkipInterceptor({AuthorizationInterceptor.class, SpmInterceptor.class})
     public R create(@Valid @RequestBody(required = false) Request<RpQrcCreateRequest> request,
@@ -56,10 +60,11 @@ public class ClientOauth2QrcController {
             }
             if (created != null && StringUtils.isNotBlank(created.getUuid())) {
                 scanBrowserBindSupport.bindOnCreate(created.getUuid(), servlet, response);
+                log.info("RP QRC create ok uuid={} redisBacked={}", created.getUuid(), rpQrcPendingStore.isRedisBacked());
             }
             return R.ok().put("data", created);
         } catch (Exception e) {
-            log.warn("RP QRC create failed: {}", e.getMessage());
+            log.warn("RP QRC create failed redisBacked={}: {}", rpQrcPendingStore.isRedisBacked(), e.getMessage());
             return R.error(e.getMessage());
         }
     }
@@ -87,7 +92,7 @@ public class ClientOauth2QrcController {
             scanBrowserBindSupport.assertBoundByUuid(uuid, request);
             return R.ok().put("data", scanLoginFacade.pollRpTicketStatus(uuid));
         } catch (Exception e) {
-            log.warn("RP QRC status failed uuid={}: {}", uuid, e.getMessage());
+            log.warn("RP QRC status failed uuid={} redisBacked={}: {}", uuid, rpQrcPendingStore.isRedisBacked(), e.getMessage());
             return R.error(e.getMessage());
         }
     }

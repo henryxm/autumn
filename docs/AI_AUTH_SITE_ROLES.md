@@ -182,7 +182,7 @@ flowchart TB
 | POST | `/ticket/cancel?uuid=` | 取消票据（代理 AS `open/cancel`） |
 | POST | `/inbound` | AS Webhook 入站（`qrc.scanned` / `qrc.authorized`，签名校验） |
 
-`stream`/`status` 只读 RP **`RpQrcPendingStore`**（键 `rp:qrc:pending:`），**不查 AS 票**。多副本部署 **必须 Redis**，否则 create 与 stream 落不同节点会报「扫码会话不存在或已过期」。排障见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1。
+`stream`/`status` 只读 RP **`RpQrcPendingStore`**（`RedisUtils`，键 `rp:qrc:pending:`），**不查 AS 票**。多副本 **必须** `autumn.redis.open`；无 Redis 时建票失败。本 WARN「扫码会话不存在或已过期」= RP pending miss，升级 AS 无效。排障见 [`AI_MULTI_DOMAIN.md`](AI_MULTI_DOMAIN.md) §5.1。
 
 ### 5.2 浏览器 Redirect（B1）
 

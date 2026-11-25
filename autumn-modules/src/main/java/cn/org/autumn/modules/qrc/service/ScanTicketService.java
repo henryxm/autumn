@@ -307,15 +307,18 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
         saveTicket(ticket);
     }
 
-    /** 旁路绑定密钥（集群可走 Redis；无 Redis 时本机 Map）。 */
+    /**
+     * 旁路绑定密钥（集群走 {@link RedisUtils}，与 {@code RpQrcPendingStore} 同通道）。
+     * 须用 {@link RedisUtils#isAvailable()}，勿仅看 {@code isOpen()}（开开关无 Template 时 set 静默 no-op）。
+     */
     public void putBrowserBind(String uuid, String secret, long ttlSeconds) {
         if (StringUtils.isBlank(uuid) || StringUtils.isBlank(secret)) {
             return;
         }
         long ttl = Math.max(1, ttlSeconds);
         String key = BROWSER_BIND_KEY_PREFIX + uuid;
-        if (redisUtils.isOpen()) {
-            redisUtils.set(key, secret, ttl);
+        if (redisUtils.isAvailable()) {
+            redisUtils.trySet(key, secret, ttl);
         }
         localBrowserBinds.put(uuid, secret);
     }
@@ -325,7 +328,7 @@ public class ScanTicketService extends ModuleService<ScanTicketDao, ScanTicketEn
             return null;
         }
         String key = BROWSER_BIND_KEY_PREFIX + uuid;
-        if (redisUtils.isOpen()) {
+        if (redisUtils.isAvailable()) {
             Object value = redisUtils.get(key);
             if (value instanceof String && StringUtils.isNotBlank((String) value)) {
                 return (String) value;

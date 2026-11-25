@@ -42,23 +42,44 @@ public class RedisUtils {
     @Value("${autumn.redis.max-value-bytes:1048576}")
     private long maxValueBytes = DEFAULT_MAX_VALUE_BYTES;
 
+    /** {@code autumn.redis.open} 且已注入 {@link RedisTemplate}（与仅 {@link #isOpen()} 区分：开了开关但无连接工厂时仍不可用）。 */
+    public boolean isAvailable() {
+        return open && redisTemplate != null;
+    }
+
+    /**
+     * 写入并设置 TTL。调用方需区分「静默跳过」与成功：请用 {@link #trySet}。
+     * 本方法保留无返回值以兼容存量调用。
+     */
     public void set(String key, Object value, long expire) {
-        if (!open || redisTemplate == null) {
-            return;
-        }
-        if (isOversizedPlainValue(value)) {
-            log.warn("Redis set skipped oversized value key={} limitBytes={}", key, maxValueBytes);
-            return;
-        }
-        redisTemplate.opsForValue().set(key, value);
-        if (expire != NOT_EXPIRE) {
-            RedisExpireUtil.expire(redisTemplate, key, expire, TimeUnit.SECONDS);
-        }
+        trySet(key, value, expire);
     }
 
     public void set(String key, Object value) {
-        if (open && redisTemplate != null)
-            set(key, value, DEFAULT_EXPIRE);
+        trySet(key, value, DEFAULT_EXPIRE);
+    }
+
+    /**
+     * 写入并设置 TTL。
+     *
+     * @return {@code true} 已写入；{@code false} 未写入（未 open / 无 Template / 超大值被跳过）
+     */
+    public boolean trySet(String key, Object value, long expire) {
+        if (!open || redisTemplate == null) {
+            return false;
+        }
+        if (isOversizedPlainValue(value)) {
+            log.warn("Redis set skipped oversized value key={} limitBytes={}", key, maxValueBytes);
+            return false;
+        }
+        redisTemplate.opsForValue().set(key, value);
+        if (expire != NOT_EXPIRE) {
+            boolean ttlOk = RedisExpireUtil.expire(redisTemplate, key, expire, TimeUnit.SECONDS);
+            if (!ttlOk) {
+                log.warn("Redis expire failed after set key={} expireSeconds={}", key, expire);
+            }
+        }
+        return true;
     }
 
     public Object get(String key) {

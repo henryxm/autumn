@@ -107,12 +107,23 @@ CLUSTER_ROOT_DOMAIN=x.com
 
 | 现象 | 主因 | 处理 |
 |------|------|------|
-| `stream`/`status` 报「扫码会话不存在或已过期」 | RP `RpQrcPendingStore` 读不到 pending（多副本无 Redis / Redis 写失败） | 生产 **必须** `autumn.redis.open` + 可用 Redis；键前缀 `rp:qrc:pending:`；无 Redis 时后台 WARN「仅内存」 |
+| `stream`/`status` 报「扫码会话不存在或已过期」 | **RP** `RpQrcPendingStore.get` 为空（与 **AS/超然信票无关**） | 生产 **必须** `autumn.redis.open` + 可用 `RedisTemplate`；pending 与浏览器 bind **同走 `RedisUtils`**；键 `rp:qrc:pending:{uuid}`；建票用 `trySet`，失败直接拒票（禁止幽灵 uuid）。日志含 `redisBacked=` |
 | 前端一直「等待扫码」 | 旧前端吞错不刷新 | 升级后会话丢失/863x 会提示并 `refreshQrLogin` |
-| 确认后跳转仍未登录 | exchange 失败却盲目 reload | 现展示 `msg`，禁止无条件 reload |
+| 确认后跳转仍未登录 | exchange 失败却盲目 reload；或 inbound 同样读不到 pending | 现展示 `msg`，禁止无条件 reload；先查 RP Redis |
 | 控制台 csrf 401 / loopback `ERR_CERT_DATE_INVALID` | 与 pending 丢失可并存 | csrf 可忽略；证书见下节 |
 
-**RP pending**：`POST .../ticket/create` 成功后本机/Redis 须有会话；SSE/status **只读 RP 本机 pending**，不靠 AS 票。多节点缺 Redis 时 create 与 stream 落不同 pod → 二次扫码卡死。
+**RP pending（模式 D）**：`POST .../ticket/create` 成功后任意副本须能读到 `rp:qrc:pending:{uuid}`（值为 **JSON 字符串**，经主 `RedisTemplate`/JDK 包装，不是 `StringRedisTemplate` 裸文本）；PC `status`/`stream` **只读 RP pending，从不问 AS**。升级超然信 **无法**消除本 WARN。
+
+### 5.1.1 历史根因（为何「以前能扫、后来挂」）
+
+| 阶段 | 行为 | 后果 |
+|------|------|------|
+| 早期 | pending 与 bind 均走 `RedisUtils`，但 **整对象 JDK 序列化** | inbound 写含 `ScannerBrief` 的 session → `Cannot serialize`（Webhook HTTP 200 业务 500） |
+| `a94c8acd` | 为修序列化改走可选 **`StringRedisTemplate` + JSON** | Autumn `RedisConfig` **不注册** `StringRedisTemplate`；bighub 常缺 Bean → **仅内存建票仍成功**；bind 仍走 `RedisUtils` → **绑定过 + pending 空** → 本 WARN。单副本偶发正常，多副本必挂 |
+| `b0b91c0a` | `saveOrFail` 仅在「有 Template 但 set 抛错」时失败 | **模板缺失仍出码** → 升级后问题依旧 |
+| 当前 | 回到 `RedisUtils`，值存 **JSON 字符串**；`isAvailable` + `trySet`；`get` **Redis 优先** | 同通道 + 可序列化 + 禁止幽灵 uuid |
+
+**回归红线（改码前必读 `RpQrcPendingStore` 类注释 Invariant）**：禁止再引入 `StringRedisTemplate` 分轨；禁止 `RedisUtils.set(session对象)` 整对象 JDK 序列化；禁止「内存优先 get」钉死他节点状态；建票禁止在 Redis 未写入时返回 uuid。滚动升级时旧 `StringRedisTemplate` 裸 JSON 键与现格式不兼容，在途票可失效，必要时 `DEL`/`SCAN` 清理 `rp:qrc:pending:*`。
 
 ## 5.2 App 快捷登录 loopback 证书过期
 
