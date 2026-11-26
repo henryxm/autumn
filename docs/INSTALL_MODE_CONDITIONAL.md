@@ -111,6 +111,10 @@ public InstallOnlyHelper installOnlyHelper() {
 
 结论：连库逻辑若在**构造器**或 **`afterPropertiesSet`** 中执行，仅靠跳过 PostConstruct **不够**，应使用本节的条件注解或拆分配置类。
 
+### 1.5 与 `sys_config` 启动门禁
+
+安装引导会置 **`autumn.table.init=false`**，`InitFactory` 因 `isInit()==false` 整段跳过（与历史行为一致）。此时 **`SysConfigSchemaGate.schemaReady` 保持 false**：`SysConfigService.put` 入队（debug），读路径回落 null/Java seed，**不**因缺表刷 WARN。正式库空库首启（`table.init=true`）即使建表标志未置位也**仍跑 Init**，由 soft-defer 兜底；相位与纪律见 **`docs/AI_DATABASE.md` §9**。
+
 ## 2. 安装引导时追加 `spring.autoconfigure.exclude`
 
 属性 **`autumn.install.autoconfigure-exclude`**（见 `InstallConstants.AUTOCONFIGURE_EXCLUDE_EXTRA`）：**逗号分隔**的自动配置类全限定名。仅在进入安装引导并写入 `autumnInstallBootstrap` 时，与当前环境中已有的 `spring.autoconfigure.exclude` **合并**后写入引导属性源（高优先级）。

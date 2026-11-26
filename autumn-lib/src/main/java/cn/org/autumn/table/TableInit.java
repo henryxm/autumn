@@ -37,6 +37,17 @@ public class TableInit {
     @Value("${autumn.table.init:true}")
     private boolean init;
 
+    @Autowired
+    private MysqlTableService mysqlTableService;
+
+    @Autowired
+    private Environment springEnvironment;
+
+    @Autowired
+    private SysConfigSchemaGate schemaGate;
+
+    private volatile boolean ensured;
+
     public String getDatabaseType() {
         if (StringUtils.isNotBlank(databaseType)) {
             return databaseType.trim();
@@ -48,31 +59,70 @@ public class TableInit {
         return init;
     }
 
-    @Autowired
-    private MysqlTableService mysqlTableService;
-
-    @Autowired
-    private Environment springEnvironment;
-
     @PostConstruct
+    public void onConstruct() {
+        if (Config.getInstance().getEnvironment() == null && springEnvironment != null) {
+            Config.getInstance().setEnv(springEnvironment);
+        }
+        ensureCreated();
+    }
+
+    /**
+     * 运维重置入口（如 GeneratorController）：强制再跑注解建表。
+     * 启动期请用 {@link #ensureCreated()} 幂等路径。
+     */
     public void start() {
         if (Config.getInstance().getEnvironment() == null && springEnvironment != null) {
             Config.getInstance().setEnv(springEnvironment);
         }
-        if (InstallMode.isActive(springEnvironment)) {
-            return;
+        ensured = false;
+        ensureCreated();
+    }
+
+    /**
+     * 幂等建表：安装向导 / {@code autumn.table.init=false} 时不标记 schemaReady；
+     * 注解同步成功或不支持注解建表（假定外部 DDL）时 {@link SysConfigSchemaGate#markSchemaReady()}。
+     * <p>失败时不置 {@code ensured}，允许后续重试（兼容 InitFactory 二次调用）。
+     *
+     * @return 当前是否 schemaReady
+     */
+    public synchronized boolean ensureCreated() {
+        if (ensured) {
+            return schemaGate.isSchemaReady();
         }
+        if (InstallMode.isActive(springEnvironment)) {
+            log.debug("TableInit skipped: install mode");
+            ensured = true;
+            return false;
+        }
+        // 与 isInit() / EnvBean 对齐：任一为 false 则跳过（二者均绑定 autumn.table.init）
         if (!init || !envBean.isTableInit()) {
-            return;
+            log.debug("TableInit skipped: autumn.table.init=false");
+            ensured = true;
+            return false;
         }
         DatabaseType t = databaseHolder.getType();
-        if (t.supportsAnnotationTableSync()) {
-            long t0 = System.currentTimeMillis();
-            mysqlTableService.create();
-            log.info("TableInit finished: database={} elapsedMs={}", t, System.currentTimeMillis() - t0);
-        } else {
-            log.warn("当前库类型={} 未接入注解建表，已跳过 TableInit（请使用 Flyway/手工 DDL 或后续扩展方言）。", t);
+        try {
+            if (t.supportsAnnotationTableSync()) {
+                long t0 = System.currentTimeMillis();
+                mysqlTableService.create();
+                schemaGate.markSchemaReady();
+                ensured = true;
+                log.info("TableInit finished: database={} elapsedMs={}", t, System.currentTimeMillis() - t0);
+            } else {
+                // 外部 Flyway/手工 DDL；允许 InitFactory 继续，由 SysConfig soft-defer 兜底缺表
+                schemaGate.markSchemaReady();
+                ensured = true;
+                log.warn("当前库类型={} 未接入注解建表，已跳过 TableInit（请使用 Flyway/手工 DDL 或后续扩展方言）。", t);
+            }
+        } catch (RuntimeException e) {
+            log.error("TableInit failed: database={} msg={}", t, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("TableInit failed: database={} msg={}", t, e.getMessage());
+            throw new IllegalStateException("TableInit failed: " + e.getMessage(), e);
         }
+        return schemaGate.isSchemaReady();
     }
 
     /**

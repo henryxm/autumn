@@ -43,6 +43,7 @@ import cn.org.autumn.site.ConfigFactory;
 import cn.org.autumn.site.DomainFactory;
 import cn.org.autumn.site.HostFactory;
 import cn.org.autumn.site.InitFactory;
+import cn.org.autumn.table.SysConfigSchemaGate;
 import cn.org.autumn.base.EncryptModuleService;
 import cn.org.autumn.utils.*;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -55,7 +56,9 @@ import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.web.servlet.Cookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.data.redis.core.Cursor;
@@ -79,7 +82,8 @@ import org.springframework.core.env.Environment;
 
 @Slf4j
 @Service
-public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConfigEntity> implements LoopJob.FiveMinute, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
+@DependsOn("tableInit")
+public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConfigEntity> implements LoopJob.FiveMinute, LoopJob.OneMinute, HostFactory.Host, InitFactory.Init, InitFactory.ConfigFlush, InitFactory.After, CategoryHandler, DomainHandler, ClearHandler {
 
     public static final String string_type = InputType.StringType.getValue();
     public static final String boolean_type = InputType.BooleanType.getValue();
@@ -171,10 +175,15 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     @Autowired(required = false)
     private RedisListenerService redisListenerService;
 
+    @Autowired(required = false)
+    private SysConfigSchemaGate schemaGate;
+
     private CloudStorageConfig cloudStorageConfig = null;
     private Map<String, SysConfigEntity> map = new ConcurrentHashMap<>();
     /** 本机 JSON 解析缓存：key = paramKey + '#' + className；失效与 map 同步 */
     private final Map<String, Object> jsonObjectCache = new ConcurrentHashMap<>();
+    /** 建表完成前入队的 put 种子，{@link #init()} flush */
+    private final List<String[][]> pendingPuts = Collections.synchronizedList(new ArrayList<>());
     private String lastLoggerLevel = null;
     private String namespace = null;
     private volatile boolean configCacheSubscribed = false;
@@ -197,9 +206,77 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     @Order(-1000)
     public void init() {
         clear();
+        flushPendingPuts();
         put(getConfigItems());
         updateCookieDomain();
         language.put(getLanguageItems(), getLanguageList());
+        markBootstrappedIfSettled();
+    }
+
+    /**
+     * Init 相位末尾再刷 pending（其它 Init 可能再次 defer）；再尝试标记 bootstrapped。
+     */
+    @Order(Ordered.LOWEST_PRECEDENCE)
+    @Override
+    public void flushDeferredConfig() {
+        flushPendingPuts();
+        markBootstrappedIfSettled();
+    }
+
+    /** 注解建表是否已标记就绪；无 Gate Bean 时视为就绪（单测）。 */
+    boolean isSchemaReady() {
+        return schemaGate == null || schemaGate.isSchemaReady();
+    }
+
+    /** 首次成功访问 sys_config 时补标 schemaReady（兼容外部 DDL / 门禁未置位）。 */
+    private void noteSchemaUsable() {
+        if (schemaGate != null && !schemaGate.isSchemaReady()) {
+            schemaGate.markSchemaReady();
+        }
+    }
+
+    private void markBootstrappedIfSettled() {
+        if (schemaGate == null) {
+            return;
+        }
+        if (!pendingPuts.isEmpty()) {
+            log.warn("SysConfig bootstrap deferred: pendingPuts={} (schemaReady={})", pendingPuts.size(), schemaGate.isSchemaReady());
+            return;
+        }
+        if (schemaGate.isSchemaReady()) {
+            schemaGate.markConfigBootstrapped();
+        }
+    }
+
+    void flushPendingPuts() {
+        List<String[][]> drained;
+        synchronized (pendingPuts) {
+            if (pendingPuts.isEmpty()) {
+                return;
+            }
+            drained = new ArrayList<>(pendingPuts);
+            pendingPuts.clear();
+        }
+        for (String[][] mapping : drained) {
+            putNow(mapping);
+        }
+    }
+
+    private void deferPut(String[][] mapping, String reason) {
+        if (mapping == null || mapping.length == 0) {
+            return;
+        }
+        pendingPuts.add(copyMapping(mapping));
+        String first = mapping[0] != null && mapping[0].length > 0 ? mapping[0][0] : "";
+        log.debug("SysConfig put deferred ({}) firstKey={} rows={}", reason, first, mapping.length);
+    }
+
+    private static String[][] copyMapping(String[][] mapping) {
+        String[][] copy = new String[mapping.length][];
+        for (int i = 0; i < mapping.length; i++) {
+            copy[i] = mapping[i] == null ? null : Arrays.copyOf(mapping[i], mapping[i].length);
+        }
+        return copy;
     }
 
     @SuppressWarnings("RedundantArrayCreation")
@@ -480,8 +557,26 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     }
 
     public void put(String[][] mapping) {
+        if (mapping == null || mapping.length == 0) {
+            return;
+        }
+        if (!isSchemaReady()) {
+            deferPut(mapping, "schema not ready");
+            return;
+        }
+        putNow(mapping);
+    }
+
+    /**
+     * 实际落库种子。缺表时入队剩余行并 {@code break}（禁止整批 {@code return} 丢弃后续键）。
+     */
+    void putNow(String[][] mapping) {
+        if (mapping == null || mapping.length == 0) {
+            return;
+        }
         boolean persist = CrudGuard.writable();
-        for (String[] map : mapping) {
+        for (int i = 0; i < mapping.length; i++) {
+            String[] map = mapping[i];
             SysConfigEntity config = new SysConfigEntity();
             String temp = map[0];
             if (null != temp)
@@ -489,10 +584,12 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
             SysConfigEntity entity;
             try {
                 entity = afterRead(baseMapper.queryByKey(temp));
+                noteSchemaUsable();
             } catch (Exception e) {
                 if (isMissingRelation(e)) {
-                    log.warn("SysConfig put skipped (table missing) key={} msg={}", temp, e.getMessage());
-                    return;
+                    log.debug("SysConfig put deferred (table missing) key={} msg={}", temp, e.getMessage());
+                    deferPut(Arrays.copyOfRange(mapping, i, mapping.length), "table missing");
+                    break;
                 }
                 throw e;
             }
@@ -634,7 +731,20 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     }
 
     public SysConfigEntity getByKey(String key) {
-        return afterRead(baseMapper.queryByKey(key));
+        if (!isSchemaReady()) {
+            return null;
+        }
+        try {
+            SysConfigEntity entity = afterRead(baseMapper.queryByKey(key));
+            noteSchemaUsable();
+            return entity;
+        } catch (Exception e) {
+            if (isMissingRelation(e)) {
+                log.debug("SysConfig getByKey table unavailable key={} msg={}", key, e.getMessage());
+                return null;
+            }
+            throw e instanceof RuntimeException re ? re : new RuntimeException(e);
+        }
     }
 
     /**
@@ -664,8 +774,12 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         if (StringUtils.isBlank(key)) {
             return false;
         }
+        if (!isSchemaReady()) {
+            return false;
+        }
         try {
             Integer has = baseMapper.hasKey(key);
+            noteSchemaUsable();
             return null != has && has > 0;
         } catch (Exception e) {
             if (isMissingRelation(e)) {
@@ -983,11 +1097,23 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
 
     @Transactional(rollbackFor = Exception.class)
     public void updateValueByKey(String key, String value) {
+        if (!isSchemaReady()) {
+            log.debug("SysConfig updateValueByKey deferred (schema not ready) key={}", key);
+            return;
+        }
         String stored = value;
         if (StringUtils.isNotBlank(value)) {
             stored = encrypt.encryptValue(value, null);
         }
-        baseMapper.updateValueByKey(key, stored);
+        try {
+            baseMapper.updateValueByKey(key, stored);
+        } catch (Exception e) {
+            if (isMissingRelation(e)) {
+                log.debug("SysConfig updateValueByKey skipped (table missing) key={} msg={}", key, e.getMessage());
+                return;
+            }
+            throw e instanceof RuntimeException re ? re : new RuntimeException(e);
+        }
         sysConfigRedis.delete(key);
         invalidateLocalCache(key);
         if (LOGGER_LEVEL.equalsIgnoreCase(key))
@@ -1025,6 +1151,9 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
                 return finalizePlainValue(key, decryptEntity(cached));
             }
         }
+        if (!isSchemaReady()) {
+            return null;
+        }
         // 2) Redis / DB 回源
         return finalizePlainValue(key, loadAndDecrypt(key));
     }
@@ -1049,6 +1178,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
         }
         try {
             config = baseMapper.queryByKey(key);
+            noteSchemaUsable();
             if (config != null) {
                 config = decryptEntity(config);
                 if (config != null && !isCipherPrefix(config.getParamValue())) {
@@ -1144,7 +1274,7 @@ public class SysConfigService extends EncryptModuleService<SysConfigDao, SysConf
     }
 
     public String getNameSpace() {
-        if (null == namespace) {
+        if (null == namespace && isSchemaReady()) {
             try {
                 SysConfigEntity config = ensurePlainParamValue(afterRead(baseMapper.queryByKey(CLUSTER_NAMESPACE)));
                 String r = config == null ? null : config.getParamValue();

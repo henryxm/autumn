@@ -349,14 +349,49 @@ rg -n 'FIND_IN_SET|IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(' --glo
 
 ---
 
-## 9. 文档与代码同步
+## 9. 空库首启与 `sys_config` 门禁
+
+空库首次部署时，Spring Bean 创建（尤其 **Shiro `shiroFilter` → `FilterChainHandler.definition`**）可能早于或交错于注解建表。框架门禁保证：**建表完成前不对 `sys_config` 做权威 JDBC 读写**；种子写入集中在 `InitFactory.Init`。
+
+### 9.1 相位
+
+```text
+TableInit.ensureCreated / @PostConstruct
+  → SysConfigSchemaGate.markSchemaReady
+  →（Shiro @DependsOn tableInit：FilterChain / Cookie 此时表应已存在）
+PostApplicationRunner
+  → InitFactory：ensureCreated（尽量建表）→ Before → Init → ConfigFlush → After → Post → Must
+    → SysConfigService.init @Order(-1000)：flush 延后 put → put(种子)
+    → 其它 InitFactory.Init（业务 Config put / reloadCache）
+    → ConfigFlush：再次 flush pending；pending 空且 schemaReady 时 markConfigBootstrapped
+```
+
+| 标志 | 置位 | 含义 |
+|------|------|------|
+| `schemaReady` | `TableInit` 注解建表成功，或非注解同步库假定外部 DDL；或首次成功 JDBC 访问 `sys_config` 补标 | 允许对 `sys_config` JDBC |
+| `configBootstrapped` | pending 已空且 schemaReady（Init / ConfigFlush） | 框架基础种子已落库 |
+
+安装向导 / `autumn.table.init=false`：**不** mark schemaReady；`InitFactory` 因 `isInit()==false` 整段跳过（与旧行为一致）。`autumn.table.init=true` 但建表未标 ready 时：**仍执行 Init**（兼容旧版），缺表由 soft-defer 兜底，不硬阻断。
+
+### 9.2 编码纪律
+
+1. **Bean 创建期 / `FilterChainHandler.definition`**：禁止依赖库中权威配置；禁止 `put` 种子。需要开关时用静态默认，或等 `InitFactory.Init` / 请求期惰性读。
+2. **配置种子**：只放在 **`InitFactory.Init`**（或其后相位）；`SysConfigService.put` 在 schema 未就绪时自动入队，于 `init()` / `ConfigFlush` flush。
+3. **缺表**：`put` **不得**整批 `return` 丢弃后续键；入队剩余行并 `break`。读路径 `hasKey`/`getValue`/`getByKey` 软失败。
+4. **依赖顺序**：读 SysConfig 的 Shiro Bean、`SysConfigService` 已 `@DependsOn("tableInit")`；业务侧早读表服务可同样声明。
+
+实现：`SysConfigSchemaGate`、`TableInit#ensureCreated`、`InitFactory`（含 `ConfigFlush`）、`SysConfigService`（见 `autumn-lib` / `autumn-modules`）。
+
+---
+
+## 10. 文档与代码同步
 
 - 新增或调整 **`DatabaseType`**、方言实现或路由规则时：**同步更新本文 §2** 与 **`docs/AI_INDEX.md`**。  
 - **实现类索引**：`DatabaseHolder`、`RoutingRuntimeSqlDialect`（按 `DatabaseType` 路由，见 §2.1）、`RoutingRelationalTableOperations`、`RuntimeSqlDialectRegistry`、`RuntimeSql`、`DialectService`。
 
 ---
 
-## 10. 交叉引用
+## 11. 交叉引用
 
 | 主题 | 文档 |
 |------|------|
@@ -367,3 +402,4 @@ rg -n 'FIND_IN_SET|IFNULL\(|DATE_FORMAT\(|GROUP_CONCAT\(|LAST_INSERT_ID\(' --glo
 | 升级清单、扫描脚本、「一键」边界 | **`docs/AI_UPGRADE.md`** |
 | **老旧 Dao/Wrapper 迁移步骤与检索** | **本文 §8** |
 | **只读模式 / `CrudGuard` 全局 API** | **`docs/AI_DATABASE_READ_ONLY.md`** |
+| **空库首启 / `sys_config` 门禁** | **本文 §9**；安装跳过建表见 **`docs/INSTALL_MODE_CONDITIONAL.md`** |

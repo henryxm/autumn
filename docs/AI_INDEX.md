@@ -20,7 +20,7 @@
 - **`docs/AI_DUAL_KEY.md`**：**双主键落地**（`UuidBased` / `SnowBased` / **`UserBased`**、**§3.4 无第二主键仅 `user`**、`AutoIdService`、`Uuid` / `Snow`）
 - `docs/AI_CODE_STYLE.md`：**Java 版式**（方法/调用；**§5.1 Lombok 实体与 `@Slf4j`**；**import 优先** §7；**日志单行** §8）
 - `docs/AI_SERVICE_COHESION.md`：**实体 Service 内聚（硬）**（业务唯一落点、Controller 薄、约 1000 行再拆、少工具类）
-- **`docs/AI_DATABASE.md`**：**多数据库落地规范**（已支持 `DatabaseType` 清单、**§1.1 关联键与业务主键（承接 `AI_STANDARDS` §10.4）**、**§2.1 `RuntimeSqlDialect` 能力清单与故意不抽象项**、**§4.0 代码层标准写法（`RuntimeSql` / `WrapperColumns`，禁止硬编码方言符号）**、**全库兼容默认**、**Wrapper 安全边界**、**Dao+Provider 强制与推荐分层**、`RuntimeSql` 使用纪律；**§8 老旧注解 Dao / 方言化 Wrapper 升级与一键体检策略**）
+- **`docs/AI_DATABASE.md`**：**多数据库落地规范**（已支持 `DatabaseType` 清单、**§1.1 关联键与业务主键（承接 `AI_STANDARDS` §10.4）**、**§2.1 `RuntimeSqlDialect` 能力清单与故意不抽象项**、**§4.0 代码层标准写法（`RuntimeSql` / `WrapperColumns`，禁止硬编码方言符号）**、**全库兼容默认**、**Wrapper 安全边界**、**Dao+Provider 强制与推荐分层**、`RuntimeSql` 使用纪律；**§8 老旧注解 Dao / 方言化 Wrapper 升级与一键体检策略**；**§9 空库首启 / `sys_config` 门禁（`SysConfigSchemaGate`）**）
 - **`docs/AI_DATABASE_READ_ONLY.md`**：**数据库只读模式**（`CrudGuard` API：`writable` / `opt` / `force` / `suppress`；Init/LoopJob/业务三类写决策表）
 - `docs/AI_DISTRIBUTED_LOCK.md`：分布式锁能力（`DistributedLockService` / `DistributedService`）、场景化加锁、降级与抗雪崩策略、`DistributedLockConfig` 配置项与默认值、业务域快捷模板（含项目示例源码入口）
 - `docs/AI_NODE_PROFILE.md`：本机节点画像（`ProfileService` / `node-profile.json` / 指纹 uuid；写盘保留扩展键；缓存 TTL 惰性读盘）

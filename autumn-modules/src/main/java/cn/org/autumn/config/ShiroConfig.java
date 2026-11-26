@@ -44,11 +44,12 @@ import java.util.*;
 public class ShiroConfig {
 
     /**
-     * 读 SysConfig（可能 ENC$）前须完成 {@code fieldEncryptRuntimeService} 的 {@code @PostConstruct} 密钥预热。
+     * 读 SysConfig（可能 ENC$）前须完成 {@code fieldEncryptRuntimeService} 的 {@code @PostConstruct} 密钥预热，
+     * 且 {@code tableInit} 已尝试注解建表，避免空库首启 FilterChain / Cookie 抢读缺表。
      * {@code fieldEncryptRuntimeService} 只挂在这些 Bean 上，勿升到 Configuration 类级（会拖住 LBP 过早建加密 Bean）。
      */
     @Bean("sessionManager")
-    @DependsOn("fieldEncryptRuntimeService")
+    @DependsOn({"fieldEncryptRuntimeService", "tableInit"})
     public SessionManager sessionManager(@Autowired RedisShiroSessionDAO redisShiroSessionDAO,
                                          Environment environment,
                                          @Autowired(required = false) SysConfigService sysConfigService) {
@@ -77,7 +78,7 @@ public class ShiroConfig {
     }
 
     @Bean
-    @DependsOn("fieldEncryptRuntimeService")
+    @DependsOn({"fieldEncryptRuntimeService", "tableInit"})
     public RememberMeManager rememberMeManager(SimpleCookie rememberMeCookie,
                                                @Autowired(required = false) RedisTemplate<String, Object> redisTemplate,
                                                @Autowired(required = false) StringRedisTemplate stringRedisTemplate,
@@ -110,7 +111,7 @@ public class ShiroConfig {
     }
 
     @Bean
-    @DependsOn("fieldEncryptRuntimeService")
+    @DependsOn({"fieldEncryptRuntimeService", "tableInit"})
     public SimpleCookie rememberMeCookie(@Autowired(required = false) SysConfigService sysConfigService) {
         SecuritySessionConfig sessionCfg = resolveSessionConfig(sysConfigService);
         SimpleCookie simpleCookie = new SimpleCookie("rememberMe");
@@ -158,6 +159,7 @@ public class ShiroConfig {
     }
 
     @Bean("shiroFilter")
+    @DependsOn("tableInit")
     public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager, List<FilterChainHandler> filterChainHandlers,
                                               @Value("${server.servlet.context-path:}") String servletContextPath) {
         ShiroFilterFactoryBean shiroFilter = new ShiroFilterFactoryBean();
