@@ -5,7 +5,7 @@
 # 执行策略：见 docs/AI_INDEX.md — 日常开发与 AI 辅助**不强制**本脚本；按需（用户/任务要求、CI、合并前自检）执行。
 #
 # 对照文档（请在仓库内保持与实现同步）:
-#   docs/AI_STANDARDS.md  §5～§14（定时任务、权限、实体、索引唯一、分层、gen）
+#   docs/AI_STANDARDS.md  §4（禁 Map 契约）、§5～§14、§9（实体≥2词/禁表前缀）、§10.2（查询列默认索引）、§16（默认合规；触发词=纠偏+扫描）
 #   docs/AI_CODE_STYLE.md §7（import 优先 / 禁止 FQN）
 #   docs/AI_DATABASE.md   §1、§4～§5、§8.5（方言、Dao Provider、Wrapper、检索示例）
 #   docs/AI_BOOT.md       §3（注解建表、表名 §3.2）
@@ -14,6 +14,7 @@
 #   docs/REDIS_TTL_GUIDE.md、docs/REDIS_REDISSON_SPRING_DATA.md — Redis TTL / RedisExpireUtil（H 组）
 #   docs/REDIS_KEYS_AND_SCAN.md — 禁止 RedisTemplate.keys / KEYS（J 组）
 #   docs/AI_FIELD_ENCRYPT.md §3.2 — SysConfig 标准读 API（K 组）
+#   A 组含 A4 单单词实体、A5 手写 Controller Map 契约启发式（§4 / §16）
 #
 # 用法:
 #   ./scripts/constraints-scan [ROOT]
@@ -67,9 +68,10 @@ ROOT="${1:-.}"
 ROOT="$(cd "${ROOT}" && pwd)"
 JAVA_GLOB="${AUTUMN_SCAN_JAVA_GLOB:-*.java}"
 
-GEN_GLOB_ARGS=( )
+# bash 3.2 + set -u：空数组展开会报 unbound；用占位保证始终可 "${GEN_GLOB_ARGS[@]}"
+GEN_GLOB_ARGS=( --glob '*.java' )
 if [[ "${AUTUMN_SCAN_SKIP_GEN:-}" == "1" ]]; then
-  GEN_GLOB_ARGS=( --glob '!**/controller/gen/**' --glob '!**/modules/gen/**' )
+  GEN_GLOB_ARGS=( --glob '!**/controller/gen/**' --glob '!**/modules/gen/**' --glob '*.java' )
 fi
 
 if [[ ! -d "${ROOT}" ]]; then
@@ -194,6 +196,55 @@ scan_group_a() {
   emit_matches_or_none --glob "${JAVA_GLOB}" '@TableName\(\s*"[A-Z][A-Za-z0-9]*[A-Z]' | head -80
   [[ "${n}" -gt 80 ]] && echo "${C_DIM}… 其余省略，共 ${n} 行${C_RST}"
   print_group_summary "A3" "${n}"
+
+  subsection "A4 实体类名单单词（§9：去掉 Entity 后须 ≥2 个 PascalCase 词）" \
+    "例 TaskEntity / SealEntity 违规；SignTaskEntity / TaskActorEntity 合规。"
+  local hits4=0
+  while IFS= read -r -d '' f; do
+    local base stem
+    base="$(basename "${f}" .java)"
+    [[ "${base}" != *Entity ]] && continue
+    stem="${base%Entity}"
+    # 单单词：无内部大写（首字母后全小写）或整段无第二段大写
+    if echo "${stem}" | rg -q '^[A-Z][a-z0-9]*$'; then
+      echo "${f}  → ${base}（疑似单单词）"
+      hits4=$((hits4 + 1))
+    fi
+  done < <(find "${ROOT}" \( -path '*/target' -o -path '*/.git' \) -prune -o \
+    -path '*/modules/*/entity/*Entity.java' -print0 2>/dev/null)
+  if [[ "${hits4}" -eq 0 ]]; then
+    echo "${C_DIM}(未发现单单词 *Entity)${C_RST}"
+  fi
+  print_group_summary "A4" "${hits4}"
+
+  subsection "A5 手写 RestController Map 契约（§4 禁止）" \
+    "含 api/v1 或 manage 路径的非 Gen *Controller*.java：Request<Map / Response<Map / @RequestBody Map。"
+  local hits5=0
+  local tmp5
+  tmp5="$(mktemp)"
+  # 注意：rg 多个正向 --glob 为 OR；此处只保留 *Controller*.java，勿叠 JAVA_GLOB
+  {
+    rg --color=never -l 'api/v1' --glob '!**/target/**' --glob '*Controller*.java' "${ROOT}" 2>/dev/null || true
+    rg --color=never -l 'manage' --glob '!**/target/**' --glob '*Controller*.java' "${ROOT}" 2>/dev/null || true
+  } | sort -u >"${tmp5}"
+  while IFS= read -r cf; do
+    [[ -z "${cf}" ]] && continue
+    # Gen CRUD 允许 list(Map params)；跳过 *ControllerGen*
+    if [[ "${cf}" == *ControllerGen* ]]; then
+      continue
+    fi
+    if rg -q 'Request\s*<\s*Map|Response\s*<\s*Map|@RequestBody[^\n]*Map\s*<' "${cf}" 2>/dev/null; then
+      rg --color=never --no-heading --line-number \
+        'Request\s*<\s*Map|Response\s*<\s*Map|@RequestBody[^\n]*Map\s*<' \
+        "${cf}" 2>/dev/null | head -20 || true
+      hits5=$((hits5 + 1))
+    fi
+  done <"${tmp5}"
+  rm -f "${tmp5}"
+  if [[ "${hits5}" -eq 0 ]]; then
+    echo "${C_DIM}(无命中；扫描了含 api/v1 或 manage 的非 Gen Controller)${C_RST}"
+  fi
+  print_group_summary "A5" "${hits5}"
 }
 
 # =====================================================================

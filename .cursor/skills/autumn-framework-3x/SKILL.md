@@ -9,11 +9,11 @@ description: >-
   Prefer import over fully qualified class names unless name clash (docs/AI_CODE_STYLE.md §7);
   log.info/debug/warn/error must be one line, no line breaks in the call (docs/AI_CODE_STYLE.md §8);
   FreeMarker templates: docs/AI_STANDARDS.md §7 (HTML <!--<#if>--> per line, JS //<#if>, title bare inline FTL);
-  Never reference Dao outside its ModuleService (access only via Service/baseMapper); entity business logic only in corresponding Service; Service must extend ModuleService; never inject any Dao from Controllers/Facades/other Services; entity Lombok @Getter/@Setter; logging @Slf4j (no LoggerFactory); codegen §11.0: replaceable, no proprietary logic in template products (empty shells excepted); required Entity/Service/Dao/Controller/ControllerGen; §11.2 pre-ZIP template Gen CRUD OK; no AI list/Pages; internal API RequestMapping module/entitylower; new open API POST /{module}/api/v1/{action} with *Request/*VO/@Valid; comment short title 2-8 chars; table prefix never in Entity class name; statics/pages/Site/PageAware.
-  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
-  scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
+  Never reference Dao outside its ModuleService (access only via Service/baseMapper); entity business logic only in corresponding Service; Service must extend ModuleService; never inject any Dao from Controllers/Facades/other Services; entity Lombok @Getter/@Setter; logging @Slf4j (no LoggerFactory); codegen §11.0: replaceable, no proprietary logic in template products (empty shells excepted); required Entity/Service/Dao/Controller/ControllerGen; §11.2 pre-ZIP template Gen CRUD OK; no AI list/Pages; internal API RequestMapping module/entitylower; new open API POST /{module}/api/v1/{action} with *Request/*VO/@Valid; FORBID Map as Request/Response T on */api/v1/** and hand-written Rest facades (no Map/JSONObject/Object/Entity as T); Entity short name MUST be ≥2 PascalCase words (SignTaskEntity OK, TaskEntity BAD); query predicate columns default @Index/@Indexes; comment short title 2-8 chars; table prefix never in Entity class name; statics/pages/Site/PageAware.
+  Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md, docs/AI_STANDARDS.md §4 §9 §10.2 §16. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot); web 集成测试见 web/docs/INTEGRATION_TEST.md（基类 integration.base.IntegrationTest）。
+  ALWAYS enforce AI_STANDARDS while coding (naming ≥2 words, no table-prefix in Entity class, default query indexes, Service cohesion, no Map on hand-written Rest) even if user never says 规范; phrases like 按照autumn框架规范/命名规范/索引规范/接口规范/开发约束 mean code has DRIFTED — enter remediation: full §16.3 checklist + prefer constraints-scan A1/A4/A5, fix before finish. See skill "默认合规与纠偏" and "约束扫描".
   OAuth/OPL/OPC: read docs/AI_AUTH_LOGIN_MODES.md first; classic RP bind client_web_oauth_bind (WebOauthBindService); OPC bind opc_connect_bind (ConnectBindService); callback uses establishSession not login(upstream).
-  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定, 站点门户, SITE_PORTAL_CONFIG, SiteLegalLinksHandler, FunctionQueue, FunctionQueues, 函数队列, LoopJob, JobDuty, JobDuty.LOCAL, ServerRole, ServerRole.LOCAL, Registry, cluster.html, 集群节点, 边缘节点, node-profile, autumn.node.registry, TagTaskExecutor, JobPhaseGate, redisTemplate.keys, KEYS, SCAN, redis.html, Redis timeout, QueryTimeoutException, 大键空间, redis运维.
+  Triggers on cn.org.autumn 3.0.0, Spring Boot 3.5, JDK 17, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, SpringDoc, bot, robot, rbt_, RobotHook, RobotMessageSubscriber, message/push, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定, 站点门户, SITE_PORTAL_CONFIG, SiteLegalLinksHandler, FunctionQueue, FunctionQueues, 函数队列, LoopJob, JobDuty, JobDuty.LOCAL, ServerRole, ServerRole.LOCAL, Registry, cluster.html, 集群节点, 边缘节点, node-profile, autumn.node.registry, TagTaskExecutor, JobPhaseGate, redisTemplate.keys, KEYS, SCAN, redis.html, Redis timeout, QueryTimeoutException, 大键空间, redis运维, 按照autumn框架规范, 命名规范, 索引规范, 接口规范, 开发约束, 表前缀, Request Response.
 ---
 
 # Autumn 3.x 框架开发（3.0.0 / 分支 3.0.0）
@@ -37,11 +37,19 @@ description: >-
 - 提到：`cn.org.autumn`、`ModuleService`、`gen`、`Dao`、`Provider`、`RuntimeSql`、`DatabaseType`、`statics`、`pages`、`Site`、`PageAware`、`autumn.table` 等，且 **栈为 JDK 17+ + Boot 3.5**。
 - 提到：**机器人 / Bot / `rbt_` / Hook 回调 / `message/push` / `cn.org.autumn.modules.bot`**（见下文 **机器人模块**）。
 
-## 约束扫描（按需）
+## 默认合规与纠偏（硬性）
 
-**默认不跑**：用户未提及规范体检、合并/CI 自检、`constraints-scan`、**约束扫描**等时，**不要**把执行 **`scripts/constraints-scan`** 当作本 Skill 的必做步骤。
+**日常开发（默认）**：写实体 / Dao / Service / Controller / 对外 API 时**始终**遵守 **`docs/AI_STANDARDS.md` §2～§15**（命名 ≥2 词、表前缀不进类名、查询列默认索引、业务落对应 Service、手写 Rest 禁 Map 等）。**不要求**用户先说「按规范」；未提及也不能降级执行。交付前对改动范围默读 **§16.3 清单**。
 
-**何时执行**：用户或任务**明确要求**对仓库做与 **`docs/AI_STANDARDS.md` / `docs/AI_DATABASE.md`** 对齐的分组体检、或声明 CI/合并门禁需要脚本结果时，再在任务根目录实际执行（勿只读文档代替执行）。
+**纠偏模式（触发词）**：出现 **按照 autumn 框架规范**、**按 Autumn 规范**、**开发约束**、**命名规范**、**索引规范**、**接口规范**、**实体命名**、**表前缀**、**Request/Response**、**约束扫描**、**规范体检**、**AI_STANDARDS** 等，表示**已经跑偏**——须对触及模块做 **§16.3 全面核对并修正**（不得只改一处命名），**宜跑** `constraints-scan`（A1/A4/A5 + 分层），**先改违规再结束**。触发词**不是**「才开始遵守」的开关。
+
+权威：**§2.1、§4、§9、§10.2、§16**。
+
+## 约束扫描（纠偏 / CI 时）
+
+**默认**：日常合规靠写代码时遵守规范 + §16.3 默读；**不必**每轮自动跑全文 `constraints-scan`。
+
+**何时执行脚本**：纠偏触发词命中、用户明确要求规范体检 / 约束扫描、或 CI/合并门禁需要脚本结果时，在任务根目录实际执行（勿只读文档代替执行）。
 
 1. **命令**  
    - 本仓库：工作区根执行 `bash scripts/constraints-scan`（或 `bash scripts/constraints-scan .`）。  
@@ -207,12 +215,13 @@ description: >-
 
 - **对内**：`@RequestMapping("{module}/{entitylower}")` + `extends *ControllerGen`（例：`auth/scopedefinition`）；页面调用接口写该 Controller。
 - **对外（新）**：独立 Controller；**`POST /{module}/api/v1/{action}`**；入参 `*Request`、出参 `*VO`；`@Valid @RequestBody Request<…>`；历史 URL 不动。
-- **硬性**：`T` 禁止 Map/JSONObject/Object/Entity；新接口默认非 Compatible；禁裸 `setCode(-1)`；写接口禁 blanket Shiro anon。
+- **硬性**：`T` **禁止** `Map`/`Map<String,*>`/`JSONObject`/`Object`/`Entity`；**禁止** `@RequestBody Map` / `Request<Map>` / `Response<Map>`；CA 回调可裸 `*Request`；新接口默认非 Compatible；禁裸 `setCode(-1)`；写接口禁 blanket Shiro anon。
+- **表名前缀 / ≥2 词**：见 §9；查询谓词列默认索引见 §10.2。
 
 ## 实体与数据库（§8～§10）
 
 - 框架扫描 + **`autumn.table.*`** 对齐表结构；**禁止**常规 **`DDL .sql`**。
-- **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**；**表前缀不进 Entity 类名**；`comment` 短标题 **2～8**。示例：`PayUserPinEntity` + `safe_pay_user_pin`；`ScopeDefinitionEntity` + `auth_scope_definition`。
+- **表名/类名（强制）**：见 **`docs/AI_BOOT.md` §3.2**、**`docs/AI_STANDARDS.md` §9**。摘要：`{模块名}_` + 类名去 `Entity` 蛇形；表名仅 **`@TableName`**；**表前缀不进 Entity 类名**；去掉 `Entity` 后 **≥2 个 PascalCase 词**（禁 `TaskEntity`）；`comment` 短标题 **2～8**；查询谓词列默认 `@Index`/`@Indexes`。示例：`PayUserPinEntity` + `safe_pay_user_pin`；`SignTaskEntity` + `esign_sign_task`。
 - **`@Column.comment`**：简介名互异（§10.1）；**`isUnique=true` 禁止再字段级 `@Index`**（§10.2）；**单字段索引用字段级 `@Index`**，类级 **`@Indexes` 仅组合索引（≥2 列）**（§10.2）；**组合索引列序优先**（等值→范围→排序；频道/开关等值列必须靠左）；**默认 ASC**；**`IndexOrder.DESC` 仅排序键且对齐主 `ORDER BY`**（ASC 上 DESC 查询可用反向扫描；混合序/热点才显式 DESC；禁止无 EXPLAIN 批量改方向）；**既有字段级 `@Index` 默认保留**（禁止因组合最左覆盖而批量删除）；优化重点为**组合 `@Indexes` 列序对齐 Dao**。**查询即索引**（方法空 `@Index` + `IndexedSelect`）与 Entity `@Indexes` **双轨常开**；同一索引二选一、同指纹以查询即索引为准。**AI 必读** **`docs/AI_INDEX_ANNOTATIONS.md` §1**。硬性纪律 **`docs/AI_STANDARDS.md` §10.2**；模式/PR 清单同 **`AI_INDEX_ANNOTATIONS.md`**。
 - **双键**：第二主键按需 **`uuid`** / **`UserBased`** / **无（§3.4 仅 `user`）**；业务 **`user`** 可存 **`sys_user` 或 `bot_robot` 的 uuid**。**存量实体默认不升级**（**`docs/AI_DUAL_KEY.md` §1.2**），除非任务明确要求。详见 **§1.1、§3**。
 
@@ -322,6 +331,8 @@ description: >-
 - 单列唯一是否**只**字段 `isUnique`？组合是否仍以唯一列为最左（应删，§5 A/D）？
 - `@IndexField` 是否优先驼峰属性名？`@Index(name)` 是否可读且未依赖「改名触发重建」？
 - 机器人：是否已读 **`docs/AI_ROBOT.md` + `docs/AI_ROBOT_API.md`**？bot 包是否仍为 **`jakarta.*` / MP3 annotation**？管理 API 与 `message/push` 鉴权是否分离？
+- Entity 类名是否**不含**表前缀且去掉 `Entity` 后 **≥2 词**？`comment` 短标题是否 **2～8**？对外 `*/api/v1/**` 是否已消除 **Map 契约**？查询列是否已默认索引？
+- 日常是否已按规范写（未等用户提规范）？若命中**纠偏触发词**：是否已按 **§16.3** 全面修正并宜跑 **constraints-scan**？
 - **`@FieldEncrypt`**：Service 是否 `EncryptModuleService`？`baseMapper` → `afterRead`？`searchable` + hash 列？**`@Cache`** 是否按 §7（明文键 + hash 通道）？
 - **授权/OAuth/OPC**：是否先读 **`AI_AUTH_LOGIN_MODES.md`**？改 scope/authorize 文案是否读 **`AI_AUTH_SCOPE.md`**？未混 `client_id`/`app_id`？绑定写 **独立表**？回调用 **`establishSession`** 而非 **`login(upstream)`**？经典 OAuth 是否走 **`WebOauthBindService`**（非 upstream uuid 联邦）？
 - **表名**：符合 §3.2？仅 `@TableName`（`@Table` 无 `value`）？Dao `quote` 一致？

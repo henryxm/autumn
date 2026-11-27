@@ -23,10 +23,11 @@
 
 ### 2.1 高内聚、低耦合（业务逻辑落 Service）
 
-- **实体相关业务逻辑必须落在对应 Service（硬性）**：凡与某实体（表 / 领域模型）相关的**业务流程、校验规则、状态机、事务边界、缓存失效、队列投递、`LoopJob` 定时任务**，**必须**实现于该实体对应的 **`XxxService`**。  
+- **实体相关业务逻辑必须落在对应 Service（硬性，默认优先）**：凡与某实体（表 / 领域模型）相关的**业务流程、校验规则、状态机、事务边界、缓存失效、队列投递、`LoopJob` 定时任务、对外 API 的领域处理**，**必须尽量**实现于该实体对应的 **`XxxService`**（跨实体用例可放 Facade，但仍**只调 Service**）。  
   - **`XxxService` 必须继承 `ModuleService`**（含字段加密时用 **`EncryptModuleService`**，见 `docs/AI_MAP.md` §2.7、**`docs/AI_FIELD_ENCRYPT.md`**）。  
   - **禁止**把上述逻辑写在 Controller、ControllerGen、Dao、工具类「壳」或平行 `*Helper` / `*Manager`（详见 **`docs/AI_SERVICE_COHESION.md`**）。  
-  - **禁止**仅为定时任务/清理再建平行 Service。
+  - **禁止**仅为定时任务/清理再建平行 Service。  
+  - **Controller 只做**：鉴权标注、入参 `@Valid`、调用 Service、包装 `Response`；**禁止**在 Controller 内解析松散 `Map`、拼装业务字段或写状态流转。
 - **低耦合**：模块之间避免直接依赖对方**具体实现类**；需要协作时优先 **接口契约**、**事件**、或团队已选型的**远程/本地服务调用**（如 Dubbo、Facade Bean 等），由项目架构统一选型，不在此重复实现细节。
 - **类规模**：单实体 Service 实现类（不含 gen）**建议上限约 1000 行**；超过时须拆 Facade / 领域私有方法，**禁止**平行影子 Service（见 **`docs/AI_SERVICE_COHESION.md`** §2、§7）。开发期重构须**删除悬空类与未引用代码**。
 
@@ -89,15 +90,20 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
    - `{module}` = 模块短名；`{action}` = 动作名（建议小写或驼峰与现有模块文档一致）。  
    - **历史接口不动**（如既有 `bot/api/v1`、`safe/api/v1`、`/rsa/api/v1/init` 等）；新能力不得再发明平行前缀，除非列入团队**例外白名单**并文档登记。
 
-3. **统一请求响应模型**：对外 body 统一使用 **`Request<T>` / `Response<T>`**。  
-   - **新接口默认**仅用 `Request`/`Response`。  
-   - **`CompatibleRequest` / `CompatibleResponse` + `@Endpoint(compatible=true)`** 仅允许用于**已登记迁移清单**中的存量兼容接口（见 `docs/AI_CRYPTO.md`、`docs/AI_MAP.md` §2.4）。
+3. **统一请求响应模型（硬性）**：凡业务侧 **手写** `@RestController`（路径含 **`/{module}/api/v1/**`**，含 open / host；以及运维 Facade 如 `/{module}/…manage` 等**非**实体 `*ControllerGen` 路由），请求体与成功响应体**必须**类型化。  
+   - **新接口默认**：业务 API 用 **`Request<T>` / `Response<T>`**。  
+   - **第三方 CA / Webhook 入站回调**：允许 **裸 `@RequestBody *Request`**（不强制外包 `Request<>`，因对端协议通常无 Autumn 信封），但仍须 **类型化模型** + 成功侧 **`Response<*VO>`**（或团队登记的固定 ACK）。  
+   - **`CompatibleRequest` / `CompatibleResponse` + `@Endpoint(compatible=true)`** 仅允许用于**已登记迁移清单**中的存量兼容接口（见 `docs/AI_CRYPTO.md`、`docs/AI_MAP.md` §2.4）。  
+   - **禁止** `@RequestBody Map<…>`、`Response<Map<…>>`、`Request<Map<…>>`、裸 `Map` 返回、用 `Map`/`HashMap` 现场拼装对外字段。  
+   - **禁止**「先收 Map 再手工 `get("xxx")`」充当契约；第三方回调亦须定义 **`*Request` / 类型化 payload**，在 **Service** / Provider 内映射领域对象（嵌套 `data` 优先同结构嵌套对象；若对端「对象或 JSON 字符串」二态，允许用 **`JsonNode` 单字段**承接后**立即**反序列化为 `*Request`，**禁止**回退松散 `Map`）。  
+   - **例外（窄）**：**仅**对内 Gen CRUD 的 `queryPage(Map params)` / `list(Map params)`（§3 / §11）允许 Map 查询参数；**不得**把该例外照搬到 `*/api/v1/**`、回调、Open API 或运维 Facade。
 
 4. **契约类命名（硬性）**：入参模型后缀 **`*Request`**；出参模型后缀 **`*VO`**。**禁止**新接口以 `*DTO` 同时充当入参与出参，或混用无约定后缀。
 
-5. **`Request` / `Response` 的业务载荷类型（硬性）**：泛型 **`T` 必须是**上述自定义类型化模型类。  
-   - **禁止**：`Map` / `JSONObject` / `Object` / 原始 `String`（承载整段业务 JSON）/ 无界通配。  
-   - **禁止**：把 **`*Entity` 直接作为对外契约的 `T`**。  
+5. **`Request` / `Response` 的业务载荷类型（硬性）**：泛型 **`T` 必须是**上述自定义类型化模型类（或 `List<*VO>` 等元素类型化集合）。  
+   - **禁止**：`Map` / `Map<String,Object>` / `Map<String,String>` / `JSONObject` / `Object` / 原始 `String`（承载整段业务 JSON）/ 无界通配。  
+   - **禁止**：把 **`*Entity` 直接作为对外契约的 `T`**（管理 Gen CRUD 对内接口除外，见 §3）。  
+   - **允许（窄）**：无结构字段的确认结果可用 **`Boolean` / `Integer` 等标量**（如「是否成功」）；一旦有 ≥2 个业务字段须升级为 `*VO`。  
    - 参考：`docs/AI_ROBOT_API.md`（如 `RobotCreateRequest`）。
 
 6. **入参校验（硬性）**：JSON 对外接口使用 **`@Valid @RequestBody Request<*Request>`**（或 `CompatibleRequest` 迁移场景）；校验失败走全局异常或统一 `Response` 错误码，**禁止**在 Controller 内散落手写 null 判断替代 Bean Validation。
@@ -296,12 +302,15 @@ var uuid = '${uuid!""?js_string}';
 ## 9. 模块目录、包名、表前缀与实体命名（强制）
 
 - **模块根**：`modules/<模块名>/` = 包 `cn.org.autumn.modules.<模块名>` = 表前缀 **`<模块名>_`**。
-- **实体类名**：领域短名 + `Entity`；**禁止**把模块名 / 表前缀拼进类名（见 **`docs/AI_BOOT.md` §3.2**）。  
-  - **硬性**：表前缀（如 `auth_`、`safe_`、`bot_`）**只出现在物理表名**（`@TableName`）中，**不得**作为 `*Entity` 类名的前缀。  
-  - **正例**：`@TableName("auth_scope_definition")` → 类名 **`ScopeDefinitionEntity`**（不是 `AuthScopeDefinitionEntity`）。  
-  - **正例**：`@TableName("safe_pay_user_pin")` → 类名 **`PayUserPinEntity`**（不是 `SafePayUserPinEntity`）。  
-  - **反例**：`AuthScopeDefinitionEntity`、`SafePayUserPinEntity`、`BotRobotConfigEntity`（把模块前缀写进类名会导致生成错乱与命名冗余）。
+- **实体类名**：领域短名 + `Entity`（见 **`docs/AI_BOOT.md` §3.2**）。  
+  - **硬性 · 表前缀不进类名**：表前缀（如 `auth_`、`safe_`、`bot_`、`esign_`）**只出现在物理表名**（`@TableName`）中，**不得**作为 `*Entity` 类名的前缀或词缀。  
+  - **硬性 · 至少两个单词**：去掉 `Entity` 后缀后，类名须由 **≥2 个 PascalCase 单词**组成（例：`SignTask`、`TaskActor`、`ScopeDefinition`、`PayUserPin`），**禁止**单单词实体名（反例：`TaskEntity`、`ActorEntity`、`SealEntity`、`LogEntity`），以免跨模块/生成物撞名与语义过窄。  
+  - **正例**：`@TableName("auth_scope_definition")` → **`ScopeDefinitionEntity`**（不是 `AuthScopeDefinitionEntity`）。  
+  - **正例**：`@TableName("esign_sign_task")` → **`SignTaskEntity`**（不是 `EsignTaskEntity` / `TaskEntity`）。  
+  - **正例**：`@TableName("safe_pay_user_pin")` → **`PayUserPinEntity`**（不是 `SafePayUserPinEntity`）。  
+  - **反例**：`AuthScopeDefinitionEntity`、`EsignActorEntity`、`SafePayUserPinEntity`、`BotRobotConfigEntity`、`TaskEntity`。
 - **物理表名**：`{模块名}_` + 类名去 `Entity` 后蛇形；**只**在 **`@TableName`** 声明，**`@Table` 禁止写 `value`**（由框架合并）；Dao `quote` 与 `@TableName` 一致。
+- **配套命名**：与实体一一对应的 **`XxxDao` / `XxxDaoSql` / `XxxService` / `XxxController` / `XxxControllerGen`** 使用**同一领域短名**（不含表前缀）；对外 Open API Controller 可用模块能力前缀（如 `EsignOpenApiController`），**不得**回写到实体类名。
 
 ## 10. 表/字段注释、索引与字段类型
 
@@ -331,6 +340,7 @@ var uuid = '${uuid!""?js_string}';
 - **原因（为何字段为准）**：`isUnique` 已落库为单列 `UNIQUE KEY`；按该列等值查询最多命中 1 行，再拼 `visible`/`audit`/`enable` 等附带列**不能**比 UNIQUE 点查更优，只会双开索引、放大写与启动 diff。整理时以字段注解为真相源，组合侧让位。
 - **C 类误区（禁止当优化）**：列表 SQL 没有 `唯一列=?` 时，**把唯一列调到组合最左不会更快**（最左用不上）；正确做法是最左用列表等值列，组合内**不要**再挂唯一列。详见 **`docs/AI_INDEX_ANNOTATIONS.md` §5.6**。
 - **同类重复唯一声明**：亦不要与 `@Indexes` 等在同一列上重复描述同一约束（细则见 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**；统一整理方案见 **`docs/AI_INDEX_ANNOTATIONS.md` §5**）。
+- **查询列默认建索引（新实体硬性默认）**：凡 **Dao / Service 查询谓词**会等值或高频过滤的列（如 `user`、`status`、`taskUuid`、`bizSource`、`ownerUser`、外键式关联 uuid），**默认须**在实体上声明索引能力——单列用字段 **`@Index`**，多列等值/排序用类级 **`@Indexes`**；**禁止**「先裸查上线、再补丁加索引」。已 `isUnique=true` 的列**不要**再叠 `@Index`（见上条）。主键 `id`、纯展示大文本列除外。
 - **单字段索引声明位置（新代码默认）**：**单字段索引一律**写在对应**字段**上的 **`@Index`**。**类级 `@Indexes`** 仅用于**组合索引**（`fields` 含 **≥2** 列）或 FULLTEXT/SPATIAL/部分索引等特殊声明。
 - **组合索引列序（硬性）**：`@IndexField` 数组顺序 = 落库 `SEQ_IN_INDEX` 顺序；框架用有序模型发射 DDL，**禁止**再假设 HashMap 乱序。设计时遵循最左前缀：等值列靠左，范围/排序列靠右。**列序优先于 ASC/DESC**。**频道/开关等值列**（如 `xsign`/`community`）必须靠左，禁止放在范围列之后。
 - **列方向 ASC/DESC（长期基线，见下「列方向」专节）**：**默认 ASC**（未写 = ASC）。单列用字段级 **`@Index(order = …)`**；组合用 **`@IndexField(order = …)`**。DESC **仅**按主查询 `ORDER BY` 写在**排序键**上。禁止无 `EXPLAIN` 依据批量改 DESC。主查询含稳定 `ORDER BY …, id DESC` 时，索引末尾宜带上 `id`（方向与 ORDER BY 一致）。
@@ -579,7 +589,35 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
 
 说明：§15 不否定 Spring 默认写法在「依赖已正确对齐」时的可用性；文档重点是**讲清风险场景**并给出 **Autumn 侧的一致推荐路径**。
 
-## 16. 与 AI 文档的交叉引用
+## 16. 默认合规与纠偏自检（硬性）
+
+### 16.1 默认：开发过程始终按规范执行
+
+凡在 Autumn / 业务仓写实体、Dao、Service、Controller、对外 API、索引、注释时，**一律默认遵守本文 §2～§15**（及 `AI_BOOT` / `AI_DATABASE` / `AI_INDEX_ANNOTATIONS` 等专篇），**不依赖**用户是否口头提到「规范」「命名」「索引」等词。
+
+- **禁止**把「用户没提规范」当作可降低命名 / 索引 / 禁 Map / Service 内聚等纪律的理由。  
+- 每轮交付前仍应用下文 **§16.3 清单**做一次默读自检（改到的模块范围内）。
+
+### 16.2 触发词 = 已跑偏，进入纠偏模式
+
+当用户、任务或 PR 描述出现下列任一表述时，含义是：**当前实现或讨论已偏离规范**，AI / 开发者**不得**仅当提醒继续往下写，而须进入**纠偏**：对**任务触及的模块（宜扩至同模块相关改动）**做**全面规范核对与修正**（不得只改表面命名或局部一处），并**宜执行** **`scripts/constraints-scan`**（重点 A1/A4/A5 与分层组），**先改违规再结束**。
+
+**触发词（含同义）**：`按照 autumn 框架规范`、`按 Autumn 规范`、`开发约束`、`命名规范`、`索引规范`、`接口规范`、`对外 API 规范`、`实体命名`、`表前缀`、`Request/Response`、`约束扫描`、`规范体检`、`AI_STANDARDS`。
+
+说明：触发词**不是**「才开始遵守规范」的开关；平时就应合规。触发词表示**需要按清单纠偏 + 扫描核实**。
+
+### 16.3 全面检查清单
+
+1. **命名**：`*Entity` 去掉后缀后 **≥2 个单词**；**无**模块/表前缀进类名；表名 = `{module}_` + 蛇形短名；Dao/Service/ControllerGen 与实体短名一致（§9、`AI_BOOT` §3.2）。  
+2. **索引**：查询谓词列已 `@Index` / `@Indexes`；`isUnique` 未叠 `@Index`；单列在字段上、组合在类上（§10.2）。  
+3. **分层**：实体业务只在对应 `*Service`（`ModuleService`）；Controller / Facade **未**引用 Dao；Controller **无**状态机与松散 Map 拼装（§2.1、§13）。  
+4. **对外 / 手写 Rest API**：`POST /{module}/api/v1/{action}`（或已登记子路径 / 运维 Facade）；body 为 **`Request<*Request>` / `Response<*VO>`**（CA 回调可裸 `*Request`）；**禁止** `Map`/`JSONObject`/`Object`/`Entity` 作契约 `T`；回调同样类型化（§4）。  
+5. **注释**：`comment` 为 `短标题:说明`，短标题 2～8 且字段间互异（§10.1）。  
+6. **其它**：无常规 DDL `.sql`；Dao 仅 Provider；对外写接口鉴权非 blanket anon；生成物无特有逻辑（§8、§11、§12）。
+
+未通过任一项：**先改代码再结束**；不得以「历史兼容」 internally 绕过，除非任务明示并登记产品/协议例外。
+
+## 17. 与 AI 文档的交叉引用
 
 | 主题 | 文档 |
 |------|------|
@@ -595,7 +633,9 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
 | 双键模型、`UuidBased` / `SnowBased` / **`UserBased`** / `AutoIdService` | **§10.4**、**`docs/AI_DUAL_KEY.md` §3～§4**；SQL 见 **`docs/AI_DATABASE.md` §1.1** |
 | Lombok 实体 / `@Slf4j` | **§2.0**、**`docs/AI_CODE_STYLE.md` §5.1 / §8** |
 | 实体业务必须落对应 Service | **§2.1**、**`docs/AI_SERVICE_COHESION.md`** |
-| 对内路径 / 对外 URL / 契约与校验 | **§3、§4** |
+| 对内路径 / 对外 URL / 契约与校验 / 禁 Map | **§3、§4** |
+| 实体 ≥2 词、表前缀不进类名 | **§9**、`AI_BOOT` §3.2 |
+| 默认合规；触发词=纠偏自检 | **§16** |
 | 生成可替换 / 禁特有逻辑 / 空壳除外 | **§11.0～§11.2**、`docs/AI_CODEGEN.md` |
 | 代码生成端到端流程、三步开发节奏、缓存/队列基类详解 | `docs/AI_CODEGEN.md` |
 | 加解密 / Compatible | `docs/AI_CRYPTO.md`、**§4** |
@@ -606,7 +646,8 @@ public class ScopeDefinitionController extends ScopeDefinitionControllerGen {
 | Redis 批量扫描、禁止 `KEYS`、键命名 | **`docs/REDIS_KEYS_AND_SCAN.md`**、**§15.1** |
 | Service 内聚与行数 | **`docs/AI_SERVICE_COHESION.md`**、**§2.1** |
 
-## 17. 维护约定
+## 18. 维护约定
 
-- 新增与「实体/库表/Dao/资源/页面」相关的团队规则时，**优先更新本文**，并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md` 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇；**Redis 禁止 KEYS / 推荐 SCAN** 以 **`docs/REDIS_KEYS_AND_SCAN.md`** 为专篇，变更时同步 **`scripts/constraints-scan`**（**H / J 组**）。
-- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。**索引与唯一约束叠用纪律（§10.2）** 变更时同步 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**；**业务模式与统一风格**同步 **`docs/AI_INDEX_ANNOTATIONS.md`**。**实体双键（§10.4）** 变更时同步 **`docs/AI_DUAL_KEY.md`**、**`docs/AI_DATABASE.md` §1.1** 与 **`autumn-lib`** 中 **`Uuid` / `Snow` / `AutoIdService`** 说明（若工具 API 有变）。
+- 新增与「实体/库表/Dao/资源/页面/对外契约」相关的团队规则时，**优先更新本文**（含 **§4、§9、§10.2、§16**），并同步 `docs/AI_INDEX.md`、`docs/AI_GUIDE.md`、**Cursor Skill `autumn-framework-3x` / `2x`** 摘要；**多库类型、方言、Wrapper/Provider 纪律**以 **`docs/AI_DATABASE.md`** 为落地专篇，变更时同步该文 §2；**老旧项目注解 Dao / 方言 Wrapper 迁移与扫描清单**见 **`docs/AI_DATABASE.md` §8** 与 **`docs/AI_UPGRADE.md` §3.3**；与代码生成流程或三步节奏相关的补充可落在 **`docs/AI_CODEGEN.md`**。**Redis TTL 与 `RedisExpireUtil`** 以 **`docs/REDIS_TTL_GUIDE.md`** 为专篇；**Redis 禁止 KEYS / 推荐 SCAN** 以 **`docs/REDIS_KEYS_AND_SCAN.md`** 为专篇，变更时同步 **`scripts/constraints-scan`**（**H / J / A 组**）。
+- 若与 `docs/AI_MAP.md` §4「开发决策规则」表述重叠，以**本文 §2～§14**、**§15～§16** 为应用层与数据访问纪律的权威表述；MAP 保留框架能力级硬约束与类索引。**索引与唯一约束叠用纪律（§10.2）** 变更时同步 **`docs/AI_BOOT.md` §3**、**`docs/AI_MAP.md` §2.10.2**；**业务模式与统一风格**同步 **`docs/AI_INDEX_ANNOTATIONS.md`**。**实体双键（§10.4）** 变更时同步 **`docs/AI_DUAL_KEY.md`**、**`docs/AI_DATABASE.md` §1.1** 与 **`autumn-lib`** 中 **`Uuid` / `Snow` / `AutoIdService`** 说明（若工具 API 有变）。
+- **§16（默认合规 / 纠偏触发词）**变更时同步 Skill「默认合规与纠偏」「约束扫描」与 **`scripts/constraints-scan` A 组**说明。

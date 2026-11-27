@@ -10,14 +10,22 @@ description: >-
   Prefer import over fully qualified class names unless name clash (docs/AI_CODE_STYLE.md §7);
   log.info/debug/warn/error must be one line, no line breaks in the call (docs/AI_CODE_STYLE.md §8);
   FreeMarker templates: docs/AI_STANDARDS.md §7 (HTML <!--<#if>--> per line, JS //<#if>, title bare inline FTL);
-  Never reference Dao outside its ModuleService (access only via Service/baseMapper); entity business logic only in corresponding Service; Service must extend ModuleService; never inject any Dao from Controllers/Facades/other Services; entity Lombok @Getter/@Setter; logging @Slf4j (no LoggerFactory); codegen §11.0: replaceable, no proprietary logic in template products (empty shells excepted); required Entity/Service/Dao/Controller/ControllerGen; §11.2 pre-ZIP template Gen CRUD OK; no AI list/Pages; internal API RequestMapping module/entitylower; new open API POST /{module}/api/v1/{action} with *Request/*VO/@Valid; comment short title 2-8 chars; table prefix never in Entity class name; statics/pages/Site/PageAware.
+  Never reference Dao outside its ModuleService (access only via Service/baseMapper); entity business logic only in corresponding Service; Service must extend ModuleService; never inject any Dao from Controllers/Facades/other Services; entity Lombok @Getter/@Setter; logging @Slf4j (no LoggerFactory); codegen §11.0: replaceable, no proprietary logic in template products (empty shells excepted); required Entity/Service/Dao/Controller/ControllerGen; §11.2 pre-ZIP template Gen CRUD OK; no AI list/Pages; internal API RequestMapping module/entitylower; new open API POST /{module}/api/v1/{action} with *Request/*VO/@Valid; FORBID Map as Request/Response T on */api/v1/**; comment short title 2-8 chars; table prefix NEVER in Entity class name; Entity short name ≥2 PascalCase words; query columns default @Index; statics/pages/Site/PageAware.
   Read docs/AI_CODEGEN.md, docs/AI_DATABASE.md, docs/AI_DUAL_KEY.md. Bot/robot: read docs/AI_ROBOT.md + docs/AI_ROBOT_API.md (rbt_, Hook, message/push, cn.org.autumn.modules.bot).
   OAuth/OPL/OPC: read docs/AI_AUTH_LOGIN_MODES.md first; classic RP bind client_web_oauth_bind (WebOauthBindService); OPC bind opc_connect_bind (ConnectBindService); callback uses establishSession not login(upstream).
-  scripts/constraints-scan is optional: run only when the user explicitly asks for a constraint audit, CI-style check, or phrases like 约束扫描/规范体检; see skill section "约束扫描（按需）".
-  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, bot, robot, rbt_, safe, PayUserPin, PayPinVerifier, pay password, 支付密码, 手势密码, 生物识别, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定, 站点门户, SITE_PORTAL_CONFIG, SiteLegalLinksHandler, redisTemplate.keys, KEYS, SCAN, redis.html, Redis timeout, QueryTimeoutException, 大键空间, redis运维.
+  ALWAYS enforce AI_STANDARDS while coding even if user never says 规范; phrases like 按照autumn框架规范/命名规范/索引规范/接口规范/开发约束 mean DRIFT — remediation: full §16.3 checklist + prefer constraints-scan; see "默认合规与纠偏".
+  Triggers on cn.org.autumn 2.0.0, Spring Boot 2.7, JDK 8, ModuleService, EncryptModuleService, FieldEncrypt, isEncryptCacheField, encryptCache, RuntimeSql, PageAware, bot, robot, rbt_, safe, PayUserPin, PayPinVerifier, pay password, 支付密码, 手势密码, 生物识别, 字段加密, field encrypt, 加密缓存, OAuth, openId, unionId, WebOauthBind, ConnectBind, client_id, app_id, 授权登录, 账号绑定, uuid绑定, 站点门户, SITE_PORTAL_CONFIG, SiteLegalLinksHandler, redisTemplate.keys, KEYS, SCAN, redis.html, Redis timeout, QueryTimeoutException, 大键空间, redis运维, 按照autumn框架规范, 命名规范, 索引规范, 接口规范, 开发约束, 表前缀, Request Response.
 ---
 
 # Autumn 2.x 框架开发（2.0.0 / master）
+
+## 默认合规与纠偏（硬性）
+
+**日常开发（默认）**：始终遵守 **`docs/AI_STANDARDS.md` §2～§15**（命名 ≥2 词、表前缀不进类名、查询列默认索引、业务落对应 Service、手写 Rest 禁 Map 等）；**不要求**用户先说「按规范」。
+
+**纠偏模式（触发词）**：出现 **按照 autumn 框架规范**、**命名规范**、**索引规范**、**接口规范**、**开发约束**、**约束扫描**、**规范体检** 等，表示**已经跑偏**——须 **§16.3 全面核对并修正**，宜跑 `constraints-scan`，**先改违规再结束**。触发词不是「才开始遵守」的开关。
+
+权威：**§2.1、§4、§9、§10.2、§16**。
 
 ## 版本矩阵（本 Skill 唯一适用）
 
@@ -38,11 +46,11 @@ description: >-
 - 提到：`cn.org.autumn`、`ModuleService`、`gen`、`Dao`、`Provider`、`RuntimeSql`、`DatabaseType`、`statics`、`pages`、`Site`、`PageAware`、`autumn.table` 等，且 **栈为 JDK8 + Boot 2.7**。
 - 提到：**机器人 / Bot / `rbt_` / Hook 回调 / `message/push` / `cn.org.autumn.modules.bot` / `RobotMessageSubscriber`**（见下文 **机器人模块**）。
 
-## 约束扫描（按需）
+## 约束扫描（纠偏 / CI 时）
 
-**默认不跑**：用户未提及规范体检、合并/CI 自检、`constraints-scan`、**约束扫描**等时，**不要**把执行 **`scripts/constraints-scan`** 当作本 Skill 的必做步骤。
+**默认**：日常合规靠写代码时遵守规范 + §16.3 默读；**不必**每轮自动跑全文扫描。
 
-**何时执行**：用户或任务**明确要求**对仓库做与 **`docs/AI_STANDARDS.md` / `docs/AI_DATABASE.md`** 对齐的分组体检、或声明 CI/合并门禁需要脚本结果时，再在任务根目录实际执行（勿只读文档代替执行）。
+**何时执行脚本**：纠偏触发词命中、用户明确要求规范体检 / 约束扫描、或 CI/合并门禁需要脚本结果时，再在任务根目录实际执行（勿只读文档代替执行）。
 
 1. **命令**  
    - 本仓库：工作区根执行 `bash scripts/constraints-scan`（或 `bash scripts/constraints-scan .`）。  

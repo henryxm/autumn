@@ -15,7 +15,7 @@
 - **`docs/REDIS_TTL_GUIDE.md`**：**Redis TTL、`Redisson` 与 `RedisExpireUtil`**（何时宜用、常见问题、API 对照、推荐处理顺序与可选扫描脚本）
 - **`docs/REDIS_KEYS_AND_SCAN.md`**：**禁止 `KEYS`、推荐 `SCAN`**（大键空间运维、`redis.html` 事故、批量删键/列表分页推荐写法、**constraints-scan J 组**）
 - `docs/AI_MAP.md`：高频开发能力主图（含生成模板分层与可改/不可改边界）
-- `docs/AI_STANDARDS.md`：**约束性开发规范**（**§2.0 Lombok + `@Slf4j`**、**§2.1 实体业务落 Service**、**§3～§4 内外 API**、**§10.2 索引硬性纪律 / ASC·DESC**、**§11.0 生成可替换、禁特有逻辑进模板产物（空壳除外）**、**§13 禁外部直连 Dao**、**PageAware / gen 超管**）
+- `docs/AI_STANDARDS.md`：**约束性开发规范**（**§2.0 Lombok + `@Slf4j`**、**§2.1 实体业务落 Service**、**§3～§4 内外 API（禁 Map 契约）**、**§9 实体 ≥2 词且表前缀不进类名**、**§10.2 查询列默认索引 / isUnique**、**§16 默认合规；触发词=纠偏**、**§11.0 生成可替换**、**§13 禁外部直连 Dao**、**PageAware / gen 超管**）
 - **`docs/AI_INDEX_ANNOTATIONS.md`**：**实体索引 / 查询即索引**（**§1** 双轨与标准写法；**§5 isUnique**、**§6**、**§7**、PR 清单；约束权威 **STANDARDS §10.2**）
 - **`docs/AI_DUAL_KEY.md`**：**双主键落地**（`UuidBased` / `SnowBased` / **`UserBased`**、**§3.4 无第二主键仅 `user`**、`AutoIdService`、`Uuid` / `Snow`）
 - `docs/AI_CODE_STYLE.md`：**Java 版式**（方法/调用；**§5.1 Lombok 实体与 `@Slf4j`**；**import 优先** §7；**日志单行** §8）

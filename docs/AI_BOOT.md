@@ -104,9 +104,12 @@
 {模块名}_{类名去掉 Entity 后缀后的驼峰转蛇形}
 ```
 
-- **模块名** = `modules/<模块>/` 目录名 = 包段 = 表前缀（如 `safe` → **`safe_`**，`auth` → **`auth_`**）。
-- **实体类名**用领域短名，**禁止**把模块名 / 表前缀拼进类名（反例：`SafePayUserPinEntity`、`AuthScopeDefinitionEntity`；正例：`PayUserPinEntity`、`ScopeDefinitionEntity`）。**表前缀只写在 `@TableName`，不出现在 Entity 类名前面。**
+- **模块名** = `modules/<模块>/` 目录名 = 包段 = 表前缀（如 `safe` → **`safe_`**，`auth` → **`auth_`**，`esign` → **`esign_`**）。
+- **实体类名**用领域短名：  
+  - **禁止**把模块名 / 表前缀拼进类名（反例：`SafePayUserPinEntity`、`EsignTaskEntity`、`AuthScopeDefinitionEntity`；正例：`PayUserPinEntity`、`SignTaskEntity`、`ScopeDefinitionEntity`）。**表前缀只写在 `@TableName`，不出现在 Entity 类名前面。**  
+  - **硬性**：去掉 `Entity` 后须 **≥2 个 PascalCase 单词**（反例：`TaskEntity`、`ActorEntity`；正例：`SignTaskEntity`、`TaskActorEntity`）。权威细则 **`docs/AI_STANDARDS.md` §9**。
 - **注解（强制）**：物理表名只写在 **`@TableName`**；**`@Table` 不写 `value`**（框架会把 `@TableName` 合并进 `TableInfo`）。**`@Table` 至少保留 `comment`** 等建表元数据。Dao `*DaoSql#quote(...)` 与 `@TableName` 一致。
+- **查询索引默认**：等值/过滤查询列默认字段 `@Index` 或组合 `@Indexes`（**`AI_STANDARDS` §10.2**）。
 - 可选：仅写 `@Table(prefix = "safe_", comment = "...")` 且省略 `@TableName` 时由框架推导（细则同生成器）；新代码推荐显式 **`@TableName`**。
 
 **示例 1**（模块 `safe`，实体 `PayUserPinEntity`）：
